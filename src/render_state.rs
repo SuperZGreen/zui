@@ -1,3 +1,5 @@
+use crate::zui::Zui;
+
 pub struct RenderState {
     adapter: wgpu::Adapter,
     surface: wgpu::Surface,
@@ -102,6 +104,7 @@ impl RenderState {
 
     pub fn render(
         &mut self,
+        zui: &Zui,
     ) -> Result<(), wgpu::SurfaceError> {
         if self.skip_rendering {
             return Ok(());
@@ -119,7 +122,7 @@ impl RenderState {
                 });
 
         {
-            let mut _render_pass = command_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            let mut render_pass = command_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("world_render_pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &surface_texture_view,
@@ -139,9 +142,11 @@ impl RenderState {
                 })],
                 depth_stencil_attachment: None,
             });
+
+            // TODO: do rendering
+            zui.render(&mut render_pass);
         }
 
-        // TODO: do rendering
         
         self.queue.submit(std::iter::once(command_encoder.finish()));
 
@@ -160,6 +165,15 @@ impl RenderState {
 
     pub fn device(&self) -> &wgpu::Device {
         &self.device
+    }
+    
+
+    pub fn queue(&self) -> &wgpu::Queue {
+        &self.queue
+    }
+
+    pub fn surface_configuration(&self) -> &wgpu::SurfaceConfiguration {
+        &self.surface_configuration
     }
 
     pub fn surface_format(&self) -> wgpu::TextureFormat {
