@@ -36,50 +36,65 @@ fn main() {
     let mut render_state = pollster::block_on(RenderState::new(&window));
 
     // zui
+    let resolution = window.inner_size();
     let mut zui = Zui::new(
         "resources/roboto.ttf",
         14,
         render_state.device(),
-        render_state.queue(),
         render_state.surface_configuration(),
+        resolution.width,
+        resolution.height,
     )
     .unwrap();
 
-    let main_contents = Widget::new()
-        .with_span(Span::ParentRatio(0.9f32))
-        .with_background(Some(Colour::rgb(0.5f32, 0.5f32, 0.5f32)));
+    // let main_contents = Widget::new()
+    //     // .with_span(Span::ParentRatio(0.9f32))
+    //     .with_background(Some(Colour::rgb(0.5f32, 0.5f32, 0.5f32)));
 
-    let central_container_padding_top = Widget::new();
-    let central_container_padding_bottom = Widget::new();
-    let central_container_padding_left = Widget::new();
-    let central_container_padding_right = Widget::new();
+    // let central_container_padding_top = Widget::new().with_span(Span::ViewMin(0.05f32));
+    // let central_container_padding_bottom = Widget::new().with_span(Span::ViewMin(0.05f32));
+    // let central_container_padding_left = Widget::new().with_span(Span::ViewMin(0.05f32));
+    // let central_container_padding_right = Widget::new().with_span(Span::ViewMin(0.05f32));
 
-    let central_container_vertical = Widget::new()
-        .with_axis(Axis::Vertical)
-        .with_span(Span::ParentRatio(0.9f32))
-        .with_background(Some(Colour::rgb(0.4f32, 0.4f32, 0.4f32)))
-        .push(central_container_padding_top)
-        .push(main_contents)
-        .push(central_container_padding_bottom);
+    // let central_container_vertical = Widget::new()
+    //     .with_axis(Axis::Vertical)
+    //     // .with_span(Span::ParentRatio(0.9f32))
+    //     .with_background(Some(Colour::rgb(0.4f32, 0.4f32, 0.4f32)))
+    //     .push(central_container_padding_top)
+    //     .push(main_contents)
+    //     .push(central_container_padding_bottom);
 
-    let central_container = Widget::new()
-        .with_axis(Axis::Horizontal)
-        .with_span(Span::ParentRatio(0.75f32))
-        .with_background(Some(Colour::rgb(0.3f32, 0.3f32, 0.3f32)))
-        .push(central_container_padding_left)
-        .push(central_container_vertical)
-        .push(central_container_padding_right);
+    // let central_container = Widget::new()
+    //     .with_axis(Axis::Horizontal)
+    //     .with_span(Span::ParentRatio(0.75f32))
+    //     .with_background(Some(Colour::rgb(0.3f32, 0.3f32, 0.3f32)))
+    //     .push(central_container_padding_left)
+    //     .push(central_container_vertical)
+    //     .push(central_container_padding_right);
 
-    let outer_padding_left = Widget::new();
-    let outer_padding_right = Widget::new();
+    // let outer_padding_left = Widget::new();
+    // let outer_padding_right = Widget::new();
+
+    // zui.set_root_widget(Some(
+    //     Widget::new()
+    //         .with_axis(Axis::Horizontal)
+    //         // .with_background(Some(Colour::rgb(0.2f32, 0.2f32, 0.2f32)))
+    //         .push(outer_padding_left)
+    //         .push(central_container)
+    //         .push(outer_padding_right),
+    // ));
 
     zui.set_root_widget(Some(
         Widget::new()
             .with_axis(Axis::Horizontal)
             // .with_background(Some(Colour::rgb(0.2f32, 0.2f32, 0.2f32)))
-            .push(outer_padding_left)
-            .push(central_container)
-            .push(outer_padding_right),
+            .push(Widget::new())
+            .push(
+                Widget::new()
+                    .with_span(Span::ViewMin(1f32))
+                    .with_background(Some(Colour::rgb(0.1f32, 0.1f32, 0.1f32))),
+            )
+            .push(Widget::new()),
     ));
 
     zui.update_widget_rectangles();
@@ -99,6 +114,7 @@ fn main() {
                     }
                     WindowEvent::Resized(physical_size) => {
                         render_state.resize(physical_size);
+                        zui.resize(physical_size.width, physical_size.height);
                     }
                     WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
                         render_state.resize(*new_inner_size);
@@ -129,20 +145,22 @@ fn main() {
                 window.request_redraw();
             }
             Event::RedrawRequested(_) => {
-                // uploading
-                zui.renderer_upload(render_state.device());
+                if !render_state.skip_rendering() {
+                    // uploading
+                    zui.renderer_upload(render_state.device());
 
-                // rendering
-                match render_state.render(&zui) {
-                    Ok(_) => {}
-                    Err(wgpu::SurfaceError::Lost) => {
-                        warn!("wgpu::SurfaceError::Lost");
+                    // rendering
+                    match render_state.render(&zui) {
+                        Ok(_) => {}
+                        Err(wgpu::SurfaceError::Lost) => {
+                            warn!("wgpu::SurfaceError::Lost");
 
-                        let size = render_state.window_size();
-                        render_state.resize(&size);
-                    }
-                    Err(e) => {
-                        warn!("encountered error: {:?}", e);
+                            let size = render_state.window_size();
+                            render_state.resize(&size);
+                        }
+                        Err(e) => {
+                            warn!("encountered error: {:?}", e);
+                        }
                     }
                 }
             }

@@ -14,7 +14,6 @@ pub struct Renderer {
 impl Renderer {
     pub fn new(
         device: &wgpu::Device,
-        queue: &wgpu::Queue,
         surface_configuration: &wgpu::SurfaceConfiguration,
     ) -> Self {
         let shader_module = util::shader_module_from_file_path(

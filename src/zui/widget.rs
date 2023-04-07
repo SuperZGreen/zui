@@ -1,5 +1,6 @@
 use super::Rectangle;
 
+#[derive(Copy, Clone)]
 pub enum Axis {
     Vertical,
     Horizontal,
@@ -18,18 +19,62 @@ pub enum Span {
     //
     //  Absolute Sizes
     //
-    /// relative size with respect to the minimum dimension of the wgpu viewport
+    /// Size as a portion of the view height, ie. the height of the application window surface is 1
+    ViewWidth(f32),
+
+    /// Size as a portion of the view width, ie. the width of the application window surface is 1
+    ViewHeight(f32),
+
+    /// Relative size with respect to the minimum dimension of the wgpu viewport
     ViewMin(f32),
+
+    // TODO: ViewMax?
 
     //
     //  Flexible Sizes, dynamically resizes depending on the size of the parent widget
     //
-    /// weighted size with respect to the parent's size. Is summed up and divided amongst other
+    /// Weighted size with respect to the parent's size. Is summed up and divided amongst other
     /// child's sizes to determine the actual screen-space size of the widget
     ParentWeight(f32),
 
-    /// the size with respect to the parent's size
+    /// The size as a proportion of the parent's size
     ParentRatio(f32),
+}
+
+impl Span {
+    pub fn view_min_to_screen_space_span(
+        view_min: f32,
+        aspect_ratio: f32,
+        parent_widget_axis: Axis,
+    ) -> f32 {
+        if aspect_ratio < 1f32 {
+            Self::view_width_to_screen_space_span(view_min, aspect_ratio, parent_widget_axis)
+        } else {
+            Self::view_height_to_screen_space_span(view_min, aspect_ratio, parent_widget_axis)
+        }
+    }
+
+    pub fn view_height_to_screen_space_span(
+        view_height: f32,
+        aspect_ratio: f32,
+        parent_widget_axis: Axis,
+    ) -> f32 {
+        match parent_widget_axis {
+            Axis::Vertical => view_height * 2f32,
+            Axis::Horizontal => view_height / aspect_ratio * 2f32,
+        }
+    }
+
+    pub fn view_width_to_screen_space_span(
+        view_width: f32,
+        aspect_ratio: f32,
+        parent_widget_axis: Axis,
+    ) -> f32 {
+        match parent_widget_axis {
+            Axis::Vertical => view_width * aspect_ratio * 2f32,
+            Axis::Horizontal => view_width * 2f32,
+        }
+    }
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -105,15 +150,20 @@ impl Widget {
         self.rectangle = rectangle;
     }
 
-    pub fn update_child_rectangles_recursively(&mut self) {
+    pub fn update_child_rectangles_recursively(&mut self, aspect_ratio: f32) {
         let self_rectangle = self.rectangle.unwrap();
 
         let axis_index = self.axis.to_index();
 
-        let self_normalised_space_available = Self::get_normalised_space_available(&self.children);
+        let self_normalised_space_available = Self::get_parent_normalised_space_available(
+            &self.children,
+            self.axis,
+            self_rectangle.dimensions[axis_index],
+            aspect_ratio,
+        );
 
-        if self_normalised_space_available <= 0.0f32 {
-            warn!("no space available: {}", self_normalised_space_available);
+        if self_normalised_space_available < 0.0f32 {
+            warn!("overflowing: screen space span: {}", self_normalised_space_available);
         }
 
         let sum_of_child_span_weights = Self::get_sum_of_child_span_weights(&self.children);
@@ -121,7 +171,15 @@ impl Widget {
 
         for child in self.children.iter_mut() {
             let screen_space_span = match child.span {
-                Span::ViewMin(_vm) => todo!(),
+                Span::ViewWidth(vw) => {
+                    Span::view_width_to_screen_space_span(vw, aspect_ratio, self.axis)
+                }
+                Span::ViewHeight(vh) => {
+                    Span::view_height_to_screen_space_span(vh, aspect_ratio, self.axis)
+                }
+                Span::ViewMin(vm) => {
+                    Span::view_min_to_screen_space_span(vm, aspect_ratio, self.axis)
+                }
                 Span::ParentWeight(pw) => {
                     pw / sum_of_child_span_weights
                         * self_normalised_space_available
@@ -137,7 +195,7 @@ impl Widget {
                 top_left: top_left_accumulator,
                 dimensions,
             };
-            
+
             child.set_rectangle(Some(child_rectangle));
 
             // updating accumulator
@@ -146,19 +204,37 @@ impl Widget {
                 Axis::Horizontal => top_left_accumulator[0] += screen_space_span,
             }
 
-            child.update_child_rectangles_recursively()
+            child.update_child_rectangles_recursively(aspect_ratio);
         }
     }
 
     // TODO: will need to change
-    fn get_normalised_space_available(children: &[Widget]) -> f32 {
+    fn get_parent_normalised_space_available(
+        children: &[Widget],
+        parent_widget_axis: Axis,
+        parent_screen_space_span: f32,
+        aspect_ratio: f32,
+    ) -> f32 {
         let mut space = 1f32;
         for child in children.iter() {
-            match child.span {
-                Span::ViewMin(_) => todo!(),
-                Span::ParentRatio(ratio) => space -= ratio,
-                Span::ParentWeight(_) => {}
-            }
+            let space_used = match child.span {
+                Span::ViewHeight(vh) => {
+                    Span::view_height_to_screen_space_span(vh, aspect_ratio, parent_widget_axis)
+                        / parent_screen_space_span
+                }
+                Span::ViewWidth(vw) => {
+                    Span::view_width_to_screen_space_span(vw, aspect_ratio, parent_widget_axis)
+                        / parent_screen_space_span
+                }
+                Span::ViewMin(vm) => {
+                    Span::view_min_to_screen_space_span(vm, aspect_ratio, parent_widget_axis)
+                        / parent_screen_space_span
+                }
+                Span::ParentRatio(ratio) => ratio,
+                Span::ParentWeight(_) => 0f32,
+            };
+
+            space -= space_used;
         }
         space
     }
@@ -167,6 +243,8 @@ impl Widget {
         let mut sum = 0f32;
         for child in children.iter() {
             match child.span {
+                Span::ViewHeight(_) => {}
+                Span::ViewWidth(_) => {}
                 Span::ViewMin(_) => {}
                 Span::ParentRatio(_) => {}
                 Span::ParentWeight(weight) => sum += weight,
@@ -177,7 +255,7 @@ impl Widget {
 
     pub fn traverse<F>(&self, f: &mut F)
     where
-        F: FnMut(&Widget)
+        F: FnMut(&Widget),
     {
         f(self);
 

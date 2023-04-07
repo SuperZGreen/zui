@@ -14,6 +14,10 @@ pub struct Zui {
     font: Font,
     root_widget: Option<Widget>,
     renderer: Renderer,
+    
+    width_px: u32,
+    height_px: u32,
+    aspect_ratio: f32,
 }
 
 impl Zui {
@@ -21,8 +25,9 @@ impl Zui {
         file: &str,
         size_px: u32,
         device: &wgpu::Device,
-        queue: &wgpu::Queue,
         surface_configuration: &wgpu::SurfaceConfiguration,
+        width_px: u32,
+        height_px: u32,
     ) -> Result<Self, ()> {
         let font_default = match Font::new(file, size_px) {
             Ok(f) => f,
@@ -32,7 +37,10 @@ impl Zui {
         Ok(Self {
             font: font_default,
             root_widget: None,
-            renderer: Renderer::new(device, queue, surface_configuration),
+            renderer: Renderer::new(device, surface_configuration),
+            width_px,
+            height_px,
+            aspect_ratio: width_px as f32 / height_px as f32,
         })
     }
 
@@ -61,7 +69,7 @@ impl Zui {
             glam::Vec2::new(2f32, 2f32),
         )));
 
-        root_widget.update_child_rectangles_recursively();
+        root_widget.update_child_rectangles_recursively(self.aspect_ratio);
 
         root_widget.traverse(&mut |widget| {
             match widget.rectangle {
@@ -116,6 +124,7 @@ impl Zui {
         //     info!("vert: {:?}", vertex);
         // }
         // info!("");
+        // info!("verts len: {}", vertices.len());
 
         self.renderer.upload(device, &vertices);
     }
@@ -123,5 +132,14 @@ impl Zui {
     /// Tells the Zui Renderer to draw the UI
     pub fn render<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) {
         self.renderer.render(render_pass);
+    }
+    
+    /// Resizes the zui context
+    pub fn resize(&mut self, width_px: u32, height_px: u32) {
+        self.width_px = width_px;
+        self.height_px = height_px;
+        self.aspect_ratio = width_px as f32 / height_px as f32;
+        
+        self.update_widget_rectangles();
     }
 }
