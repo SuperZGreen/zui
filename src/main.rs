@@ -47,43 +47,6 @@ fn main() {
     )
     .unwrap();
 
-    // let main_contents = Widget::new()
-    //     // .with_span(Span::ParentRatio(0.9f32))
-    //     .with_background(Some(Colour::rgb(0.5f32, 0.5f32, 0.5f32)));
-
-    // let central_container_padding_top = Widget::new().with_span(Span::ViewMin(0.05f32));
-    // let central_container_padding_bottom = Widget::new().with_span(Span::ViewMin(0.05f32));
-    // let central_container_padding_left = Widget::new().with_span(Span::ViewMin(0.05f32));
-    // let central_container_padding_right = Widget::new().with_span(Span::ViewMin(0.05f32));
-
-    // let central_container_vertical = Widget::new()
-    //     .with_axis(Axis::Vertical)
-    //     // .with_span(Span::ParentRatio(0.9f32))
-    //     .with_background(Some(Colour::rgb(0.4f32, 0.4f32, 0.4f32)))
-    //     .push(central_container_padding_top)
-    //     .push(main_contents)
-    //     .push(central_container_padding_bottom);
-
-    // let central_container = Widget::new()
-    //     .with_axis(Axis::Horizontal)
-    //     .with_span(Span::ParentRatio(0.75f32))
-    //     .with_background(Some(Colour::rgb(0.3f32, 0.3f32, 0.3f32)))
-    //     .push(central_container_padding_left)
-    //     .push(central_container_vertical)
-    //     .push(central_container_padding_right);
-
-    // let outer_padding_left = Widget::new();
-    // let outer_padding_right = Widget::new();
-
-    // zui.set_root_widget(Some(
-    //     Widget::new()
-    //         .with_axis(Axis::Horizontal)
-    //         // .with_background(Some(Colour::rgb(0.2f32, 0.2f32, 0.2f32)))
-    //         .push(outer_padding_left)
-    //         .push(central_container)
-    //         .push(outer_padding_right),
-    // ));
-
     zui.set_root_widget(Some(
         Widget::new()
             .with_axis(Axis::Horizontal)
@@ -92,7 +55,11 @@ fn main() {
             .push(
                 Widget::new()
                     .with_span(Span::ViewMin(1f32))
-                    .with_background(Some(Colour::rgb(0.1f32, 0.1f32, 0.1f32))),
+                    .with_background(Some(Colour::rgb(0.1f32, 0.1f32, 0.1f32)))
+                    .push_padded(
+                        Widget::new().with_background(Some(Colour::rgb(0.3f32, 0.3f32, 0.3f32))),
+                        Widget::new().with_span(Span::ViewMin(0.01f32)),
+                    ),
             )
             .push(Widget::new()),
     ));

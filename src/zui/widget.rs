@@ -1,3 +1,5 @@
+use winit::window::WindowBuilder;
+
 use super::Rectangle;
 
 #[derive(Copy, Clone)]
@@ -15,6 +17,7 @@ impl Axis {
     }
 }
 
+#[derive(Copy, Clone)]
 pub enum Span {
     //
     //  Absolute Sizes
@@ -101,6 +104,7 @@ impl From<Colour> for glam::Vec4 {
     }
 }
 
+#[derive(Clone)]
 pub struct Widget {
     children: Vec<Widget>,
 
@@ -146,6 +150,23 @@ impl Widget {
         self
     }
 
+    /// Creates a new widget with padding widgets
+    pub fn push_padded(self, child: Self, padding_widget: Self) -> Self {
+
+        let vertical_container = Self::new()
+            .with_axis(Axis::Vertical)
+            .push(padding_widget.clone())
+            .push(child)
+            .push(padding_widget.clone());
+        let horizontal_container = Self::new()
+            .with_axis(Axis::Horizontal)
+            .push(padding_widget.clone())
+            .push(vertical_container)
+            .push(padding_widget.clone());
+
+        self.push(horizontal_container)
+    }
+
     pub fn set_rectangle(&mut self, rectangle: Option<Rectangle>) {
         self.rectangle = rectangle;
     }
@@ -163,7 +184,10 @@ impl Widget {
         );
 
         if self_normalised_space_available < 0.0f32 {
-            warn!("overflowing: screen space span: {}", self_normalised_space_available);
+            warn!(
+                "overflowing: screen space span: {}",
+                self_normalised_space_available
+            );
         }
 
         let sum_of_child_span_weights = Self::get_sum_of_child_span_weights(&self.children);
