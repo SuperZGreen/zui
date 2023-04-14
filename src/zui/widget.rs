@@ -1,6 +1,8 @@
+use std::collections::VecDeque;
+
 use winit::window::WindowBuilder;
 
-use super::Rectangle;
+use super::{Rectangle, ScreenSpacePosition};
 
 #[derive(Copy, Clone)]
 pub enum Axis {
@@ -105,12 +107,20 @@ impl From<Colour> for glam::Vec4 {
 }
 
 #[derive(Clone)]
-pub struct Widget {
-    children: Vec<Widget>,
+pub struct Widget<Message>
+where
+    Message: Clone + Copy,
+{
+    children: Vec<Widget<Message>>,
 
     // structure
     pub axis: Axis,
     pub span: Span,
+
+    // behaviour
+    pub on_click: Option<Message>,
+    pub on_cursor_on: Option<Message>,
+    pub on_cursor_off: Option<Message>,
 
     // style
     pub background: Option<Colour>,
@@ -119,12 +129,18 @@ pub struct Widget {
     pub rectangle: Option<Rectangle>,
 }
 
-impl Widget {
+impl<Message> Widget<Message>
+where
+    Message: Clone + Copy,
+{
     pub fn new() -> Self {
         Self {
             children: Vec::new(),
             axis: Axis::Vertical,
             span: Span::ParentWeight(1f32),
+            on_click: None,
+            on_cursor_on: None,
+            on_cursor_off: None,
             background: None,
             rectangle: None,
         }
@@ -145,14 +161,28 @@ impl Widget {
         self
     }
 
-    pub fn push(mut self, child: Widget) -> Self {
+    pub fn with_on_click(mut self, on_click: Option<Message>) -> Self {
+        self.on_click = on_click;
+        self
+    }
+
+    pub fn with_on_cursor_on(mut self, on_cursor_on: Option<Message>) -> Self {
+        self.on_cursor_on = on_cursor_on;
+        self
+    }
+
+    pub fn with_on_cursor_off(mut self, on_cursor_off: Option<Message>) -> Self {
+        self.on_cursor_off = on_cursor_off;
+        self
+    }
+
+    pub fn push(mut self, child: Widget<Message>) -> Self {
         self.children.push(child);
         self
     }
 
     /// Creates a new widget with padding widgets
     pub fn push_padded(self, child: Self, padding_widget: Self) -> Self {
-
         let vertical_container = Self::new()
             .with_axis(Axis::Vertical)
             .push(padding_widget.clone())
@@ -234,7 +264,7 @@ impl Widget {
 
     // TODO: will need to change
     fn get_parent_normalised_space_available(
-        children: &[Widget],
+        children: &[Widget<Message>],
         parent_widget_axis: Axis,
         parent_screen_space_span: f32,
         aspect_ratio: f32,
@@ -263,7 +293,7 @@ impl Widget {
         space
     }
 
-    fn get_sum_of_child_span_weights(children: &[Widget]) -> f32 {
+    fn get_sum_of_child_span_weights(children: &[Widget<Message>]) -> f32 {
         let mut sum = 0f32;
         for child in children.iter() {
             match child.span {
@@ -279,12 +309,39 @@ impl Widget {
 
     pub fn traverse<F>(&self, f: &mut F)
     where
-        F: FnMut(&Widget),
+        F: FnMut(&Widget<Message>),
     {
         f(self);
 
         for child in self.children.iter() {
             child.traverse(f);
+        }
+    }
+
+    /// Traverses through widgets, adding their on_x messages to the message queue if satisfied
+    pub fn update_cursor_events_recursively(
+        &self,
+        cursor: ScreenSpacePosition,
+        message_queue: &mut VecDeque<Message>,
+    ) {
+        let self_rectangle = match self.rectangle {
+            Some(r) => r,
+            None => return,
+        };
+
+        if self_rectangle.cursor_is_over(cursor) {
+            if let Some(message) = self.on_cursor_on {
+                message_queue.push_back(message);
+            }
+
+        } else if let Some(message) = self.on_cursor_off {
+            message_queue.push_back(message);
+        }
+
+        // TODO: always propagates to children (whether over the widget or not), add conditional
+        // propagation to children
+        for child in &self.children {
+            child.update_cursor_events_recursively(cursor, message_queue)
         }
     }
 }

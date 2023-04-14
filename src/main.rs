@@ -1,5 +1,5 @@
 use winit::{
-    event::{Event, WindowEvent},
+    event::{Event, WindowEvent, KeyboardInput, VirtualKeyCode},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
@@ -15,7 +15,10 @@ use render_state::RenderState;
 mod zui;
 use zui::Zui;
 
-use crate::zui::{Axis, Colour, Span, Widget};
+mod main_scene;
+use main_scene::MainScene;
+
+use crate::zui::SceneHandle;
 
 fn main() {
     info!("starting!");
@@ -47,24 +50,8 @@ fn main() {
     )
     .unwrap();
 
-    zui.set_root_widget(Some(
-        Widget::new()
-            .with_axis(Axis::Horizontal)
-            // .with_background(Some(Colour::rgb(0.2f32, 0.2f32, 0.2f32)))
-            .push(Widget::new())
-            .push(
-                Widget::new()
-                    .with_span(Span::ViewMin(1f32))
-                    .with_background(Some(Colour::rgb(0.1f32, 0.1f32, 0.1f32)))
-                    .push_padded(
-                        Widget::new().with_background(Some(Colour::rgb(0.3f32, 0.3f32, 0.3f32))),
-                        Widget::new().with_span(Span::ViewMin(0.01f32)),
-                    ),
-            )
-            .push(Widget::new()),
-    ));
-
-    zui.update_widget_rectangles();
+    let main_scene = MainScene::new();
+    let mut scene_handle = SceneHandle::new(main_scene, zui.aspect_ratio());
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
@@ -82,13 +69,16 @@ fn main() {
                     WindowEvent::Resized(physical_size) => {
                         render_state.resize(physical_size);
                         zui.resize(physical_size.width, physical_size.height);
+                        scene_handle.queue_widget_recreation();
                     }
                     WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
                         render_state.resize(*new_inner_size);
                     }
-                    WindowEvent::KeyboardInput { .. } => {}
-                    WindowEvent::CursorMoved { .. } => {
-                        // TODO
+                    WindowEvent::KeyboardInput { input : KeyboardInput {virtual_keycode: Some(VirtualKeyCode::X), ..}, ..} => {
+                        *control_flow = ControlFlow::Exit;
+                    }
+                    WindowEvent::CursorMoved { position, .. } => {
+                        zui.update_cursor_state(*position);
                     }
                     WindowEvent::ModifiersChanged(_) => {
                         // TODO
@@ -108,13 +98,16 @@ fn main() {
             Event::Resumed => {}
             Event::MainEventsCleared => {
                 // TODO: Solving
+                if let Some(cursor_state) = zui.cursor_state() {
+                    scene_handle.update(cursor_state, zui.aspect_ratio());
+                }
 
                 window.request_redraw();
             }
             Event::RedrawRequested(_) => {
                 if !render_state.skip_rendering() {
                     // uploading
-                    zui.renderer_upload(render_state.device());
+                    zui.renderer_upload(render_state.device(), &scene_handle);
 
                     // rendering
                     match render_state.render(&zui) {

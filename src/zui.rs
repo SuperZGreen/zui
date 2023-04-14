@@ -1,23 +1,28 @@
 mod font;
 mod primitives;
 mod renderer;
+mod scene;
 pub mod util;
 mod widget;
 
 pub use font::Font;
+pub use primitives::ScreenSpacePosition;
 pub use renderer::Renderer;
+pub use scene::{Scene, SceneHandle};
 pub use widget::{Axis, Colour, Span, Widget};
+use winit::dpi::PhysicalPosition;
 
-use self::{primitives::Rectangle, renderer::Vertex};
+use self::{primitives::Rectangle, renderer::Vertex, scene::Renderable};
 
 pub struct Zui {
     font: Font,
-    root_widget: Option<Widget>,
     renderer: Renderer,
-    
+
     width_px: u32,
     height_px: u32,
     aspect_ratio: f32,
+
+    cursor_state: Option<ScreenSpacePosition>,
 }
 
 impl Zui {
@@ -36,11 +41,11 @@ impl Zui {
 
         Ok(Self {
             font: font_default,
-            root_widget: None,
             renderer: Renderer::new(device, surface_configuration),
             width_px,
             height_px,
             aspect_ratio: width_px as f32 / height_px as f32,
+            cursor_state: None,
         })
     }
 
@@ -53,72 +58,11 @@ impl Zui {
         Ok(())
     }
 
-    pub fn set_root_widget(&mut self, root_widget: Option<Widget>) {
-        self.root_widget = root_widget;
-    }
-
-    pub fn update_widget_rectangles(&mut self) {
-        let root_widget = match &mut self.root_widget {
-            Some(rw) => rw,
-            None => return,
-        };
-
-        // updating rectangles
-        root_widget.set_rectangle(Some(Rectangle::new(
-            glam::Vec2::new(-1f32, 1f32),
-            glam::Vec2::new(2f32, 2f32),
-        )));
-
-        root_widget.update_child_rectangles_recursively(self.aspect_ratio);
-
-        root_widget.traverse(&mut |widget| {
-            match widget.rectangle {
-                Some(r) => println!("rect: {:?}", r),
-                None => println!("rect: None"),
-            };
-        });
-    }
+    pub fn update_widget_rectangles(&mut self) {}
 
     /// Turns the Widget's rectangles into vertices, uploads them to the GPU
-    pub fn renderer_upload(&mut self, device: &wgpu::Device) {
-        let mut vertices = Vec::new();
-        match &self.root_widget {
-            Some(rw) => rw.traverse(&mut |widget| {
-                let colour = match widget.background {
-                    Some(c) => c,
-                    None => return,
-                };
-
-                let rectangle = match widget.rectangle {
-                    Some(r) => r,
-                    None => return,
-                };
-
-                let a = Vertex::new(rectangle.top_left, colour.into());
-                let b = Vertex::new(
-                    rectangle.top_left + glam::Vec2::new(rectangle.dimensions[0], 0f32),
-                    colour.into(),
-                );
-                let c = Vertex::new(
-                    rectangle.top_left + glam::Vec2::new(0f32, -rectangle.dimensions[1]),
-                    colour.into(),
-                );
-                let d = Vertex::new(
-                    rectangle.top_left
-                        + glam::Vec2::new(rectangle.dimensions[0], -rectangle.dimensions[1]),
-                    colour.into(),
-                );
-
-                vertices.push(a);
-                vertices.push(c);
-                vertices.push(b);
-
-                vertices.push(b);
-                vertices.push(c);
-                vertices.push(d);
-            }),
-            None => {}
-        }
+    pub fn renderer_upload(&mut self, device: &wgpu::Device, renderable: &dyn Renderable) {
+        let vertices = renderable.to_vertices();
 
         // for vertex in vertices.iter() {
         //     info!("vert: {:?}", vertex);
@@ -133,13 +77,42 @@ impl Zui {
     pub fn render<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) {
         self.renderer.render(render_pass);
     }
-    
+
     /// Resizes the zui context
     pub fn resize(&mut self, width_px: u32, height_px: u32) {
         self.width_px = width_px;
         self.height_px = height_px;
         self.aspect_ratio = width_px as f32 / height_px as f32;
-        
+
         self.update_widget_rectangles();
+    }
+
+    /// Gives the overall aspect ratio of the application window surface
+    pub fn aspect_ratio(&self) -> f32 {
+        self.aspect_ratio
+    }
+
+    /// Gives the width of the application window surface in pixels
+    pub fn width_px(&self) -> u32 {
+        self.width_px
+    }
+
+    /// Gives the height of the application window surface in pixels
+    pub fn height_px(&self) -> u32 {
+        self.height_px
+    }
+
+    /// Updates the cursor state tracked by zui
+    pub fn update_cursor_state(&mut self, cursor_physical_position: PhysicalPosition<f64>) {
+        self.cursor_state = Some(ScreenSpacePosition::from_cursor_physical_position(
+            cursor_physical_position,
+            self.width_px,
+            self.height_px,
+        ));
+    }
+
+    /// Gives the height of the application window surface in pixels
+    pub fn cursor_state(&self) -> Option<ScreenSpacePosition> {
+        self.cursor_state
     }
 }
