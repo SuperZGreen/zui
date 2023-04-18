@@ -3,7 +3,7 @@ pub struct Font {
 }
 
 impl Font {
-    pub fn new(file: &str, size_px: u32) -> Result<Self, ()> {
+    pub fn new(_file: &str, _size_px: u32) -> Result<Self, ()> {
         Ok(Self {
             // TODO
         })

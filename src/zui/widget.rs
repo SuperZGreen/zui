@@ -117,10 +117,15 @@ where
     pub axis: Axis,
     pub span: Span,
 
-    // behaviour
-    pub on_click: Option<Message>,
-    pub on_cursor_on: Option<Message>,
-    pub on_cursor_off: Option<Message>,
+    // internal callbacks
+    pub callback_cursor_clicked: Option<fn(&mut Self) -> bool>,
+    pub callback_cursor_on: Option<fn(&mut Self) -> bool>,
+    pub callback_cursor_off: Option<fn(&mut Self) -> bool>,
+
+    // message behaviour
+    pub message_cursor_clicked: Option<Message>,
+    pub message_cursor_on: Option<Message>,
+    pub message_cursor_off: Option<Message>,
 
     // style
     pub background: Option<Colour>,
@@ -138,9 +143,12 @@ where
             children: Vec::new(),
             axis: Axis::Vertical,
             span: Span::ParentWeight(1f32),
-            on_click: None,
-            on_cursor_on: None,
-            on_cursor_off: None,
+            callback_cursor_clicked: None,
+            callback_cursor_on: None,
+            callback_cursor_off: None,
+            message_cursor_clicked: None,
+            message_cursor_on: None,
+            message_cursor_off: None,
             background: None,
             rectangle: None,
         }
@@ -161,18 +169,33 @@ where
         self
     }
 
-    pub fn with_on_click(mut self, on_click: Option<Message>) -> Self {
-        self.on_click = on_click;
+    pub fn with_callback_cursor_clicked(mut self, callback: Option<fn(&mut Self) -> bool>) -> Self {
+        self.callback_cursor_clicked = callback;
         self
     }
 
-    pub fn with_on_cursor_on(mut self, on_cursor_on: Option<Message>) -> Self {
-        self.on_cursor_on = on_cursor_on;
+    pub fn with_callback_cursor_on(mut self, callback: Option<fn(&mut Self) -> bool>) -> Self {
+        self.callback_cursor_on = callback;
         self
     }
 
-    pub fn with_on_cursor_off(mut self, on_cursor_off: Option<Message>) -> Self {
-        self.on_cursor_off = on_cursor_off;
+    pub fn with_callback_cursor_off(mut self, callback: Option<fn(&mut Self) -> bool>) -> Self {
+        self.callback_cursor_off = callback;
+        self
+    }
+
+    pub fn with_message_clicked(mut self, message: Option<Message>) -> Self {
+        self.message_cursor_clicked = message;
+        self
+    }
+
+    pub fn with_message_cursor_on(mut self, message: Option<Message>) -> Self {
+        self.message_cursor_on = message;
+        self
+    }
+
+    pub fn with_message_cursor_off(mut self, message: Option<Message>) -> Self {
+        self.message_cursor_off = message;
         self
     }
 
@@ -320,7 +343,7 @@ where
 
     /// Traverses through widgets, adding their on_x messages to the message queue if satisfied
     pub fn update_cursor_events_recursively(
-        &self,
+        &mut self,
         cursor: ScreenSpacePosition,
         message_queue: &mut VecDeque<Message>,
     ) {
@@ -330,17 +353,26 @@ where
         };
 
         if self_rectangle.cursor_is_over(cursor) {
-            if let Some(message) = self.on_cursor_on {
-                message_queue.push_back(message);
+            if let Some(callback_cursor_on) = self.callback_cursor_on {
+                callback_cursor_on(self);
             }
 
-        } else if let Some(message) = self.on_cursor_off {
-            message_queue.push_back(message);
+            if let Some(message) = self.message_cursor_on {
+                message_queue.push_back(message);
+            }
+        } else {
+            if let Some(callback_cursor_off) = self.callback_cursor_off {
+                callback_cursor_off(self);
+            }
+
+            if let Some(message) = self.message_cursor_off {
+                message_queue.push_back(message);
+            }
         }
 
         // TODO: always propagates to children (whether over the widget or not), add conditional
         // propagation to children
-        for child in &self.children {
+        for child in self.children.iter_mut() {
             child.update_cursor_events_recursively(cursor, message_queue)
         }
     }

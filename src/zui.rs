@@ -4,6 +4,8 @@ mod renderer;
 mod scene;
 pub mod util;
 mod widget;
+pub mod premade_widgets;
+// mod tree;
 
 pub use font::Font;
 pub use primitives::ScreenSpacePosition;
@@ -12,10 +14,10 @@ pub use scene::{Scene, SceneHandle};
 pub use widget::{Axis, Colour, Span, Widget};
 use winit::dpi::PhysicalPosition;
 
-use self::{primitives::Rectangle, renderer::Vertex, scene::Renderable};
+use self::{primitives::Rectangle, scene::Renderable};
 
 pub struct Zui {
-    font: Font,
+    _font: Font,
     renderer: Renderer,
 
     width_px: u32,
@@ -40,7 +42,7 @@ impl Zui {
         };
 
         Ok(Self {
-            font: font_default,
+            _font: font_default,
             renderer: Renderer::new(device, surface_configuration),
             width_px,
             height_px,
@@ -50,7 +52,7 @@ impl Zui {
     }
 
     pub fn set_font(mut self, file: &str, size_px: u32) -> Result<(), ()> {
-        self.font = match Font::new(file, size_px) {
+        self._font = match Font::new(file, size_px) {
             Ok(f) => f,
             Err(_) => return Err(()),
         };

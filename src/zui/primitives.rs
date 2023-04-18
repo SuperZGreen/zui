@@ -7,7 +7,7 @@ pub struct ScreenSpacePosition {
 }
 
 impl ScreenSpacePosition {
-    pub fn new(x: f32, y: f32) -> Self {
+    pub fn _new(x: f32, y: f32) -> Self {
         Self { x, y }
     }
 
