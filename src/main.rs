@@ -41,9 +41,10 @@ fn main() {
     // zui
     let resolution = window.inner_size();
     let mut zui = Zui::new(
-        "resources/roboto.ttf",
+        "resources/zui/fonts/Roboto-Regular.ttf",
         14,
         render_state.device(),
+        render_state.queue(),
         render_state.surface_configuration(),
         resolution.width,
         resolution.height,

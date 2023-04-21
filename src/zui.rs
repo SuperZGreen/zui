@@ -5,12 +5,14 @@ mod scene;
 pub mod util;
 mod widget;
 pub mod premade_widgets;
+mod texture_atlas;
 // mod tree;
 
 pub use font::Font;
 pub use primitives::ScreenSpacePosition;
 pub use renderer::Renderer;
 pub use scene::{Scene, SceneHandle};
+use wgpu::Device;
 pub use widget::{Axis, Colour, Span, Widget};
 use winit::dpi::PhysicalPosition;
 
@@ -32,11 +34,12 @@ impl Zui {
         file: &str,
         size_px: u32,
         device: &wgpu::Device,
+        queue: &wgpu::Queue,
         surface_configuration: &wgpu::SurfaceConfiguration,
         width_px: u32,
         height_px: u32,
     ) -> Result<Self, ()> {
-        let font_default = match Font::new(file, size_px) {
+        let font_default = match Font::new(file, size_px, device, queue) {
             Ok(f) => f,
             Err(_) => return Err(()),
         };
@@ -51,14 +54,14 @@ impl Zui {
         })
     }
 
-    pub fn set_font(mut self, file: &str, size_px: u32) -> Result<(), ()> {
-        self._font = match Font::new(file, size_px) {
-            Ok(f) => f,
-            Err(_) => return Err(()),
-        };
+    // pub fn set_font(mut self, file: &str, size_px: u32) -> Result<(), ()> {
+    //     self._font = match Font::new(file, size_px, queue, ) {
+    //         Ok(f) => f,
+    //         Err(_) => return Err(()),
+    //     };
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
     pub fn update_widget_rectangles(&mut self) {}
 

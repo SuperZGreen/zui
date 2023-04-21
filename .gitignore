@@ -1,1 +1,21 @@
+# excluding build directory
 /target
+
+# excluding all files
+*
+
+# whitelisting all folders, must be done to allow specific file extensions to
+# be white listed in folders excluded when previously excluding all files
+!/**/
+
+# generally allowed files
+!/src/**/*.rs
+!/*.toml
+
+!Cargo.lock
+!Cargo.toml
+
+!README.md
+
+# rules for resource directory
+!/resources/**/*.wgsl
