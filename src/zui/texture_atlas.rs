@@ -1,9 +1,9 @@
 use std::fmt::Debug;
 use std::hash::Hash;
 
+use crunch::{Rotation, Item};
 use image::{DynamicImage, GenericImage};
 // use image::{GenericImage, GenericImageView};
-use rectangle_pack::{GroupedRectsToPlace, RectToInsert, RectanglePackOk, TargetBin};
 use std::{
     collections::BTreeMap,
     path::{Path, PathBuf},
@@ -42,73 +42,37 @@ impl TextureAtlasBuilder {
         });
     }
 
-    fn attempt_pack_expanding_until_fits<RectToPlaceId, GroupId>(
-        initial_span: u32,
-        grouped_rects_to_pack: &GroupedRectsToPlace<RectToPlaceId, GroupId>,
-    ) -> Result<(RectanglePackOk<RectToPlaceId, i32>, u32), ()>
-    where
-        RectToPlaceId: Debug + Hash + Eq + Ord + PartialOrd + Clone + Copy,
-        GroupId: Debug + Hash + Eq + Ord + PartialOrd + Clone + Copy,
-    {
-        let mut span = initial_span;
-        let packed_results = loop {
-            // adding target bins
-            let mut target_bins = BTreeMap::new();
-            target_bins.insert(0, TargetBin::new(span, span, 1));
-
-            // attempting pack
-            let results = match rectangle_pack::pack_rects(
-                grouped_rects_to_pack,
-                &mut target_bins,
-                &rectangle_pack::volume_heuristic,
-                &rectangle_pack::contains_smallest_box,
-            ) {
-                Ok(placements) => placements,
-                Err(_e) => {
-                    span += 256;
-                    continue;
-                }
-            };
-
-            // returns results if successful
-            break (results, span);
-        };
-
-        Ok(packed_results)
-    }
-
     pub fn build_atlas(&self, device: &wgpu::Device, queue: &wgpu::Queue) -> TextureAtlas {
         // preparing rectangles to be packed
-        let mut rects_to_place = GroupedRectsToPlace::new();
+        let mut rects_to_place = Vec::new();
         for (index, unpacked_sprite) in self.unpacked_sprites.iter().enumerate() {
-            rects_to_place.push_rect(
-                index,
-                Some(vec![0]),
-                RectToInsert::new(unpacked_sprite.width_px, unpacked_sprite.height_px, 1),
-            );
+            rects_to_place.push(Item::new(index, unpacked_sprite.width_px as usize, unpacked_sprite.height_px as usize, Rotation::None));
         }
 
         // getting the packed rectangles
-        let (packing_results, atlas_span) =
-            match Self::attempt_pack_expanding_until_fits(256, &rects_to_place) {
-                Ok(results) => results,
-                Err(_) => {
-                    error!("failed to pack font!");
-                    todo!()
-                }
-            };
+        let packed_items = match crunch::pack_into_po2(1024*10, rects_to_place) {
+            Ok(res) => res,
+            Err(_) => {
+                error!("failed to pack items!");
+                panic!();
+            }
+        };
 
         // copying sprite info images into new atlas image
-        let mut atlas_image = image::GrayImage::new(atlas_span, atlas_span);
-        for (rect_id, (_, location)) in packing_results.packed_locations() {
+        let atlas_width = packed_items.w as u32;
+        let atlas_height = packed_items.h as u32;
+        let mut atlas_image = image::GrayImage::new(atlas_width, atlas_height);
+        for packed_item in packed_items.items.iter() {
             // info!("rect id: {}", rect_id);
-            let unpacked_sprite = &self.unpacked_sprites[*rect_id];
+            let index = packed_item.data;
+            let rect = packed_item.rect;
+            let unpacked_sprite = &self.unpacked_sprites[index];
 
             atlas_image
                 .copy_from(
                     unpacked_sprite.image.as_luma8().unwrap(),
-                    location.x(),
-                    location.y(),
+                    rect.x as u32,
+                    rect.y as u32,
                 )
                 .expect("copy_from failed!");
         }
@@ -122,8 +86,8 @@ impl TextureAtlasBuilder {
         // creating and uploading the wgpu texture
         let texture = {
             let texture_size = wgpu::Extent3d {
-                width: atlas_span,
-                height: atlas_span,
+                width: atlas_width,
+                height: atlas_height,
                 depth_or_array_layers: 1,
             };
 
@@ -149,8 +113,8 @@ impl TextureAtlasBuilder {
                 &atlas_image,
                 wgpu::ImageDataLayout {
                     offset: 0,
-                    bytes_per_row: std::num::NonZeroU32::new(1 * atlas_span),
-                    rows_per_image: std::num::NonZeroU32::new(atlas_span),
+                    bytes_per_row: std::num::NonZeroU32::new(1 * atlas_width),
+                    rows_per_image: std::num::NonZeroU32::new(atlas_height),
                 },
                 texture_size,
             );
@@ -217,28 +181,27 @@ impl TextureAtlasBuilder {
         let mut packed_sprites = Vec::new();
         let indices_used = self.unpacked_sprites.len();
         for index in 0..indices_used {
-            let (_, (_, location)) = packing_results
-                .packed_locations()
+            let rect = packed_items.items
                 .iter()
-                .find(|(bin_id, _)| **bin_id == index)
+                .find(|item| item.data == index)
                 .expect(&format!("could not find pack result with id = {}", index));
 
             let top_left = glam::Vec2::new(
-                location.x() as f32 / atlas_span as f32,
-                location.y() as f32 / atlas_span as f32,
+                rect.rect.x as f32 / atlas_width as f32,
+                rect.rect.y as f32 / atlas_height as f32,
             );
             let bottom_right = top_left
                 + glam::Vec2::new(
-                    location.width() as f32 / atlas_span as f32,
-                    location.height() as f32 / atlas_span as f32,
+                    rect.rect.w as f32 / atlas_width as f32,
+                    rect.rect.h as f32 / atlas_height as f32,
                 );
 
             packed_sprites.push(PackedSprite {
                 name: String::from("TODO"),
                 top_left,
                 bottom_right,
-                width_px: location.width(),
-                height_px: location.height(),
+                width_px: rect.rect.w as u32,
+                height_px: rect.rect.h as u32,
             });
         }
 
