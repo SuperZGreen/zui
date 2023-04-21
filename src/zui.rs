@@ -18,7 +18,7 @@ use wgpu::Device;
 pub use widget::{Axis, Colour, Span, Widget};
 use winit::dpi::PhysicalPosition;
 
-use self::{primitives::Rectangle, scene::Renderable};
+use self::{primitives::Rectangle, scene::Renderable, text_renderer::TextVertex};
 
 pub struct Zui {
     font: Font,
@@ -35,14 +35,13 @@ pub struct Zui {
 impl Zui {
     pub fn new(
         file: &str,
-        size_px: u32,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         surface_configuration: &wgpu::SurfaceConfiguration,
         width_px: u32,
         height_px: u32,
     ) -> Result<Self, ()> {
-        let font_default = match Font::new(file, size_px, device, queue) {
+        let font_default = match Font::new(file, 128, device, queue) {
             Ok(f) => f,
             Err(_) => return Err(()),
         };
@@ -77,13 +76,48 @@ impl Zui {
 
     /// Turns the Widget's rectangles into vertices, uploads them to the GPU
     pub fn renderer_upload(&mut self, device: &wgpu::Device, renderable: &dyn Renderable) {
-        let (simple_vertices, text_vertices) = renderable.to_vertices();
+        let (simple_vertices, mut text_vertices) = renderable.to_vertices();
 
         // for vertex in vertices.iter() {
         //     info!("vert: {:?}", vertex);
         // }
         // info!("");
         // info!("verts len: {}", vertices.len());
+
+        // test text vertices
+        let (_symbol_info, top_left, bottom_right) = self.font.get_symbol('a').unwrap();
+
+        let hspan = 0.5f32;
+        let text_verts = [
+            TextVertex::new(
+                glam::Vec2::new(-hspan, hspan),
+                glam::vec2(top_left.x(), top_left.y()),
+                glam::Vec4::new(1f32, 1f32, 1f32, 1f32),
+            ),
+            TextVertex::new(
+                glam::Vec2::new(hspan, hspan),
+                glam::vec2(bottom_right.x(), top_left.y()),
+                glam::Vec4::new(1f32, 1f32, 1f32, 1f32),
+            ),
+            TextVertex::new(
+                glam::Vec2::new(-hspan, -hspan),
+                glam::vec2(top_left.x(), bottom_right.y()),
+                glam::Vec4::new(1f32, 1f32, 1f32, 1f32),
+            ),
+            TextVertex::new(
+                glam::Vec2::new(hspan, -hspan),
+                glam::vec2(bottom_right.x(), bottom_right.y()),
+                glam::Vec4::new(1f32, 1f32, 1f32, 1f32),
+            ),
+        ];
+
+        text_vertices.push(text_verts[0]);
+        text_vertices.push(text_verts[2]);
+        text_vertices.push(text_verts[1]);
+
+        text_vertices.push(text_verts[1]);
+        text_vertices.push(text_verts[2]);
+        text_vertices.push(text_verts[3]);
 
         self.renderer.upload(device, &simple_vertices);
         self.text_renderer.upload(device, &text_vertices);

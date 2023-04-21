@@ -101,7 +101,7 @@ where
 {
     fn to_vertices(&self) -> (Vec<SimpleVertex>, Vec<TextVertex>) {
         let mut simple_vertices = Vec::new();
-        let mut text_vertices = Vec::new();
+        let text_vertices = Vec::new();
 
         // simple rectangle vertices
         self.root_widget.traverse(&mut |widget| {
@@ -138,39 +138,6 @@ where
             simple_vertices.push(c);
             simple_vertices.push(d);
         });
-
-        // test text vertices
-        let hspan = 0.5f32;
-        let text_verts = [
-            TextVertex::new(
-                glam::Vec2::new(-hspan, hspan),
-                glam::vec2(0f32, 0f32),
-                glam::Vec4::new(1f32, 1f32, 1f32, 1f32),
-            ),
-            TextVertex::new(
-                glam::Vec2::new(hspan, hspan),
-                glam::vec2(1f32, 0f32),
-                glam::Vec4::new(1f32, 1f32, 1f32, 1f32),
-            ),
-            TextVertex::new(
-                glam::Vec2::new(-hspan, -hspan),
-                glam::vec2(0f32, 1f32),
-                glam::Vec4::new(1f32, 1f32, 1f32, 1f32),
-            ),
-            TextVertex::new(
-                glam::Vec2::new(hspan, -hspan),
-                glam::vec2(1f32, 1f32),
-                glam::Vec4::new(1f32, 1f32, 1f32, 1f32),
-            ),
-        ];
-
-        text_vertices.push(text_verts[0]);
-        text_vertices.push(text_verts[2]);
-        text_vertices.push(text_verts[1]);
-
-        text_vertices.push(text_verts[1]);
-        text_vertices.push(text_verts[2]);
-        text_vertices.push(text_verts[3]);
 
         (simple_vertices, text_vertices)
     }

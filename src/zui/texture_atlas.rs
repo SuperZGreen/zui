@@ -1,13 +1,5 @@
-use std::fmt::Debug;
-use std::hash::Hash;
-
 use crunch::{Rotation, Item};
 use image::{DynamicImage, GenericImage};
-// use image::{GenericImage, GenericImageView};
-use std::{
-    collections::BTreeMap,
-    path::{Path, PathBuf},
-};
 
 struct UnpackedSprite {
     image: DynamicImage,
@@ -20,11 +12,11 @@ pub struct TextureAtlasBuilder {
 }
 
 pub struct PackedSprite {
-    name: String,
-    top_left: glam::Vec2,
-    bottom_right: glam::Vec2,
-    width_px: u32,
-    height_px: u32,
+    pub name: String,
+    pub top_left: glam::Vec2,
+    pub bottom_right: glam::Vec2,
+    pub width_px: u32,
+    pub height_px: u32,
 }
 
 impl TextureAtlasBuilder {
@@ -77,7 +69,7 @@ impl TextureAtlasBuilder {
                 .expect("copy_from failed!");
         }
         
-        _ = atlas_image.save("output.png");
+        // _ = atlas_image.save("output.png");
 
         //
         //  Creating texture and wgpu related structs
@@ -128,7 +120,7 @@ impl TextureAtlasBuilder {
             address_mode_u: wgpu::AddressMode::ClampToEdge,
             address_mode_v: wgpu::AddressMode::ClampToEdge,
             address_mode_w: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Nearest,
+            mag_filter: wgpu::FilterMode::Linear,
             min_filter: wgpu::FilterMode::Linear,
             mipmap_filter: wgpu::FilterMode::Linear,
             ..Default::default()
@@ -234,37 +226,9 @@ pub struct TextureAtlas {
 }
 
 impl TextureAtlas {
-    /// Gives the id for a provided file stem/name
-    // pub fn sprite_id_from_name(&self, name: &str) -> Option<usize> {
-    //     self.sprites.iter().position(|s| s.name() == name)
-    // }
-
-    /// Gives the id for a provided file stem/name, or returns the question mark texture
-    // pub fn sprite_id_from_name_or_question_mark(&self, name: &str) -> Option<usize> {
-    //     match self.sprites.iter().position(|s| s.name() == name) {
-    //         Some(index) => {
-    //             return Some(index);
-    //         }
-    //         None => {
-    //             warn!(
-    //                 "could not find sprite: '{}', attempting to return question mark!",
-    //                 name
-    //             );
-    //             match self.sprite_id_from_name("question_mark") {
-    //                 Some(question_mark_index) => Some(question_mark_index),
-    //                 None => {
-    //                     warn!("could not find question mark texture!");
-    //                     return None;
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
-
-    /// Returns the sprite for a given sprite id
-    // pub fn sprite_from_id(&self, id: usize) -> &Sprite {
-    //     &self.sprites[id]
-    // }
+    pub fn get<'a>(&'a self, index: usize) -> Option<&'a PackedSprite> {
+        Some(self.packed_sprites.get(index)?)
+    }
 
     /// Returns the texture atlas texture
     pub fn texture(&self) -> &wgpu::Texture {
