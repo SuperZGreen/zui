@@ -6,9 +6,11 @@ use rand::Rng;
 use rustc_hash::FxHashMap;
 
 use crate::zui::texture_atlas::TextureAtlasBuilder;
+use super::texture_atlas::TextureAtlas;
 
 pub struct Font {
     symbols: FxHashMap<char, ()>,
+    pub texture_atlas: TextureAtlas,
 }
 
 struct SymbolInfo {
@@ -58,10 +60,11 @@ impl Font {
             texture_atlas_builder.add_sprite(image, width_px, height_px);
         }
 
-        texture_atlas_builder.build_atlas(device, queue);
+        let texture_atlas = texture_atlas_builder.build_atlas(device, queue);
 
         Ok(Self {
             symbols: FxHashMap::default(),
+            texture_atlas,
         })
     }
 }

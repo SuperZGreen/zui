@@ -1,6 +1,9 @@
 use std::collections::VecDeque;
 
-use super::{primitives::Rectangle, renderer::Vertex, ScreenSpacePosition, Widget};
+use super::{
+    primitives::Rectangle, renderer::SimpleVertex, text_renderer::TextVertex, ScreenSpacePosition,
+    Widget,
+};
 
 pub struct SceneHandle<Scene>
 where
@@ -24,7 +27,7 @@ where
             messages: VecDeque::new(),
         };
         this.update_widget_rectangles(aspect_ratio);
-        
+
         this
     }
 
@@ -33,14 +36,14 @@ where
         self.solve_cursor_events(cursor_position);
 
         self.handle_messages();
-        
+
         if self.widget_recreation_required {
             self.recreate_widgets();
             self.update_widget_rectangles(aspect_ratio);
             self.widget_recreation_required = false;
         }
     }
-    
+
     /// Queues the recreation of widgets via calling view on the underlying scene
     pub fn queue_widget_recreation(&mut self) {
         self.widget_recreation_required = true;
@@ -96,9 +99,11 @@ impl<Scene> Renderable for SceneHandle<Scene>
 where
     Scene: super::Scene,
 {
-    fn to_vertices(&self) -> Vec<Vertex> {
-        let mut vertices = Vec::new();
+    fn to_vertices(&self) -> (Vec<SimpleVertex>, Vec<TextVertex>) {
+        let mut simple_vertices = Vec::new();
+        let mut text_vertices = Vec::new();
 
+        // simple rectangle vertices
         self.root_widget.traverse(&mut |widget| {
             let colour = match widget.background {
                 Some(c) => c,
@@ -110,36 +115,74 @@ where
                 None => return,
             };
 
-            let a = Vertex::new(rectangle.top_left, colour.into());
-            let b = Vertex::new(
+            let a = SimpleVertex::new(rectangle.top_left, colour.into());
+            let b = SimpleVertex::new(
                 rectangle.top_left + glam::Vec2::new(rectangle.dimensions[0], 0f32),
                 colour.into(),
             );
-            let c = Vertex::new(
+            let c = SimpleVertex::new(
                 rectangle.top_left + glam::Vec2::new(0f32, -rectangle.dimensions[1]),
                 colour.into(),
             );
-            let d = Vertex::new(
+            let d = SimpleVertex::new(
                 rectangle.top_left
                     + glam::Vec2::new(rectangle.dimensions[0], -rectangle.dimensions[1]),
                 colour.into(),
             );
 
-            vertices.push(a);
-            vertices.push(c);
-            vertices.push(b);
+            simple_vertices.push(a);
+            simple_vertices.push(c);
+            simple_vertices.push(b);
 
-            vertices.push(b);
-            vertices.push(c);
-            vertices.push(d);
+            simple_vertices.push(b);
+            simple_vertices.push(c);
+            simple_vertices.push(d);
         });
 
-        vertices
+        // test text vertices
+        let hspan = 0.5f32;
+        let text_verts = [
+            TextVertex::new(
+                glam::Vec2::new(-hspan, hspan),
+                glam::vec2(0f32, 0f32),
+                glam::Vec4::new(1f32, 1f32, 1f32, 1f32),
+            ),
+            TextVertex::new(
+                glam::Vec2::new(hspan, hspan),
+                glam::vec2(1f32, 0f32),
+                glam::Vec4::new(1f32, 1f32, 1f32, 1f32),
+            ),
+            TextVertex::new(
+                glam::Vec2::new(-hspan, -hspan),
+                glam::vec2(0f32, 1f32),
+                glam::Vec4::new(1f32, 1f32, 1f32, 1f32),
+            ),
+            TextVertex::new(
+                glam::Vec2::new(hspan, -hspan),
+                glam::vec2(1f32, 1f32),
+                glam::Vec4::new(1f32, 1f32, 1f32, 1f32),
+            ),
+        ];
+
+        text_vertices.push(text_verts[0]);
+        text_vertices.push(text_verts[2]);
+        text_vertices.push(text_verts[1]);
+
+        text_vertices.push(text_verts[1]);
+        text_vertices.push(text_verts[2]);
+        text_vertices.push(text_verts[3]);
+
+        (simple_vertices, text_vertices)
     }
 }
 
 pub trait Renderable {
-    fn to_vertices(&self) -> Vec<Vertex>;
+    fn to_vertices(
+        &self,
+    ) -> (
+        Vec<super::renderer::SimpleVertex>,
+        Vec<super::text_renderer::TextVertex>,
+    );
 }
 
 pub trait Scene {

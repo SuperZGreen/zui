@@ -1,17 +1,19 @@
 mod font;
+pub mod premade_widgets;
 mod primitives;
 mod renderer;
 mod scene;
+mod text_renderer;
+mod texture_atlas;
 pub mod util;
 mod widget;
-pub mod premade_widgets;
-mod texture_atlas;
 // mod tree;
 
 pub use font::Font;
 pub use primitives::ScreenSpacePosition;
-pub use renderer::Renderer;
+use renderer::Renderer;
 pub use scene::{Scene, SceneHandle};
+use text_renderer::TextRenderer;
 use wgpu::Device;
 pub use widget::{Axis, Colour, Span, Widget};
 use winit::dpi::PhysicalPosition;
@@ -19,8 +21,9 @@ use winit::dpi::PhysicalPosition;
 use self::{primitives::Rectangle, scene::Renderable};
 
 pub struct Zui {
-    _font: Font,
+    font: Font,
     renderer: Renderer,
+    text_renderer: TextRenderer,
 
     width_px: u32,
     height_px: u32,
@@ -44,9 +47,16 @@ impl Zui {
             Err(_) => return Err(()),
         };
 
+        let text_renderer = TextRenderer::new(
+            device,
+            surface_configuration,
+            font_default.texture_atlas.bind_group_layout(),
+        );
+
         Ok(Self {
-            _font: font_default,
+            font: font_default,
             renderer: Renderer::new(device, surface_configuration),
+            text_renderer,
             width_px,
             height_px,
             aspect_ratio: width_px as f32 / height_px as f32,
@@ -67,7 +77,7 @@ impl Zui {
 
     /// Turns the Widget's rectangles into vertices, uploads them to the GPU
     pub fn renderer_upload(&mut self, device: &wgpu::Device, renderable: &dyn Renderable) {
-        let vertices = renderable.to_vertices();
+        let (simple_vertices, text_vertices) = renderable.to_vertices();
 
         // for vertex in vertices.iter() {
         //     info!("vert: {:?}", vertex);
@@ -75,12 +85,15 @@ impl Zui {
         // info!("");
         // info!("verts len: {}", vertices.len());
 
-        self.renderer.upload(device, &vertices);
+        self.renderer.upload(device, &simple_vertices);
+        self.text_renderer.upload(device, &text_vertices);
     }
 
     /// Tells the Zui Renderer to draw the UI
     pub fn render<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) {
         self.renderer.render(render_pass);
+        self.text_renderer
+            .render(render_pass, &self.font.texture_atlas);
     }
 
     /// Resizes the zui context
