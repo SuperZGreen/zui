@@ -1,8 +1,8 @@
 use std::collections::VecDeque;
 
 use super::{
-    primitives::Rectangle, renderer::SimpleVertex, text_renderer::TextVertex, ScreenSpacePosition,
-    Widget, Colour, Font,
+    primitives::Rectangle, renderer::SimpleVertex, text_renderer::TextVertex, Colour, Font,
+    ScreenSpacePosition, Widget,
 };
 
 pub struct SceneHandle<Scene>
@@ -59,20 +59,18 @@ where
     /// Recalculates all the widget rectangles/regions in a scene
     fn update_widget_rectangles(&mut self, aspect_ratio: f32) {
         // setting the root widget's rectangle to the whole screen
-        self.root_widget.set_rectangle(Some(Rectangle::new(
-            glam::Vec2::new(-1f32, 1f32),
-            glam::Vec2::new(2f32, 2f32),
-        )));
+        self.root_widget
+            .set_rectangle(Some(Rectangle::new(-1f32, 1f32, -1f32, 1f32)));
 
         // updating the child rectangles
         self.root_widget
             .update_child_rectangles_recursively(aspect_ratio);
-
     }
-    
+
     /// Updates the text symbols (and rectangles) for a scene
     fn update_text_symbols(&mut self, font: &Font, aspect_ratio: f32) {
-        self.root_widget.update_text_symbols_recursively(font, aspect_ratio);
+        self.root_widget
+            .update_text_symbols_recursively(font, aspect_ratio);
     }
 
     /// Propagates through all widgets and adds to self.messages queue if widget contains an on_x
@@ -127,24 +125,27 @@ where
                 simple_vertices.push(c);
                 simple_vertices.push(d);
             }
-            
+
             // adding text vertices if text exists
             let text_colour = Colour::rgb(1f32, 1f32, 1f32);
             if let Some(text) = &widget.text {
                 for symbol in text.symbols.iter() {
                     let region_vertices = symbol.region.vertices();
-                    
+
                     // println!("rect: {:?}", symbol.region);
-                    
+
                     let uv_top_left = symbol.uv_top_left;
-                    let uv_top_right = glam::Vec2::new(symbol.uv_bottom_right.x(), symbol.uv_top_left.y());
-                    let uv_bottom_left = glam::Vec2::new(symbol.uv_top_left.x(), symbol.uv_bottom_right.y());
+                    let uv_top_right =
+                        glam::Vec2::new(symbol.uv_bottom_right.x(), symbol.uv_top_left.y());
+                    let uv_bottom_left =
+                        glam::Vec2::new(symbol.uv_top_left.x(), symbol.uv_bottom_right.y());
                     let uv_bottom_right = symbol.uv_bottom_right;
-                    
+
                     let a = TextVertex::new(region_vertices[0], uv_top_left, text_colour.into());
                     let b = TextVertex::new(region_vertices[1], uv_top_right, text_colour.into());
                     let c = TextVertex::new(region_vertices[2], uv_bottom_left, text_colour.into());
-                    let d = TextVertex::new(region_vertices[3], uv_bottom_right, text_colour.into());
+                    let d =
+                        TextVertex::new(region_vertices[3], uv_bottom_right, text_colour.into());
 
                     text_vertices.push(a);
                     text_vertices.push(c);
@@ -178,7 +179,7 @@ pub trait Scene {
     fn handle_message(&mut self, message: Self::Message) -> bool;
 
     /// Returns the root widget of the scene, window's aspect ratio included for user conveninence
-    fn view(&self, aspect_ratio:f32) -> Widget<Self::Message>
+    fn view(&self, aspect_ratio: f32) -> Widget<Self::Message>
     where
         <Self as Scene>::Message: std::marker::Copy;
 }

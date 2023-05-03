@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use winit::window::WindowBuilder;
 
-use super::{Rectangle, ScreenSpacePosition, text::Text, Font};
+use super::{text::Text, Font, Rectangle, ScreenSpacePosition};
 
 #[derive(Copy, Clone)]
 pub enum Axis {
@@ -132,7 +132,7 @@ where
 
     // calculated screen space area
     pub rectangle: Option<Rectangle>,
-    
+
     // Text contained within a widget's area
     pub text: Option<Text>,
 }
@@ -141,6 +141,7 @@ impl<Message> Widget<Message>
 where
     Message: Clone + Copy,
 {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
             children: Vec::new(),
@@ -158,56 +159,67 @@ where
         }
     }
 
+    #[allow(dead_code)]
     pub fn with_axis(mut self, axis: Axis) -> Self {
         self.axis = axis;
         self
     }
 
+    #[allow(dead_code)]
     pub fn with_span(mut self, span: Span) -> Self {
         self.span = span;
         self
     }
 
+    #[allow(dead_code)]
     pub fn with_background(mut self, background: Option<Colour>) -> Self {
         self.background = background;
         self
     }
 
+    #[allow(dead_code)]
     pub fn with_callback_cursor_clicked(mut self, callback: Option<fn(&mut Self) -> bool>) -> Self {
         self.callback_cursor_clicked = callback;
         self
     }
 
+    #[allow(dead_code)]
     pub fn with_callback_cursor_on(mut self, callback: Option<fn(&mut Self) -> bool>) -> Self {
         self.callback_cursor_on = callback;
         self
     }
 
+    #[allow(dead_code)]
     pub fn with_callback_cursor_off(mut self, callback: Option<fn(&mut Self) -> bool>) -> Self {
         self.callback_cursor_off = callback;
         self
     }
 
+    #[allow(dead_code)]
     pub fn with_message_clicked(mut self, message: Option<Message>) -> Self {
         self.message_cursor_clicked = message;
         self
     }
 
+    #[allow(dead_code)]
     pub fn with_message_cursor_on(mut self, message: Option<Message>) -> Self {
         self.message_cursor_on = message;
         self
     }
 
+    #[allow(dead_code)]
     pub fn with_message_cursor_off(mut self, message: Option<Message>) -> Self {
         self.message_cursor_off = message;
         self
     }
-    
+
+    #[allow(dead_code)]
     pub fn with_text(mut self, string: &str) -> Self {
         self.text = Some(Text::new(string));
         self
     }
 
+    #[allow(dead_code)]
     pub fn push(mut self, child: Widget<Message>) -> Self {
         self.children.push(child);
         self
@@ -236,12 +248,11 @@ where
     pub fn update_child_rectangles_recursively(&mut self, aspect_ratio: f32) {
         let self_rectangle = self.rectangle.unwrap();
 
-        let axis_index = self.axis.to_index();
-
+        // getting the amount of free space within the self span for child widgets
         let self_normalised_space_available = Self::get_parent_normalised_space_available(
             &self.children,
             self.axis,
-            self_rectangle.dimensions[axis_index],
+            self_rectangle.span_by_axis(self.axis),
             aspect_ratio,
         );
 
@@ -253,10 +264,11 @@ where
         }
 
         let sum_of_child_span_weights = Self::get_sum_of_child_span_weights(&self.children);
-        let mut top_left_accumulator = self_rectangle.top_left;
+        // let mut top_left_accumulator = glam::Vec2::new(self_rectangle.x_min, self_rectangle.y_max);
+        let mut used_screen_space_accumulator = 0f32;
 
         for child in self.children.iter_mut() {
-            let screen_space_span = match child.span {
+            let child_screen_space_span = match child.span {
                 Span::ViewWidth(vw) => {
                     Span::view_width_to_screen_space_span(vw, aspect_ratio, self.axis)
                 }
@@ -269,58 +281,60 @@ where
                 Span::ParentWeight(pw) => {
                     pw / sum_of_child_span_weights
                         * self_normalised_space_available
-                        * self_rectangle.dimensions[axis_index]
+                        * self_rectangle.span_by_axis(self.axis)
                 }
-                Span::ParentRatio(pr) => pr * self_rectangle.dimensions[axis_index],
+                Span::ParentRatio(pr) => pr * self_rectangle.span_by_axis(self.axis),
             };
 
-            let mut dimensions = self_rectangle.dimensions;
-            dimensions[axis_index] = screen_space_span;
-
-            let child_rectangle = Rectangle {
-                top_left: top_left_accumulator,
-                dimensions,
+            let child_rectangle = match self.axis {
+                Axis::Vertical => Rectangle::new(
+                    self_rectangle.x_min,
+                    self_rectangle.x_max,
+                    self_rectangle.y_max - used_screen_space_accumulator - child_screen_space_span,
+                    self_rectangle.y_max - used_screen_space_accumulator,
+                ),
+                Axis::Horizontal => Rectangle::new(
+                    self_rectangle.x_min + used_screen_space_accumulator,
+                    self_rectangle.x_min + used_screen_space_accumulator + child_screen_space_span,
+                    self_rectangle.y_min,
+                    self_rectangle.y_max,
+                ),
             };
-
-            child.set_rectangle(Some(child_rectangle));
 
             // updating accumulator
-            match self.axis {
-                Axis::Vertical => top_left_accumulator[1] -= screen_space_span,
-                Axis::Horizontal => top_left_accumulator[0] += screen_space_span,
-            }
+            used_screen_space_accumulator += child_screen_space_span;
 
+            child.set_rectangle(Some(child_rectangle));
             child.update_child_rectangles_recursively(aspect_ratio);
         }
     }
-    
+
     /// Updates the text symbols for self and child widgets if applicable
     pub fn update_text_symbols_recursively(&mut self, font: &Font, aspect_ratio: f32) {
-        
         // updating own text
         if let Some(text) = &mut self.text {
-            if let Some(self_rectangle) = & self.rectangle {
+            if let Some(self_rectangle) = &self.rectangle {
                 text.update_symbols(font, self_rectangle);
             }
         }
-        
+
         // calling for children
         for child in &mut self.children {
             child.update_text_symbols_recursively(font, aspect_ratio);
         }
-        
     }
 
     // TODO: will need to change
+    /// Gets the amount of space (normalised to the parent's directional span) available
     fn get_parent_normalised_space_available(
         children: &[Widget<Message>],
         parent_widget_axis: Axis,
         parent_screen_space_span: f32,
         aspect_ratio: f32,
     ) -> f32 {
-        let mut space = 1f32;
+        let mut normalised_space_available = 1f32;
         for child in children.iter() {
-            let space_used = match child.span {
+            let child_space_used = match child.span {
                 Span::ViewHeight(vh) => {
                     Span::view_height_to_screen_space_span(vh, aspect_ratio, parent_widget_axis)
                         / parent_screen_space_span
@@ -337,9 +351,9 @@ where
                 Span::ParentWeight(_) => 0f32,
             };
 
-            space -= space_used;
+            normalised_space_available -= child_space_used;
         }
-        space
+        normalised_space_available
     }
 
     fn get_sum_of_child_span_weights(children: &[Widget<Message>]) -> f32 {
@@ -378,7 +392,7 @@ where
             None => return,
         };
 
-        if self_rectangle.cursor_is_over(cursor) {
+        if self_rectangle.is_in(cursor) {
             if let Some(callback_cursor_on) = self.callback_cursor_on {
                 callback_cursor_on(self);
             }

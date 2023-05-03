@@ -1,5 +1,7 @@
 use winit::dpi::PhysicalPosition;
 
+use super::Axis;
+
 #[derive(Debug, Copy, Clone)]
 pub struct ScreenSpacePosition {
     pub x: f32,
@@ -27,29 +29,34 @@ impl ScreenSpacePosition {
 /// right: (1, -1)
 #[derive(Debug, Clone, Copy)]
 pub struct Rectangle {
-    /// top left point of rectangle in screen space
-    pub top_left: glam::Vec2,
-
-    /// dimensions (width, height) in screen space
-    pub dimensions: glam::Vec2,
+    /// The minimum bounding x value of the rectangle
+    pub x_min: f32,
+    /// The maximum bounding x value of the rectangle
+    pub x_max: f32,
+    /// The minimum bounding y value of the rectangle
+    pub y_min: f32,
+    /// The maximum bounding y value of the rectangle
+    pub y_max: f32,
 }
 
 impl Rectangle {
-    pub fn new(top_left: glam::Vec2, dimensions: glam::Vec2) -> Self {
+    pub fn new(x_min: f32, x_max: f32, y_min: f32, y_max: f32) -> Self {
         Self {
-            top_left,
-            dimensions,
+            x_min,
+            x_max,
+            y_min,
+            y_max,
         }
     }
 
-    /// Returns true if the cursor is over this rectangle
-    pub fn cursor_is_over(&self, cursor: ScreenSpacePosition) -> bool {
-        cursor.x >= self.top_left.x()
-            && cursor.x <= self.top_left.x() + self.dimensions.x()
-            && cursor.y <= self.top_left.y()
-            && cursor.y >= self.top_left.y() - self.dimensions.y()
+    /// Returns true if the point is over this rectangle
+    pub fn is_in(&self, position: ScreenSpacePosition) -> bool {
+        position.x >= self.x_min
+            && position.x <= self.x_max
+            && position.y >= self.y_min
+            && position.y <= self.y_max
     }
-    
+
     /// Returns the screen space position vertices that make up the rectangle in the following order:
     ///
     ///   0 -----> 1
@@ -59,14 +66,34 @@ impl Rectangle {
     ///    /
     ///   2 -----> 3
     pub fn vertices(&self) -> [glam::Vec2; 4] {
-        let top_left = self.top_left;
-        let bottom_right = self.top_left + glam::Vec2::new(self.dimensions.x(), -self.dimensions.y());
+        let top_left = glam::Vec2::new(self.x_min, self.y_max);
+        let top_right = glam::Vec2::new(self.x_max, self.y_max);
+        let bottom_left = glam::Vec2::new(self.x_min, self.y_min);
+        let bottom_right = glam::Vec2::new(self.x_max, self.y_min);
 
         [
             top_left,
-            glam::Vec2::new(bottom_right.x(), top_left.y()),
-            glam::Vec2::new(top_left.x(), bottom_right.y()),
+            top_right,
+            bottom_left,
             bottom_right,
         ]
+    }
+    
+    /// Returns the space width of the rectangle
+    pub fn width(&self) -> f32 {
+        self.x_max - self.x_min
+    }
+
+    /// Returns the space width of the rectangle
+    pub fn height(&self) -> f32 {
+        self.y_max - self.y_min
+    }
+    
+    /// Gives the span of the Rectangle by its axis
+    pub fn span_by_axis(&self, axis: Axis) -> f32 {
+        match axis {
+            Axis::Vertical => self.height(),
+            Axis::Horizontal => self.width(),
+        }
     }
 }

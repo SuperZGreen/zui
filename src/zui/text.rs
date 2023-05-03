@@ -20,7 +20,7 @@ impl Text {
     pub fn update_symbols(&mut self, font: &Font, parent_rect: &Rectangle) {
         let scale_factor = 0.001f32;
         let mut glyph_origin =
-            parent_rect.top_left - glam::Vec2::new(0f32, font.line_metrics.ascent * scale_factor);
+            glam::Vec2::new(parent_rect.x_min, parent_rect.y_max - font.line_metrics.ascent * scale_factor);
 
         for character in self.string.chars() {
             let (info, uv_top_left, uv_bottom_right) = match font.get_symbol(character) {
@@ -32,16 +32,20 @@ impl Text {
             };
 
             let symbol_metrics = &info.metrics;
+            
+            let symbol_width = symbol_metrics.width as f32 * scale_factor;
+            let symbol_height = symbol_metrics.height as f32 * scale_factor;
+            let symbol_x_shift = symbol_metrics.xmin as f32 * scale_factor;
+            let symbol_y_shift = symbol_metrics.ymin as f32 * scale_factor;
+            let symbol_advance_width = symbol_metrics.advance_width * scale_factor;
 
             self.symbols.push(Symbol {
                 character,
                 region: Rectangle::new(
-                    glyph_origin
-                        + glam::Vec2::new(
-                            symbol_metrics.xmin as f32 * scale_factor,
-                            (symbol_metrics.ymin + symbol_metrics.height as i32) as f32 * scale_factor,
-                        ),
-                    glam::Vec2::new(symbol_metrics.width as f32 * scale_factor, symbol_metrics.height as f32 * scale_factor),
+                    glyph_origin.x() + symbol_x_shift,
+                    glyph_origin.x() + symbol_x_shift + symbol_width,
+                    glyph_origin.y() + symbol_y_shift,
+                    glyph_origin.y() + symbol_y_shift + symbol_height,
                 ),
                 uv_top_left,
                 uv_bottom_right,
