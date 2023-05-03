@@ -51,7 +51,7 @@ fn main() {
     .unwrap();
 
     let main_scene = MainScene::new();
-    let mut scene_handle = SceneHandle::new(main_scene, zui.aspect_ratio());
+    let mut scene_handle = SceneHandle::new(main_scene, zui.font(), zui.aspect_ratio());
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
@@ -99,7 +99,7 @@ fn main() {
             Event::MainEventsCleared => {
                 // TODO: Solving
                 if let Some(cursor_state) = zui.cursor_state() {
-                    scene_handle.update(cursor_state, zui.aspect_ratio());
+                    scene_handle.update(cursor_state, zui.font(), zui.aspect_ratio());
                 }
 
                 window.request_redraw();
@@ -107,7 +107,7 @@ fn main() {
             Event::RedrawRequested(_) => {
                 if !render_state.skip_rendering() {
                     // uploading
-                    zui.renderer_upload(render_state.device(), &scene_handle);
+                    zui.upload_vertices(render_state.device(), &scene_handle);
 
                     // rendering
                     match render_state.render(&zui) {

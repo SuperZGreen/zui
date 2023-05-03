@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use winit::window::WindowBuilder;
 
-use super::{Rectangle, ScreenSpacePosition};
+use super::{Rectangle, ScreenSpacePosition, text::Text, Font};
 
 #[derive(Copy, Clone)]
 pub enum Axis {
@@ -132,6 +132,9 @@ where
 
     // calculated screen space area
     pub rectangle: Option<Rectangle>,
+    
+    // Text contained within a widget's area
+    pub text: Option<Text>,
 }
 
 impl<Message> Widget<Message>
@@ -151,6 +154,7 @@ where
             message_cursor_off: None,
             background: None,
             rectangle: None,
+            text: None,
         }
     }
 
@@ -196,6 +200,11 @@ where
 
     pub fn with_message_cursor_off(mut self, message: Option<Message>) -> Self {
         self.message_cursor_off = message;
+        self
+    }
+    
+    pub fn with_text(mut self, string: &str) -> Self {
+        self.text = Some(Text::new(string));
         self
     }
 
@@ -283,6 +292,23 @@ where
 
             child.update_child_rectangles_recursively(aspect_ratio);
         }
+    }
+    
+    /// Updates the text symbols for self and child widgets if applicable
+    pub fn update_text_symbols_recursively(&mut self, font: &Font, aspect_ratio: f32) {
+        
+        // updating own text
+        if let Some(text) = &mut self.text {
+            if let Some(self_rectangle) = & self.rectangle {
+                text.update_symbols(font, self_rectangle);
+            }
+        }
+        
+        // calling for children
+        for child in &mut self.children {
+            child.update_text_symbols_recursively(font, aspect_ratio);
+        }
+        
     }
 
     // TODO: will need to change

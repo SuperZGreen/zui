@@ -49,4 +49,24 @@ impl Rectangle {
             && cursor.y <= self.top_left.y()
             && cursor.y >= self.top_left.y() - self.dimensions.y()
     }
+    
+    /// Returns the screen space position vertices that make up the rectangle in the following order:
+    ///
+    ///   0 -----> 1
+    ///          /
+    ///        /
+    ///      /
+    ///    /
+    ///   2 -----> 3
+    pub fn vertices(&self) -> [glam::Vec2; 4] {
+        let top_left = self.top_left;
+        let bottom_right = self.top_left + glam::Vec2::new(self.dimensions.x(), -self.dimensions.y());
+
+        [
+            top_left,
+            glam::Vec2::new(bottom_right.x(), top_left.y()),
+            glam::Vec2::new(top_left.x(), bottom_right.y()),
+            bottom_right,
+        ]
+    }
 }

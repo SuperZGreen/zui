@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use super::{
     primitives::Rectangle, renderer::SimpleVertex, text_renderer::TextVertex, ScreenSpacePosition,
-    Widget,
+    Widget, Colour, Font,
 };
 
 pub struct SceneHandle<Scene>
@@ -19,27 +19,29 @@ impl<Scene> SceneHandle<Scene>
 where
     Scene: super::Scene,
 {
-    pub fn new(scene: Scene, aspect_ratio: f32) -> Self {
+    pub fn new(scene: Scene, font: &Font, aspect_ratio: f32) -> Self {
         let mut this = Self {
-            root_widget: scene.view(),
+            root_widget: scene.view(aspect_ratio),
             scene,
             widget_recreation_required: false,
             messages: VecDeque::new(),
         };
         this.update_widget_rectangles(aspect_ratio);
+        this.update_text_symbols(font, aspect_ratio);
 
         this
     }
 
     /// Handles external events and rebuilds widgets and rectangles if required
-    pub fn update(&mut self, cursor_position: ScreenSpacePosition, aspect_ratio: f32) {
+    pub fn update(&mut self, cursor_position: ScreenSpacePosition, font: &Font, aspect_ratio: f32) {
         self.solve_cursor_events(cursor_position);
 
         self.handle_messages();
 
         if self.widget_recreation_required {
-            self.recreate_widgets();
+            self.recreate_widgets(aspect_ratio);
             self.update_widget_rectangles(aspect_ratio);
+            self.update_text_symbols(font, aspect_ratio);
             self.widget_recreation_required = false;
         }
     }
@@ -50,11 +52,11 @@ where
     }
 
     /// Called when the widgets of a scene need to change/update
-    fn recreate_widgets(&mut self) {
-        self.root_widget = self.scene.view();
+    fn recreate_widgets(&mut self, aspect_ratio: f32) {
+        self.root_widget = self.scene.view(aspect_ratio);
     }
 
-    /// Called when the widgets of a scene's rectangles need to be recalculated
+    /// Recalculates all the widget rectangles/regions in a scene
     fn update_widget_rectangles(&mut self, aspect_ratio: f32) {
         // setting the root widget's rectangle to the whole screen
         self.root_widget.set_rectangle(Some(Rectangle::new(
@@ -66,13 +68,11 @@ where
         self.root_widget
             .update_child_rectangles_recursively(aspect_ratio);
 
-        // debug printing rectangles
-        // self.root_widget.traverse(&mut |widget| {
-        //     match widget.rectangle {
-        //         Some(r) => println!("rect: {:?}", r),
-        //         None => println!("rect: None"),
-        //     };
-        // });
+    }
+    
+    /// Updates the text symbols (and rectangles) for a scene
+    fn update_text_symbols(&mut self, font: &Font, aspect_ratio: f32) {
+        self.root_widget.update_text_symbols_recursively(font, aspect_ratio);
     }
 
     /// Propagates through all widgets and adds to self.messages queue if widget contains an on_x
@@ -101,42 +101,60 @@ where
 {
     fn to_vertices(&self) -> (Vec<SimpleVertex>, Vec<TextVertex>) {
         let mut simple_vertices = Vec::new();
-        let text_vertices = Vec::new();
+        let mut text_vertices = Vec::new();
 
         // simple rectangle vertices
         self.root_widget.traverse(&mut |widget| {
-            let colour = match widget.background {
-                Some(c) => c,
-                None => return,
-            };
-
             let rectangle = match widget.rectangle {
                 Some(r) => r,
                 None => return,
             };
 
-            let a = SimpleVertex::new(rectangle.top_left, colour.into());
-            let b = SimpleVertex::new(
-                rectangle.top_left + glam::Vec2::new(rectangle.dimensions[0], 0f32),
-                colour.into(),
-            );
-            let c = SimpleVertex::new(
-                rectangle.top_left + glam::Vec2::new(0f32, -rectangle.dimensions[1]),
-                colour.into(),
-            );
-            let d = SimpleVertex::new(
-                rectangle.top_left
-                    + glam::Vec2::new(rectangle.dimensions[0], -rectangle.dimensions[1]),
-                colour.into(),
-            );
+            // adding the background box vertices if it contains a colour/background setting
+            if let Some(colour) = widget.background {
+                let rectangle_vertices = rectangle.vertices();
 
-            simple_vertices.push(a);
-            simple_vertices.push(c);
-            simple_vertices.push(b);
+                let a = SimpleVertex::new(rectangle_vertices[0], colour.into());
+                let b = SimpleVertex::new(rectangle_vertices[1], colour.into());
+                let c = SimpleVertex::new(rectangle_vertices[2], colour.into());
+                let d = SimpleVertex::new(rectangle_vertices[3], colour.into());
 
-            simple_vertices.push(b);
-            simple_vertices.push(c);
-            simple_vertices.push(d);
+                simple_vertices.push(a);
+                simple_vertices.push(c);
+                simple_vertices.push(b);
+
+                simple_vertices.push(b);
+                simple_vertices.push(c);
+                simple_vertices.push(d);
+            }
+            
+            // adding text vertices if text exists
+            let text_colour = Colour::rgb(1f32, 1f32, 1f32);
+            if let Some(text) = &widget.text {
+                for symbol in text.symbols.iter() {
+                    let region_vertices = symbol.region.vertices();
+                    
+                    // println!("rect: {:?}", symbol.region);
+                    
+                    let uv_top_left = symbol.uv_top_left;
+                    let uv_top_right = glam::Vec2::new(symbol.uv_bottom_right.x(), symbol.uv_top_left.y());
+                    let uv_bottom_left = glam::Vec2::new(symbol.uv_top_left.x(), symbol.uv_bottom_right.y());
+                    let uv_bottom_right = symbol.uv_bottom_right;
+                    
+                    let a = TextVertex::new(region_vertices[0], uv_top_left, text_colour.into());
+                    let b = TextVertex::new(region_vertices[1], uv_top_right, text_colour.into());
+                    let c = TextVertex::new(region_vertices[2], uv_bottom_left, text_colour.into());
+                    let d = TextVertex::new(region_vertices[3], uv_bottom_right, text_colour.into());
+
+                    text_vertices.push(a);
+                    text_vertices.push(c);
+                    text_vertices.push(b);
+
+                    text_vertices.push(b);
+                    text_vertices.push(c);
+                    text_vertices.push(d);
+                }
+            }
         });
 
         (simple_vertices, text_vertices)
@@ -159,8 +177,8 @@ pub trait Scene {
     /// Returns true if a rebuild (call of view function) is required
     fn handle_message(&mut self, message: Self::Message) -> bool;
 
-    /// Returns the root widget of the scene
-    fn view(&self) -> Widget<Self::Message>
+    /// Returns the root widget of the scene, window's aspect ratio included for user conveninence
+    fn view(&self, aspect_ratio:f32) -> Widget<Self::Message>
     where
         <Self as Scene>::Message: std::marker::Copy;
 }

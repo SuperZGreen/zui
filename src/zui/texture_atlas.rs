@@ -1,4 +1,4 @@
-use crunch::{Rotation, Item};
+use crunch::{Item, Rotation};
 use image::{DynamicImage, GenericImage};
 
 struct UnpackedSprite {
@@ -20,6 +20,9 @@ pub struct PackedSprite {
 }
 
 impl TextureAtlasBuilder {
+    /// The number of pixels a sprite is padded by
+    const PADDING: u32 = 1u32;
+
     pub fn new() -> Self {
         Self {
             unpacked_sprites: Vec::new(),
@@ -38,11 +41,16 @@ impl TextureAtlasBuilder {
         // preparing rectangles to be packed
         let mut rects_to_place = Vec::new();
         for (index, unpacked_sprite) in self.unpacked_sprites.iter().enumerate() {
-            rects_to_place.push(Item::new(index, unpacked_sprite.width_px as usize, unpacked_sprite.height_px as usize, Rotation::None));
+            rects_to_place.push(Item::new(
+                index,
+                (unpacked_sprite.width_px + Self::PADDING * 2) as usize,
+                (unpacked_sprite.height_px + Self::PADDING * 2) as usize,
+                Rotation::None,
+            ));
         }
 
         // getting the packed rectangles
-        let packed_items = match crunch::pack_into_po2(1024*10, rects_to_place) {
+        let packed_items = match crunch::pack_into_po2(1024 * 10, rects_to_place) {
             Ok(res) => res,
             Err(_) => {
                 error!("failed to pack items!");
@@ -63,12 +71,12 @@ impl TextureAtlasBuilder {
             atlas_image
                 .copy_from(
                     unpacked_sprite.image.as_luma8().unwrap(),
-                    rect.x as u32,
-                    rect.y as u32,
+                    rect.x as u32 + Self::PADDING,
+                    rect.y as u32 + Self::PADDING,
                 )
                 .expect("copy_from failed!");
         }
-        
+
         // _ = atlas_image.save("output.png");
 
         //
@@ -173,7 +181,8 @@ impl TextureAtlasBuilder {
         let mut packed_sprites = Vec::new();
         let indices_used = self.unpacked_sprites.len();
         for index in 0..indices_used {
-            let rect = packed_items.items
+            let rect = packed_items
+                .items
                 .iter()
                 .find(|item| item.data == index)
                 .expect(&format!("could not find pack result with id = {}", index));
