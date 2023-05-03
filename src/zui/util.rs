@@ -1,14 +1,17 @@
 /// Converts an arbitrary reference into a u8 slice
+#[allow(dead_code)]
 pub unsafe fn ref_as_u8_slice<T>(data: &T) -> &[u8] {
     std::slice::from_raw_parts((data as *const T) as *const u8, std::mem::size_of_val(data))
 }
 
 /// Converts an arbitrary slice into a u8 slice
+#[allow(dead_code)]
 pub unsafe fn slice_as_u8_slice<T>(data: &[T]) -> &[u8] {
     std::slice::from_raw_parts(data.as_ptr() as *const u8, std::mem::size_of_val(data))
 }
 
 /// Creates a shader module from a shader source file path
+#[allow(dead_code)]
 pub fn shader_module_from_file_path(
     device: &wgpu::Device,
     shader_file_path: &str,

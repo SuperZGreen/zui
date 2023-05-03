@@ -40,8 +40,7 @@ fn fs_main(in: VertexShaderOutput) -> @location(0) vec4<f32> {
     // return in.colour;
     let coverage = textureSample(texture, texture_sampler, in.uv).r;
 
-    let colour = vec4<f32>(1.0, 1.0, 1.0, coverage);
+    let colour = vec4<f32>(in.colour.rgb, coverage);
 
     return colour;
-    // return vec4<f32>(1.0, 0.5, 0.2, 1.0);
 }

@@ -314,7 +314,7 @@ where
         // updating own text
         if let Some(text) = &mut self.text {
             if let Some(self_rectangle) = &self.rectangle {
-                text.update_symbols(font, self_rectangle);
+                text.update_symbols(font, self_rectangle, aspect_ratio);
             }
         }
 
