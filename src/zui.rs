@@ -3,8 +3,8 @@ pub mod premade_widgets;
 mod primitives;
 mod renderer;
 mod scene;
-mod text_renderer;
 mod text;
+mod text_renderer;
 mod texture_atlas;
 pub mod util;
 mod widget;
@@ -63,94 +63,10 @@ impl Zui {
         })
     }
 
-    /// Adds the vertices for a symbol to text_vertices, returns the offset of the rendering position
-    fn add_symbol(
-        font: &Font,
-        text_vertices: &mut Vec<TextVertex>,
-        character: char,
-        location: glam::Vec2,
-        scale: f32,
-    ) -> glam::Vec2 {
-        let (symbol_info, top_left, bottom_right) = font.get_symbol(character).unwrap();
-
-        let metrics = &symbol_info.metrics;
-
-        let hspan = 0.5f32;
-        let text_verts = [
-            TextVertex::new(
-                glam::Vec2::new(
-                    (metrics.xmin) as f32 * scale + location.x(),
-                    (metrics.ymin + metrics.height as i32) as f32 * scale + location.y(),
-                ),
-                glam::vec2(top_left.x(), top_left.y()),
-                glam::Vec4::new(1f32, 1f32, 1f32, 1f32),
-            ),
-            TextVertex::new(
-                glam::Vec2::new(
-                    (metrics.xmin + metrics.width as i32) as f32 * scale + location.x(),
-                    (metrics.ymin + metrics.height as i32) as f32 * scale + location.y(),
-                ),
-                glam::vec2(bottom_right.x(), top_left.y()),
-                glam::Vec4::new(1f32, 1f32, 1f32, 1f32),
-            ),
-            TextVertex::new(
-                glam::Vec2::new(
-                    (metrics.xmin) as f32 * scale + location.x(),
-                    (metrics.ymin) as f32 * scale + location.y(),
-                ),
-                glam::vec2(top_left.x(), bottom_right.y()),
-                glam::Vec4::new(1f32, 1f32, 1f32, 1f32),
-            ),
-            TextVertex::new(
-                glam::Vec2::new(
-                    (metrics.xmin + metrics.width as i32) as f32 * scale + location.x(),
-                    (metrics.ymin) as f32 * scale + location.y(),
-                ),
-                glam::vec2(bottom_right.x(), bottom_right.y()),
-                glam::Vec4::new(1f32, 1f32, 1f32, 1f32),
-            ),
-        ];
-
-        text_vertices.push(text_verts[0]);
-        text_vertices.push(text_verts[2]);
-        text_vertices.push(text_verts[1]);
-
-        text_vertices.push(text_verts[1]);
-        text_vertices.push(text_verts[2]);
-        text_vertices.push(text_verts[3]);
-
-        glam::Vec2::new(
-            metrics.advance_width * scale,
-            metrics.advance_height * scale,
-        )
-
-    }
-
-    fn generate_text_vertices(font: &Font, text: &str, starting_position: glam::Vec2, scale: f32) -> Vec<TextVertex> {
-        let mut text_vertices = Vec::new();
-        let mut current_position = starting_position;
-
-        for character in text.chars() {
-            let offset = Self::add_symbol(font, &mut text_vertices, character, current_position, scale);
-            current_position += offset
-        }
-        
-        text_vertices
-    }
-
     /// Turns the Widget's rectangles into vertices, uploads them to the GPU
     pub fn upload_vertices(&mut self, device: &wgpu::Device, renderable: &dyn Renderable) {
-        let (simple_vertices, text_vertices) = renderable.to_vertices();
-
-        // for vertex in vertices.iter() {
-        //     info!("vert: {:?}", vertex);
-        // }
-        // info!("");
-        // info!("verts len: {}", vertices.len());
-
-        // let mut other_verts = Self::generate_text_vertices(&self.font, "Hello there! :^) ygubuylka", glam::Vec2::new(-1f32, 0f32), 0.0005f32);
-
-        // text_vertices.append(&mut other_verts);
+        let (simple_vertices, text_vertices) =
+            renderable.to_vertices(glam::Vec2::new(self.width_px as f32, self.height_px as f32));
 
         self.renderer.upload(device, &simple_vertices);
         self.text_renderer.upload(device, &text_vertices);

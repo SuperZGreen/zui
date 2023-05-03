@@ -96,4 +96,5 @@ impl Rectangle {
             Axis::Horizontal => self.width(),
         }
     }
+
 }

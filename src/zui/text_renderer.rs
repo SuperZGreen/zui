@@ -1,28 +1,52 @@
 use wgpu::util::DeviceExt;
 
-use super::{texture_atlas::TextureAtlas, util};
+use super::{primitives::Rectangle, texture_atlas::TextureAtlas, util};
 
 #[allow(dead_code)]
 #[repr(C, align(16))]
 #[derive(Copy, Clone, Debug)]
 pub struct TextVertex {
+    // The colour of the text to be rendered
     colour: glam::Vec4,
+
+    // The UV of the TextVertex on the text texture atlas texture
     uv: glam::Vec2,
+
+    // The screen space position of the text vertex
     position: glam::Vec2,
+
+    // The bounds of the parent widget rectangle that contains the text, used for clipping text to
+    // prevent visual overflow
+    clip_bounds: glam::Vec4,
 }
 
 impl TextVertex {
-    pub fn new(position: glam::Vec2, uv: glam::Vec2, colour: glam::Vec4) -> TextVertex {
+    pub fn new(
+        position: glam::Vec2,
+        uv: glam::Vec2,
+        colour: glam::Vec4,
+        parent_rectangle: &Rectangle,
+        viewport_dimensions_px: glam::Vec2,
+    ) -> TextVertex {
         TextVertex {
             position,
             uv,
             colour,
+            // Converting from normalised device coordinates to frame buffer coordinates
+            clip_bounds: glam::Vec4::new(
+                (parent_rectangle.x_min / 2f32 + 0.5f32) * viewport_dimensions_px.x() - 0.5f32,
+                (parent_rectangle.x_max / 2f32 + 0.5f32) * viewport_dimensions_px.x() - 0.5f32,
+                // TODO
+                (parent_rectangle.y_min / 2f32 + 0.5f32) * -1f32 * viewport_dimensions_px.y(),
+                // TODO
+                (parent_rectangle.y_max / 2f32 + 0.5f32) * -1f32 * viewport_dimensions_px.y(),
+            ),
         }
     }
 
     pub fn vertex_buffer_layout<'a>() -> wgpu::VertexBufferLayout<'a> {
-        const VERTEX_ATTRIBUTES: [wgpu::VertexAttribute; 3] =
-            wgpu::vertex_attr_array![0 => Float32x4, 1=> Float32x2, 2=> Float32x2];
+        const VERTEX_ATTRIBUTES: [wgpu::VertexAttribute; 4] =
+            wgpu::vertex_attr_array![0 => Float32x4, 1=> Float32x2, 2=> Float32x2, 3 => Float32x4];
         let vertex_buffer_layout: wgpu::VertexBufferLayout = wgpu::VertexBufferLayout {
             array_stride: std::mem::size_of::<TextVertex>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Vertex,

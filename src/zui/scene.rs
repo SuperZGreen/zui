@@ -97,7 +97,10 @@ impl<Scene> Renderable for SceneHandle<Scene>
 where
     Scene: super::Scene,
 {
-    fn to_vertices(&self) -> (Vec<SimpleVertex>, Vec<TextVertex>) {
+    fn to_vertices(
+        &self,
+        viewport_dimensions_px: glam::Vec2,
+    ) -> (Vec<SimpleVertex>, Vec<TextVertex>) {
         let mut simple_vertices = Vec::new();
         let mut text_vertices = Vec::new();
 
@@ -141,11 +144,34 @@ where
                         glam::Vec2::new(symbol.uv_top_left.x(), symbol.uv_bottom_right.y());
                     let uv_bottom_right = symbol.uv_bottom_right;
 
-                    let a = TextVertex::new(region_vertices[0], uv_top_left, text_colour.into());
-                    let b = TextVertex::new(region_vertices[1], uv_top_right, text_colour.into());
-                    let c = TextVertex::new(region_vertices[2], uv_bottom_left, text_colour.into());
-                    let d =
-                        TextVertex::new(region_vertices[3], uv_bottom_right, text_colour.into());
+                    let a = TextVertex::new(
+                        region_vertices[0],
+                        uv_top_left,
+                        text_colour.into(),
+                        &rectangle,
+                        viewport_dimensions_px,
+                    );
+                    let b = TextVertex::new(
+                        region_vertices[1],
+                        uv_top_right,
+                        text_colour.into(),
+                        &rectangle,
+                        viewport_dimensions_px,
+                    );
+                    let c = TextVertex::new(
+                        region_vertices[2],
+                        uv_bottom_left,
+                        text_colour.into(),
+                        &rectangle,
+                        viewport_dimensions_px,
+                    );
+                    let d = TextVertex::new(
+                        region_vertices[3],
+                        uv_bottom_right,
+                        text_colour.into(),
+                        &rectangle,
+                        viewport_dimensions_px,
+                    );
 
                     text_vertices.push(a);
                     text_vertices.push(c);
@@ -165,6 +191,7 @@ where
 pub trait Renderable {
     fn to_vertices(
         &self,
+        viewport_dimensions_px: glam::Vec2,
     ) -> (
         Vec<super::renderer::SimpleVertex>,
         Vec<super::text_renderer::TextVertex>,

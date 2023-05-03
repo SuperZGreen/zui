@@ -70,7 +70,7 @@ impl Scene for MainScene {
                 Widget::new()
                     .with_span(Span::ParentWeight(3f32))
                     .with_background(Some(Colour::rgb(0.2f32, 0.6f32, 0.1f32)))
-                    .with_text("Hello again! :^)"),
+                    .with_text("Hello again! :^) This is a very long line that is very, very long and will need a lot of space to render correctly which is unfortunate because text wrapping might not yet be implemented properly"),
             )
             .push(Widget::new())
             .push(
