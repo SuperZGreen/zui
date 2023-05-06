@@ -3,6 +3,8 @@ pub mod premade_widgets;
 mod primitives;
 mod renderer;
 mod scene;
+mod scene_handle;
+mod renderable;
 mod text;
 mod text_renderer;
 mod texture_atlas;
@@ -13,12 +15,14 @@ mod widget;
 pub use font::Font;
 pub use primitives::ScreenSpacePosition;
 use renderer::Renderer;
-pub use scene::{Scene, SceneHandle};
+pub use renderable::Renderable;
+pub use scene::Scene;
+pub use scene_handle::SceneHandle;
 use text_renderer::TextRenderer;
 pub use widget::{Axis, Colour, Span, Widget};
 use winit::dpi::PhysicalPosition;
 
-use self::{primitives::Rectangle, scene::Renderable, text_renderer::TextVertex};
+use self::primitives::Rectangle;
 
 pub struct Zui {
     font: Font,

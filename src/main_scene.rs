@@ -38,7 +38,7 @@ impl Scene for MainScene {
     type Message = Message;
 
     fn handle_message(&mut self, message: Self::Message) -> bool {
-        let mut rebuild_required = false;
+        let rebuild_required = false;
 
         match message {
             Message::StartClicked => {
