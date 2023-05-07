@@ -1,29 +1,20 @@
+use std::collections::VecDeque;
+
 use crate::zui::{premade_widgets::Button, Axis, Colour, Scene, Span, Widget};
 
 pub struct MainScene {
-    cursor_over_button: bool,
-    button_colour: Colour,
+    external_messages: VecDeque<Message>
 }
 
 impl MainScene {
-    const BUTTON_OFF_COLOUR: Colour = Colour {
-        r: 0.1f32,
-        g: 0.1f32,
-        b: 0.6f32,
-        a: 1f32,
-    };
-    const BUTTON_ON_COLOUR: Colour = Colour {
-        r: 0.3f32,
-        g: 0.6f32,
-        b: 0.3f32,
-        a: 1f32,
-    };
-
     pub fn new() -> Self {
         Self {
-            cursor_over_button: false,
-            button_colour: Self::BUTTON_OFF_COLOUR,
+            external_messages: VecDeque::new(),
         }
+    }
+    
+    pub fn pop_external_message(&mut self) -> Option<Message> {
+        self.external_messages.pop_front()
     }
 }
 
@@ -51,6 +42,8 @@ impl Scene for MainScene {
                 info!("Exit clicked!");
             }
         }
+        
+        self.external_messages.push_back(message);
 
         rebuild_required
     }

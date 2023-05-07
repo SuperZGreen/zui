@@ -47,7 +47,7 @@ where
     pub fn queue_widget_recreation(&mut self) {
         self.widget_recreation_required = true;
     }
-
+    
     /// Called when the widgets of a scene need to change/update
     fn recreate_widgets(&mut self, aspect_ratio: f32) {
         self.root_widget = self.scene.view(aspect_ratio);
@@ -87,6 +87,11 @@ where
                 self.widget_recreation_required = true;
             }
         }
+    }
+
+    /// Gives a mut reference to the underlying scene
+    pub fn scene_mut(&mut self) -> &mut Scene {
+        &mut self.scene
     }
 }
 
