@@ -50,8 +50,8 @@ fn fs_main(in: VertexShaderOutput) -> @location(0) vec4<f32> {
 
     if in.clip_position.x < clip_x_min
         || in.clip_position.x > clip_x_max
-        // || in.clip_position.y < clip_y_min
-        // || in.clip_position.y > clip_x_max
+        || in.clip_position.y < clip_y_min
+        || in.clip_position.y > clip_y_max
     {
         discard;
     }

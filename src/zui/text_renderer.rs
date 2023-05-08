@@ -21,6 +21,16 @@ pub struct TextVertex {
 }
 
 impl TextVertex {
+    /// Converts an X-axis value from wgpu's normalised device coordinates (NDC) to frame buffer coordinates
+    fn normalised_device_space_to_frame_buffer_space_x(position: f32, viewport_px_x: f32) -> f32 {
+        (position / 2f32 + 0.5f32) * viewport_px_x - 0.5f32
+    }
+
+    /// Converts an Y-axis value from wgpu's normalised device coordinates (NDC) to frame buffer coordinates
+    fn normalised_device_space_to_frame_buffer_space_y(position: f32, viewport_px_y: f32) -> f32 {
+        (1f32 - (position / 2f32 + 0.5f32)) * viewport_px_y - 0.5f32
+    }
+
     pub fn new(
         position: glam::Vec2,
         uv: glam::Vec2,
@@ -28,18 +38,36 @@ impl TextVertex {
         parent_rectangle: &Rectangle,
         viewport_dimensions_px: glam::Vec2,
     ) -> TextVertex {
+        // clip bounds are frame buffer coordinates
+        let clip_bound_x_min = Self::normalised_device_space_to_frame_buffer_space_x(
+            parent_rectangle.x_min,
+            viewport_dimensions_px.x(),
+        );
+        let clip_bound_x_max = Self::normalised_device_space_to_frame_buffer_space_x(
+            parent_rectangle.x_max,
+            viewport_dimensions_px.x(),
+        );
+        
+        // Note: the max and min will swap due to the y-down nature of wgpu's frame buffer coordinates
+        let clip_bound_y_max = Self::normalised_device_space_to_frame_buffer_space_y(
+            parent_rectangle.y_min,
+            viewport_dimensions_px.y(),
+        );
+        let clip_bound_y_min = Self::normalised_device_space_to_frame_buffer_space_y(
+            parent_rectangle.y_max,
+            viewport_dimensions_px.y(),
+        );
+
         TextVertex {
             position,
             uv,
             colour,
             // Converting from normalised device coordinates to frame buffer coordinates
             clip_bounds: glam::Vec4::new(
-                (parent_rectangle.x_min / 2f32 + 0.5f32) * viewport_dimensions_px.x() - 0.5f32,
-                (parent_rectangle.x_max / 2f32 + 0.5f32) * viewport_dimensions_px.x() - 0.5f32,
-                // TODO
-                (parent_rectangle.y_min / 2f32 + 0.5f32) * -1f32 * viewport_dimensions_px.y(),
-                // TODO
-                (parent_rectangle.y_max / 2f32 + 0.5f32) * -1f32 * viewport_dimensions_px.y(),
+                clip_bound_x_min,
+                clip_bound_x_max,
+                clip_bound_y_min,
+                clip_bound_y_max,
             ),
         }
     }
