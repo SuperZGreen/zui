@@ -2,10 +2,12 @@ use super::Widget;
 
 pub trait Scene {
     type Message: Copy + Clone;
+    type ExternalMessage;
 
-    /// Implements the update logic when a new message is received,
-    /// Returns true if a rebuild (call of view function) is required
-    fn handle_message(&mut self, message: Self::Message) -> bool;
+    /// Implements the update logic when a new message is received from a widget,
+    /// Returns an external message, ie a command that is to be handled by the external context
+    /// and a boolean that shows whether or not a scene rebuild is required
+    fn handle_message(&mut self, message: Self::Message) -> (Option<Self::ExternalMessage>, bool);
 
     /// Returns the root widget of the scene, window's aspect ratio included for user conveninence
     fn view(&self, aspect_ratio: f32) -> Widget<Self::Message>

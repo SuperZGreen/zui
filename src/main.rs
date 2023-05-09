@@ -20,6 +20,12 @@ use main_scene::MainScene;
 
 use crate::zui::SceneHandle;
 
+pub enum UiCommand {
+    Start,
+    GoToOptions,
+    Exit,
+}
+
 fn main() {
     info!("starting!");
 
@@ -51,7 +57,7 @@ fn main() {
     .unwrap();
 
     let main_scene = MainScene::new();
-    let mut scene_handle = SceneHandle::new(main_scene, zui.font(), zui.aspect_ratio());
+    let mut scene_handle: SceneHandle<MainScene> = SceneHandle::new(main_scene, zui.font(), zui.aspect_ratio());
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
@@ -63,8 +69,7 @@ fn main() {
             } if window_id == window.id() => {
                 match event {
                     WindowEvent::CloseRequested => {
-                        info!("exiting!");
-                        *control_flow = ControlFlow::Exit;
+                        exit(control_flow);
                     }
                     WindowEvent::Resized(physical_size) => {
                         render_state.resize(physical_size);
@@ -82,7 +87,7 @@ fn main() {
                             },
                         ..
                     } => {
-                        *control_flow = ControlFlow::Exit;
+                        exit(control_flow);
                     }
                     WindowEvent::CursorMoved { position, .. } => {
                         zui.update_cursor_position(*position);
@@ -111,6 +116,15 @@ fn main() {
                 // TODO: Solving
                 scene_handle.update(zui.cursor_state(), zui.font(), zui.aspect_ratio());
                 zui.update();
+                
+                // solving user behaviour
+                while let Some(message) = scene_handle.pop_external_message() {
+                    match message {
+                        UiCommand::Start => println!("started!"),
+                        UiCommand::GoToOptions => println!("gone to options!"),
+                        UiCommand::Exit => exit(control_flow),
+                    }
+                }
 
                 window.request_redraw();
             }
@@ -139,4 +153,9 @@ fn main() {
             _ => {}
         };
     });
+}
+
+fn exit(control_flow: &mut ControlFlow) {
+    info!("exiting this way!");
+    *control_flow = ControlFlow::Exit;
 }

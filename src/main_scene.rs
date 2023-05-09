@@ -1,20 +1,16 @@
 use std::collections::VecDeque;
 
-use crate::zui::{premade_widgets::Button, Axis, Colour, Scene, Span, Widget};
+use crate::{zui::{premade_widgets::Button, Axis, Colour, Scene, Span, Widget}, UiCommand};
 
 pub struct MainScene {
-    external_messages: VecDeque<Message>
+    // TODO
 }
 
 impl MainScene {
     pub fn new() -> Self {
         Self {
-            external_messages: VecDeque::new(),
+            // TODO
         }
-    }
-    
-    pub fn pop_external_message(&mut self) -> Option<Message> {
-        self.external_messages.pop_front()
     }
 }
 
@@ -27,25 +23,25 @@ pub enum Message {
 
 impl Scene for MainScene {
     type Message = Message;
+    type ExternalMessage = UiCommand;
 
-    fn handle_message(&mut self, message: Self::Message) -> bool {
+    fn handle_message(&mut self, message: Self::Message) -> (Option<Self::ExternalMessage>, bool) {
         let rebuild_required = false;
 
         match message {
             Message::StartClicked => {
                 info!("Start clicked!");
+                (Some(UiCommand::Start), false)
             }
             Message::OptionsClicked => {
                 info!("Options clicked!");
+                (Some(UiCommand::GoToOptions), false)
             }
             Message::ExitClicked => {
                 info!("Exit clicked!");
+                (Some(UiCommand::Exit), false)
             }
         }
-        
-        self.external_messages.push_back(message);
-
-        rebuild_required
     }
 
     fn view(&self, aspect_ratio: f32) -> crate::zui::Widget<Message> {

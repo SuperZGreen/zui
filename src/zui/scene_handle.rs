@@ -1,6 +1,9 @@
 use std::collections::VecDeque;
 
-use super::{Widget, Font, ScreenSpacePosition, primitives::Rectangle, Renderable, renderer::SimpleVertex, text_renderer::TextVertex, Colour, CursorState};
+use super::{
+    primitives::Rectangle, renderer::SimpleVertex, text_renderer::TextVertex, Colour, CursorState,
+    Font, Renderable, ScreenSpacePosition, Widget,
+};
 
 pub struct SceneHandle<Scene>
 where
@@ -10,6 +13,7 @@ where
     scene: Scene,
     widget_recreation_required: bool,
     messages: VecDeque<Scene::Message>,
+    external_messages: VecDeque<Scene::ExternalMessage>,
 }
 
 impl<Scene> SceneHandle<Scene>
@@ -22,6 +26,7 @@ where
             scene,
             widget_recreation_required: false,
             messages: VecDeque::new(),
+            external_messages: VecDeque::new(),
         };
         this.update_widget_rectangles(aspect_ratio);
         this.update_text_symbols(font, aspect_ratio);
@@ -47,7 +52,7 @@ where
     pub fn queue_widget_recreation(&mut self) {
         self.widget_recreation_required = true;
     }
-    
+
     /// Called when the widgets of a scene need to change/update
     fn recreate_widgets(&mut self, aspect_ratio: f32) {
         self.root_widget = self.scene.view(aspect_ratio);
@@ -81,12 +86,21 @@ where
     /// one
     fn handle_messages(&mut self) {
         while let Some(message) = self.messages.pop_front() {
-            let rebuild_required = self.scene.handle_message(message);
+            let (external_message_opt, rebuild_required) = self.scene.handle_message(message);
+
+            if let Some(external_message) = external_message_opt {
+                self.external_messages.push_back(external_message);
+            }
 
             if rebuild_required {
                 self.widget_recreation_required = true;
             }
         }
+    }
+
+    /// Pops an external message from the queue
+    pub fn pop_external_message(&mut self) -> Option<Scene::ExternalMessage> {
+        self.external_messages.pop_front()
     }
 
     /// Gives a mut reference to the underlying scene
