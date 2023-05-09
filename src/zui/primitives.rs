@@ -23,6 +23,12 @@ impl ScreenSpacePosition {
             y: -(cursor_position.y as f32 / viewport_height_px as f32 * 2f32 - 1f32),
         }
     }
+
+    // TODO: check equality edge cases
+    /// Returns true if in the range -1 to 1 for x and y axis
+    pub fn is_in_viewport_bounds(&self) -> bool {
+        self.x >= -1f32 && self.x <= 1f32 && self.y >= -1f32 && self.y <= 1f32
+    }
 }
 
 /// A rectangular region of screen-space using WGPU coordinates, where top left: (-1, 1), and bottom
@@ -71,14 +77,9 @@ impl Rectangle {
         let bottom_left = glam::Vec2::new(self.x_min, self.y_min);
         let bottom_right = glam::Vec2::new(self.x_max, self.y_min);
 
-        [
-            top_left,
-            top_right,
-            bottom_left,
-            bottom_right,
-        ]
+        [top_left, top_right, bottom_left, bottom_right]
     }
-    
+
     /// Returns the space width of the rectangle
     pub fn width(&self) -> f32 {
         self.x_max - self.x_min
@@ -88,7 +89,7 @@ impl Rectangle {
     pub fn height(&self) -> f32 {
         self.y_max - self.y_min
     }
-    
+
     /// Gives the span of the Rectangle by its axis
     pub fn span_by_axis(&self, axis: Axis) -> f32 {
         match axis {
@@ -96,5 +97,4 @@ impl Rectangle {
             Axis::Horizontal => self.width(),
         }
     }
-
 }

@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use super::{Widget, Font, ScreenSpacePosition, primitives::Rectangle, Renderable, renderer::SimpleVertex, text_renderer::TextVertex, Colour};
+use super::{Widget, Font, ScreenSpacePosition, primitives::Rectangle, Renderable, renderer::SimpleVertex, text_renderer::TextVertex, Colour, CursorState};
 
 pub struct SceneHandle<Scene>
 where
@@ -30,8 +30,8 @@ where
     }
 
     /// Handles external events and rebuilds widgets and rectangles if required
-    pub fn update(&mut self, cursor_position: ScreenSpacePosition, font: &Font, aspect_ratio: f32) {
-        self.solve_cursor_events(cursor_position);
+    pub fn update(&mut self, cursor_state: &Option<CursorState>, font: &Font, aspect_ratio: f32) {
+        self.solve_cursor_events(cursor_state);
 
         self.handle_messages();
 
@@ -72,9 +72,9 @@ where
 
     /// Propagates through all widgets and adds to self.messages queue if widget contains an on_x
     /// message
-    fn solve_cursor_events(&mut self, cursor_position: ScreenSpacePosition) {
+    fn solve_cursor_events(&mut self, cursor_state: &Option<CursorState>) {
         self.root_widget
-            .update_cursor_events_recursively(cursor_position, &mut self.messages);
+            .update_cursor_events_recursively(cursor_state, &mut self.messages);
     }
 
     /// Iterates through the self.messages queue and passes messages to the underlying scene one by

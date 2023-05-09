@@ -1,5 +1,5 @@
 use winit::{
-    event::{Event, WindowEvent, KeyboardInput, VirtualKeyCode},
+    event::{Event, KeyboardInput, VirtualKeyCode, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
@@ -74,19 +74,30 @@ fn main() {
                     WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
                         render_state.resize(*new_inner_size);
                     }
-                    WindowEvent::KeyboardInput { input : KeyboardInput {virtual_keycode: Some(VirtualKeyCode::X), ..}, ..} => {
+                    WindowEvent::KeyboardInput {
+                        input:
+                            KeyboardInput {
+                                virtual_keycode: Some(VirtualKeyCode::X),
+                                ..
+                            },
+                        ..
+                    } => {
                         *control_flow = ControlFlow::Exit;
                     }
                     WindowEvent::CursorMoved { position, .. } => {
-                        zui.update_cursor_state(*position);
+                        zui.update_cursor_position(*position);
                     }
                     WindowEvent::ModifiersChanged(_) => {
                         // TODO
                     }
                     WindowEvent::CursorEntered { .. } => {}
-                    WindowEvent::CursorLeft { .. } => {}
+                    WindowEvent::CursorLeft { .. } => {
+                        zui.cursor_left();
+                    }
                     WindowEvent::MouseWheel { .. } => {}
-                    WindowEvent::MouseInput { .. } => {}
+                    WindowEvent::MouseInput { button, state, .. } => {
+                        zui.mouse_input(*button, *state);
+                    }
                     _ => {}
                 }
 
@@ -98,9 +109,8 @@ fn main() {
             Event::Resumed => {}
             Event::MainEventsCleared => {
                 // TODO: Solving
-                if let Some(cursor_state) = zui.cursor_state() {
-                    scene_handle.update(cursor_state, zui.font(), zui.aspect_ratio());
-                }
+                scene_handle.update(zui.cursor_state(), zui.font(), zui.aspect_ratio());
+                zui.update();
 
                 window.request_redraw();
             }

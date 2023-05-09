@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use winit::window::WindowBuilder;
 
-use super::{text::Text, Font, Rectangle, ScreenSpacePosition};
+use super::{text::Text, CursorState, Font, Rectangle, ScreenSpacePosition};
 
 #[derive(Copy, Clone)]
 pub enum Axis {
@@ -384,7 +384,7 @@ where
     /// Traverses through widgets, adding their on_x messages to the message queue if satisfied
     pub fn update_cursor_events_recursively(
         &mut self,
-        cursor: ScreenSpacePosition,
+        cursor_state: &Option<CursorState>,
         message_queue: &mut VecDeque<Message>,
     ) {
         let self_rectangle = match self.rectangle {
@@ -392,15 +392,34 @@ where
             None => return,
         };
 
-        if self_rectangle.is_in(cursor) {
-            if let Some(callback_cursor_on) = self.callback_cursor_on {
-                callback_cursor_on(self);
-            }
+        let mut cursor_is_over_widget = false;
+        if let Some(cursor_state) = cursor_state {
+            if self_rectangle.is_in(cursor_state.screen_space_position()) {
+                cursor_is_over_widget = true;
 
-            if let Some(message) = self.message_cursor_on {
-                message_queue.push_back(message);
+                if let Some(callback_cursor_on) = self.callback_cursor_on {
+                    callback_cursor_on(self);
+                }
+
+                if let Some(message) = self.message_cursor_on {
+                    message_queue.push_back(message);
+                }
+
+                if cursor_state.is_clicked() {
+                    if let Some(callback_cursor_clicked) = self.callback_cursor_clicked {
+                        callback_cursor_clicked(self);
+                    }
+
+                    if let Some(message) = self.message_cursor_clicked {
+                        message_queue.push_back(message);
+                    }
+                }
+            } else {
+                cursor_is_over_widget = false;
             }
-        } else {
+        }
+
+        if !cursor_is_over_widget {
             if let Some(callback_cursor_off) = self.callback_cursor_off {
                 callback_cursor_off(self);
             }
@@ -413,7 +432,7 @@ where
         // TODO: always propagates to children (whether over the widget or not), add conditional
         // propagation to children
         for child in self.children.iter_mut() {
-            child.update_cursor_events_recursively(cursor, message_queue)
+            child.update_cursor_events_recursively(cursor_state, message_queue)
         }
     }
 }

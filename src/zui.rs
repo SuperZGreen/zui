@@ -1,10 +1,10 @@
 mod font;
 pub mod premade_widgets;
 mod primitives;
+mod renderable;
 mod renderer;
 mod scene;
 mod scene_handle;
-mod renderable;
 mod text;
 mod text_renderer;
 mod texture_atlas;
@@ -14,15 +14,37 @@ mod widget;
 
 pub use font::Font;
 pub use primitives::ScreenSpacePosition;
-use renderer::Renderer;
 pub use renderable::Renderable;
+use renderer::Renderer;
 pub use scene::Scene;
 pub use scene_handle::SceneHandle;
 use text_renderer::TextRenderer;
 pub use widget::{Axis, Colour, Span, Widget};
-use winit::dpi::PhysicalPosition;
+use winit::{dpi::PhysicalPosition, event::{MouseButton, ElementState}};
 
 use self::primitives::Rectangle;
+
+pub struct CursorState {
+    is_clicked: bool,
+    screen_space_position: ScreenSpacePosition,
+}
+
+impl CursorState {
+    pub fn new(is_clicked: bool, screen_space_position: ScreenSpacePosition) -> Self {
+        Self {
+            is_clicked,
+            screen_space_position,
+        }
+    }
+
+    pub fn is_clicked(&self) -> bool {
+        self.is_clicked
+    }
+
+    pub fn screen_space_position(&self) -> ScreenSpacePosition {
+        self.screen_space_position
+    }
+}
 
 pub struct Zui {
     font: Font,
@@ -33,7 +55,7 @@ pub struct Zui {
     height_px: u32,
     aspect_ratio: f32,
 
-    cursor_state: Option<ScreenSpacePosition>,
+    cursor_state: Option<CursorState>,
 }
 
 impl Zui {
@@ -110,17 +132,46 @@ impl Zui {
         self.height_px
     }
 
-    /// Updates the cursor state tracked by zui
-    pub fn update_cursor_state(&mut self, cursor_physical_position: PhysicalPosition<f64>) {
-        self.cursor_state = Some(ScreenSpacePosition::from_cursor_physical_position(
+    /// Updates the cursor state tracked by zui, will only ever be called when cursor is over viewport
+    pub fn update_cursor_position(&mut self, cursor_physical_position: PhysicalPosition<f64>) {
+        let screen_space_position = ScreenSpacePosition::from_cursor_physical_position(
             cursor_physical_position,
             self.width_px,
             self.height_px,
-        ));
+        );
+
+        self.cursor_state = if screen_space_position.is_in_viewport_bounds() {
+            Some(CursorState {
+                is_clicked: false,
+                screen_space_position,
+            })
+        } else {
+            None
+        }
+    }
+    
+    /// Called when the cursor leaves the screen
+    pub fn cursor_left(&mut self) {
+        self.cursor_state = None;
+    }
+    
+    /// Handles mouse clicks via winit's types
+    pub fn mouse_input(&mut self, _button: MouseButton, state: ElementState) {
+        if let Some(cursor_state) = &mut self.cursor_state {
+            cursor_state.is_clicked = match state {
+                ElementState::Pressed => true,
+                ElementState::Released => false,
+            }
+        }
+    }
+    
+    pub fn update(&mut self) {
+        if let Some(cursor_state) = &mut self.cursor_state {
+            cursor_state.is_clicked = false
+        }
     }
 
-    /// Gives the height of the application window surface in pixels
-    pub fn cursor_state(&self) -> Option<ScreenSpacePosition> {
-        self.cursor_state
+    pub fn cursor_state(&self) -> &Option<CursorState> {
+        &self.cursor_state
     }
 }
