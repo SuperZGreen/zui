@@ -2,18 +2,28 @@ use std::collections::VecDeque;
 
 use super::{
     primitives::Rectangle, renderer::SimpleVertex, text_renderer::TextVertex, Colour, CursorState,
-    Font, Renderable, ScreenSpacePosition, Widget,
+    Font, Renderable, Widget,
 };
 
+/// Allows for caching of the widgets produced by Scene::view
 pub struct SceneHandle<Scene>
 where
     Scene: super::Scene,
 {
+    // the root widget produced by the scene
     root_widget: Widget<Scene::Message>,
+    
+    // the scene implemented by the user
     scene: Scene,
+    
+    // flag checked in update, to rebuild the scene's widgets and rectangles
     widget_recreation_required: bool,
+
+    // messages produced by the scene widgets
     messages: VecDeque<Scene::Message>,
-    external_messages: VecDeque<Scene::ExternalMessage>,
+    
+    // messages to be processed by the user developer
+    external_messages: VecDeque<Scene::Message>,
 }
 
 impl<Scene> SceneHandle<Scene>
@@ -99,7 +109,7 @@ where
     }
 
     /// Pops an external message from the queue
-    pub fn pop_external_message(&mut self) -> Option<Scene::ExternalMessage> {
+    pub fn pop_external_message(&mut self) -> Option<Scene::Message> {
         self.external_messages.pop_front()
     }
 

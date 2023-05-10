@@ -10,6 +10,7 @@ mod text_renderer;
 mod texture_atlas;
 pub mod util;
 mod widget;
+mod scene_store;
 // mod tree;
 
 pub use font::Font;
@@ -48,13 +49,13 @@ impl CursorState {
 
 pub struct Zui {
     font: Font,
+
     renderer: Renderer,
     text_renderer: TextRenderer,
 
     width_px: u32,
     height_px: u32,
     aspect_ratio: f32,
-
     cursor_state: Option<CursorState>,
 }
 

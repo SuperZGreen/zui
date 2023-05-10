@@ -1,6 +1,7 @@
-use std::collections::VecDeque;
-
-use crate::{zui::{premade_widgets::Button, Axis, Colour, Scene, Span, Widget}, UiCommand};
+use crate::{
+    zui::{premade_widgets::Button, Axis, Colour, Scene, Span, Widget},
+    SceneIdentifier, StartMenuMessage, UiMessage,
+};
 
 pub struct MainScene {
     // TODO
@@ -14,44 +15,14 @@ impl MainScene {
     }
 }
 
-#[derive(Clone, Copy)]
-pub enum Message {
-    StartClicked,
-    OptionsClicked,
-    ExitClicked,
-}
-
 impl Scene for MainScene {
-    type Message = Message;
-    type ExternalMessage = UiCommand;
+    type Message = UiMessage;
 
-    fn handle_message(&mut self, message: Self::Message) -> (Option<Self::ExternalMessage>, bool) {
-        let rebuild_required = false;
-
-        match message {
-            Message::StartClicked => {
-                info!("Start clicked!");
-                (Some(UiCommand::Start), false)
-            }
-            Message::OptionsClicked => {
-                info!("Options clicked!");
-                (Some(UiCommand::GoToOptions), false)
-            }
-            Message::ExitClicked => {
-                info!("Exit clicked!");
-                (Some(UiCommand::Exit), false)
-            }
-        }
+    fn handle_message(&mut self, message: Self::Message) -> (Option<Self::Message>, bool) {
+        (Some(message), false)
     }
 
-    fn view(&self, aspect_ratio: f32) -> crate::zui::Widget<Message> {
-        // let button = Widget::new()
-        //     .with_span(Span::ViewHeight(0.2f32))
-        //     .with_message_clicked(Some(Message::ButtonClicked))
-        //     .with_message_cursor_on(Some(Message::ButtonCursorOn))
-        //     .with_message_cursor_off(Some(Message::ButtonCursorOff))
-        //     .with_background(Some(self.button_colour));
-
+    fn view(&self, aspect_ratio: f32) -> crate::zui::Widget<Self::Message> {
         let central_content = Widget::new()
             .with_axis(Axis::Vertical)
             .push(Widget::new())
@@ -63,24 +34,24 @@ impl Scene for MainScene {
             )
             .push(Widget::new())
             .push(
-                Button::new(Message::StartClicked)
+                Button::new(UiMessage::StartMenuMessage(StartMenuMessage::StartClicked))
                     .with_span(Span::ParentWeight(2f32))
                     .with_text("Start"),
             )
             .push(Widget::new())
             .push(
-                Button::new(Message::OptionsClicked)
+                Button::new(UiMessage::GoToScene(SceneIdentifier::OptionsMenu))
                     .with_span(Span::ParentWeight(2f32))
                     .with_text("Options"),
             )
             .push(Widget::new())
             .push(
-                Button::new(Message::ExitClicked)
+                Button::new(UiMessage::Exit)
                     .with_span(Span::ParentWeight(2f32))
                     .with_text("Exit"),
             )
             .push(Widget::new());
-        
+
         let central_container_span = if aspect_ratio <= 1.1f32 {
             Span::ParentWeight(20f32)
         } else {
