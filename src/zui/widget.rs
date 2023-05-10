@@ -1,8 +1,6 @@
 use std::collections::VecDeque;
 
-use winit::window::WindowBuilder;
-
-use super::{text::Text, CursorState, Font, Rectangle, ScreenSpacePosition};
+use super::{text::Text, CursorState, Font, Rectangle};
 
 #[derive(Copy, Clone)]
 pub enum Axis {
@@ -11,7 +9,7 @@ pub enum Axis {
 }
 
 impl Axis {
-    pub fn to_index(&self) -> usize {
+    pub fn _to_index(&self) -> usize {
         match self {
             Axis::Horizontal => 0usize,
             Axis::Vertical => 1usize,
@@ -20,6 +18,7 @@ impl Axis {
 }
 
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub enum Span {
     //
     //  Absolute Sizes
@@ -226,6 +225,7 @@ where
     }
 
     /// Creates a new widget with padding widgets
+    #[allow(dead_code)]
     pub fn push_padded(self, child: Self, padding_widget: Self) -> Self {
         let vertical_container = Self::new()
             .with_axis(Axis::Vertical)

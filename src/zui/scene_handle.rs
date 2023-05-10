@@ -2,46 +2,42 @@ use std::collections::VecDeque;
 
 use super::{
     primitives::Rectangle, renderer::SimpleVertex, text_renderer::TextVertex, Colour, CursorState,
-    Font, Renderable, Widget,
+    Font, Renderable, Scene, Widget,
 };
 
 /// Allows for caching of the widgets produced by Scene::view
-pub struct SceneHandle<Scene>
+pub struct SceneHandle<Message>
 where
-    Scene: super::Scene,
+    Message: Clone + Copy,
 {
     // the root widget produced by the scene
-    root_widget: Widget<Scene::Message>,
-    
+    root_widget: Option<Widget<Message>>,
+
     // the scene implemented by the user
-    scene: Scene,
-    
+    scene: Box<dyn Scene<Message = Message>>,
+
     // flag checked in update, to rebuild the scene's widgets and rectangles
     widget_recreation_required: bool,
 
     // messages produced by the scene widgets
-    messages: VecDeque<Scene::Message>,
-    
+    messages: VecDeque<Message>,
+
     // messages to be processed by the user developer
-    external_messages: VecDeque<Scene::Message>,
+    external_messages: VecDeque<Message>,
 }
 
-impl<Scene> SceneHandle<Scene>
+impl<Message> SceneHandle<Message>
 where
-    Scene: super::Scene,
+    Message: Clone + Copy,
 {
-    pub fn new(scene: Scene, font: &Font, aspect_ratio: f32) -> Self {
-        let mut this = Self {
-            root_widget: scene.view(aspect_ratio),
+    pub fn new(scene: Box<dyn Scene<Message = Message>>) -> Self {
+        Self {
+            root_widget: None,
             scene,
-            widget_recreation_required: false,
+            widget_recreation_required: true,
             messages: VecDeque::new(),
             external_messages: VecDeque::new(),
-        };
-        this.update_widget_rectangles(aspect_ratio);
-        this.update_text_symbols(font, aspect_ratio);
-
-        this
+        }
     }
 
     /// Handles external events and rebuilds widgets and rectangles if required
@@ -50,11 +46,9 @@ where
 
         self.handle_messages();
 
+        // lazy widget recreation
         if self.widget_recreation_required {
-            self.recreate_widgets(aspect_ratio);
-            self.update_widget_rectangles(aspect_ratio);
-            self.update_text_symbols(font, aspect_ratio);
-            self.widget_recreation_required = false;
+            self.rebuild_scene(font, aspect_ratio);
         }
     }
 
@@ -63,33 +57,44 @@ where
         self.widget_recreation_required = true;
     }
 
-    /// Called when the widgets of a scene need to change/update
-    fn recreate_widgets(&mut self, aspect_ratio: f32) {
-        self.root_widget = self.scene.view(aspect_ratio);
+    /// Recreates widgets, updates rectangles and text
+    pub fn rebuild_scene(&mut self, font: &Font, aspect_ratio: f32) {
+        // recreating widgets
+        self.root_widget = Some(self.scene.view(aspect_ratio));
+
+        // updating widget rectangles
+        self.update_widget_rectangles(aspect_ratio);
+
+        // updating widget text
+        self.update_text_symbols(font, aspect_ratio);
+        
+        self.widget_recreation_required = false;
     }
 
     /// Recalculates all the widget rectangles/regions in a scene
     fn update_widget_rectangles(&mut self, aspect_ratio: f32) {
-        // setting the root widget's rectangle to the whole screen
-        self.root_widget
-            .set_rectangle(Some(Rectangle::new(-1f32, 1f32, -1f32, 1f32)));
+        if let Some(root_widget) = &mut self.root_widget {
+            // setting the root widget's rectangle to the whole screen
+            root_widget.set_rectangle(Some(Rectangle::new(-1f32, 1f32, -1f32, 1f32)));
 
-        // updating the child rectangles
-        self.root_widget
-            .update_child_rectangles_recursively(aspect_ratio);
+            // updating the child rectangles
+            root_widget.update_child_rectangles_recursively(aspect_ratio);
+        }
     }
 
     /// Updates the text symbols (and rectangles) for a scene
     fn update_text_symbols(&mut self, font: &Font, aspect_ratio: f32) {
-        self.root_widget
-            .update_text_symbols_recursively(font, aspect_ratio);
+        if let Some(root_widget) = &mut self.root_widget {
+            root_widget.update_text_symbols_recursively(font, aspect_ratio);
+        }
     }
 
     /// Propagates through all widgets and adds to self.messages queue if widget contains an on_x
     /// message
     fn solve_cursor_events(&mut self, cursor_state: &Option<CursorState>) {
-        self.root_widget
-            .update_cursor_events_recursively(cursor_state, &mut self.messages);
+        if let Some(root_widget) = &mut self.root_widget {
+            root_widget.update_cursor_events_recursively(cursor_state, &mut self.messages);
+        }
     }
 
     /// Iterates through the self.messages queue and passes messages to the underlying scene one by
@@ -109,19 +114,19 @@ where
     }
 
     /// Pops an external message from the queue
-    pub fn pop_external_message(&mut self) -> Option<Scene::Message> {
+    pub fn pop_external_message(&mut self) -> Option<Message> {
         self.external_messages.pop_front()
     }
 
-    /// Gives a mut reference to the underlying scene
-    pub fn scene_mut(&mut self) -> &mut Scene {
-        &mut self.scene
-    }
+    // /// Gives a mut reference to the underlying scene
+    // pub fn scene_mut(&mut self) -> &mut Scene {
+    //     &mut self.scene
+    // }
 }
 
-impl<Scene> Renderable for SceneHandle<Scene>
+impl<Message> Renderable for SceneHandle<Message>
 where
-    Scene: super::Scene,
+    Message: Clone + Copy,
 {
     fn to_vertices(
         &self,
@@ -130,8 +135,16 @@ where
         let mut simple_vertices = Vec::new();
         let mut text_vertices = Vec::new();
 
+        let root_widget = match &self.root_widget {
+            Some(rw) => rw,
+            None => {
+                warn!("attempting to render SceneHandle with empty root widget");
+                return (Vec::new(), Vec::new());
+            }
+        };
+
         // simple rectangle vertices
-        self.root_widget.traverse(&mut |widget| {
+        root_widget.traverse(&mut |widget| {
             let rectangle = match widget.rectangle {
                 Some(r) => r,
                 None => return,

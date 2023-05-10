@@ -1,6 +1,7 @@
 use super::{primitives::Rectangle, Font};
 
 #[derive(Clone)]
+#[allow(dead_code)]
 pub enum LineWrapping {
     None,
     Letter,
@@ -41,6 +42,7 @@ impl Text {
         }
     }
 
+    #[allow(dead_code)]
     pub fn with_configuration(mut self, configuration: TextConfiguration) -> Self {
         self.configuration = configuration;
         self

@@ -21,6 +21,8 @@ pub use scene::Scene;
 pub use scene_handle::SceneHandle;
 use text_renderer::TextRenderer;
 pub use widget::{Axis, Colour, Span, Widget};
+pub use scene_store::SceneStore;
+
 use winit::{dpi::PhysicalPosition, event::{MouseButton, ElementState}};
 
 use self::primitives::Rectangle;

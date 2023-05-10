@@ -212,7 +212,7 @@ impl TextureAtlasBuilder {
         // }
 
         TextureAtlas {
-            texture,
+            _texture: texture,
             bind_group_layout,
             bind_group,
             packed_sprites,
@@ -222,7 +222,7 @@ impl TextureAtlasBuilder {
 
 pub struct TextureAtlas {
     /// The WGPU texture handle on which the sprites reside
-    texture: wgpu::Texture,
+    _texture: wgpu::Texture,
 
     /// The bind group layout for the TextureAtlas, for use in other shaders
     bind_group_layout: wgpu::BindGroupLayout,
@@ -240,8 +240,8 @@ impl TextureAtlas {
     }
 
     /// Returns the texture atlas texture
-    pub fn texture(&self) -> &wgpu::Texture {
-        &self.texture
+    pub fn _texture(&self) -> &wgpu::Texture {
+        &self._texture
     }
 
     /// Returns a reference to the texture atlas' bind group layout

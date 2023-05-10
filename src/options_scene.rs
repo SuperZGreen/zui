@@ -40,7 +40,7 @@ impl Scene for OptionsScene {
             .push(
                 Widget::new()
                     .with_span(Span::ParentWeight(10f32))
-                    .with_background(Some(Colour::rgb(0.2f32, 0.3f32, 0.3f32)))
+                    .with_background(Some(Colour::rgb(0.1f32, 0.1f32, 0.1f32)))
                     .with_text("This is the Options Menu Text. As you can see this is a very good options menu with lots of options that you can click on and enjoy. I hope that you enjoy your time in the options menu as I obviously spent quite a bit of time doing it up and making it look nice and everything."),
             )
             .push(Widget::new())

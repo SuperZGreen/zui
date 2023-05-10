@@ -21,9 +21,9 @@ use main_scene::MainScene;
 mod options_scene;
 use options_scene::OptionsScene;
 
-use crate::zui::SceneHandle;
+use crate::zui::{SceneHandle, Scene, SceneStore};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum SceneIdentifier {
     StartMenu,
     OptionsMenu,
@@ -77,10 +77,15 @@ fn main() {
     )
     .unwrap();
 
-    let mut main_scene_handle: SceneHandle<MainScene> =
-        SceneHandle::new(MainScene::new(), zui.font(), zui.aspect_ratio());
-    let mut options_scene_handle =
-        SceneHandle::new(OptionsScene::new(), zui.font(), zui.aspect_ratio());
+    let mut scene_store = SceneStore::new();
+    scene_store.add_scene(SceneIdentifier::StartMenu, Box::new(MainScene::new()));
+    scene_store.add_scene(SceneIdentifier::OptionsMenu, Box::new(OptionsScene::new()));
+    scene_store.set_current_scene(SceneIdentifier::StartMenu);
+
+    // let mut main_scene_handle: SceneHandle<UiMessage> =
+    //     SceneHandle::new(Box::new(MainScene::new()), zui.font(), zui.aspect_ratio());
+    // let mut options_scene_handle =
+    //     SceneHandle::new(Box::new(OptionsScene::new()), zui.font(), zui.aspect_ratio());
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
@@ -97,7 +102,7 @@ fn main() {
                     WindowEvent::Resized(physical_size) => {
                         render_state.resize(physical_size);
                         zui.resize(physical_size.width, physical_size.height);
-                        main_scene_handle.queue_widget_recreation();
+                        scene_store.current_scene_mut().unwrap().queue_widget_recreation();
                     }
                     WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
                         render_state.resize(*new_inner_size);
@@ -137,18 +142,26 @@ fn main() {
             Event::Resumed => {}
             Event::MainEventsCleared => {
                 // TODO: Solving
-                main_scene_handle.update(zui.cursor_state(), zui.font(), zui.aspect_ratio());
+                let current_scene_mut = scene_store.current_scene_mut().unwrap();
+                current_scene_mut.update(zui.cursor_state(), zui.font(), zui.aspect_ratio());
                 zui.update();
 
                 // solving user behaviour
-                while let Some(message) = main_scene_handle.pop_external_message() {
+                let mut set_scene_destination = None;
+                while let Some(message) = current_scene_mut.pop_external_message() {
                     match message {
                         UiMessage::GoToScene(scene_identifier) => {
-                            println!("going to scene: {:?}", scene_identifier)
+                            println!("going to scene: {:?}", scene_identifier);
+                            set_scene_destination = Some(scene_identifier);
                         }
                         UiMessage::Exit => exit(control_flow),
                         _ => {println!("unhandled message!")},
                     }
+                }
+
+                if let Some(scene_identifier) = set_scene_destination {
+                    _ = scene_store.set_current_scene(scene_identifier);
+                    scene_store.current_scene_mut().unwrap().rebuild_scene(zui.font(), zui.aspect_ratio());
                 }
 
                 window.request_redraw();
@@ -156,7 +169,8 @@ fn main() {
             Event::RedrawRequested(_) => {
                 if !render_state.skip_rendering() {
                     // uploading
-                    zui.upload_vertices(render_state.device(), &main_scene_handle);
+                    let current_scene = scene_store.current_scene().unwrap();
+                    zui.upload_vertices(render_state.device(), current_scene);
 
                     // rendering
                     match render_state.render(&zui) {
