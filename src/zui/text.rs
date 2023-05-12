@@ -4,19 +4,47 @@ use super::{primitives::Rectangle, Colour, Font};
 #[allow(dead_code)]
 pub enum LineWrapping {
     None,
-    Letter,
+    Symbol,
     Word,
+}
+
+#[derive(Clone)]
+pub enum TextSize {
+    /// Height of the text (ascent to descent) Proportion of the parent's rectangle height
+    ParentHeight(f32),
+
+    /// Height of the text in pixels
+    Pixels(f32),
+    // /// Height of the text in screen space units
+    // ScreenSpace(f32),
+}
+
+impl TextSize {
+    /// Gives the text height in terms of screen space
+    pub fn to_screen_space_span(
+        &self,
+        parent_rectangle_height: f32,
+        viewport_height_px: u32,
+    ) -> f32 {
+        match self {
+            TextSize::ParentHeight(proportion) => proportion * parent_rectangle_height,
+            TextSize::Pixels(pixels) => pixels / viewport_height_px as f32 / 2f32,
+            // TextSize::ScreenSpace() => todo!(),
+        }
+    }
 }
 
 #[derive(Clone)]
 pub struct TextConfiguration {
     pub line_wrapping: LineWrapping,
+    pub size: TextSize,
 }
 
 impl Default for TextConfiguration {
     fn default() -> Self {
         Self {
-            line_wrapping: LineWrapping::Letter,
+            line_wrapping: LineWrapping::Symbol,
+            size: TextSize::ParentHeight(0.5f32),
         }
     }
 }
@@ -49,7 +77,6 @@ pub struct Text {
 }
 
 impl Text {
-    
     /// A new empty Text object
     pub fn new() -> Text {
         Self {
@@ -58,7 +85,7 @@ impl Text {
             configuration: TextConfiguration::default(),
         }
     }
-    
+
     /// Adds the text segment to the Text object
     pub fn with_segment(mut self, segment: TextSegment) -> Self {
         self.segments.push(segment);
@@ -72,10 +99,23 @@ impl Text {
     }
 
     pub fn update_symbols(&mut self, font: &Font, parent_rect: &Rectangle, aspect_ratio: f32) {
-        let scale_factor = 0.001f32;
+
+        // the screen space height of a symbol
+        // TODO, remove fixed pixels size
+        let text_height_screen_space = self
+            .configuration
+            .size
+            .to_screen_space_span(parent_rect.height(), 100u32);
+        
+        // the span of the original rasterised symbol
+        let rasterised_font_height_px = font.line_metrics.ascent - font.line_metrics.descent;
+        let rasterised_font_width_px = rasterised_font_height_px * aspect_ratio;
+        
+        let new_line_screen_space_span = font.line_metrics.new_line_size / rasterised_font_height_px * text_height_screen_space;
+
         let mut glyph_origin = glam::Vec2::new(
             parent_rect.x_min,
-            parent_rect.y_max - font.line_metrics.ascent * scale_factor,
+            parent_rect.y_max - font.line_metrics.ascent / rasterised_font_height_px * text_height_screen_space
         );
 
         for segment in self.segments.iter() {
@@ -89,21 +129,24 @@ impl Text {
                 };
 
                 let symbol_metrics = &info.metrics;
+                
+                let normalised_symbol_width = symbol_metrics.width as f32 / rasterised_font_width_px;
+                let normalised_symbol_height = symbol_metrics.height as f32 / rasterised_font_height_px;
+                let normalised_symbol_x_shift = symbol_metrics.xmin as f32 / rasterised_font_width_px;
+                let normalised_symbol_y_shift = symbol_metrics.ymin as f32 / rasterised_font_height_px;
+                let normalised_symbol_advance_width = symbol_metrics.advance_width / rasterised_font_width_px;
 
-                let symbol_width = symbol_metrics.width as f32 * scale_factor / aspect_ratio;
-                let symbol_height = symbol_metrics.height as f32 * scale_factor;
-                let symbol_x_shift = symbol_metrics.xmin as f32 * scale_factor / aspect_ratio;
-                let symbol_y_shift = symbol_metrics.ymin as f32 * scale_factor;
-                let symbol_advance_width =
-                    symbol_metrics.advance_width * scale_factor / aspect_ratio;
+                let symbol_width = normalised_symbol_width * text_height_screen_space;
+                let symbol_height = normalised_symbol_height * text_height_screen_space;
+                let symbol_x_shift = normalised_symbol_x_shift * text_height_screen_space;
+                let symbol_y_shift = normalised_symbol_y_shift * text_height_screen_space;
+                let symbol_advance_width = normalised_symbol_advance_width * text_height_screen_space;
 
                 // line wrapping
-                if matches!(self.configuration.line_wrapping, LineWrapping::Letter) {
+                if matches!(self.configuration.line_wrapping, LineWrapping::Symbol) {
                     if glyph_origin.x() + symbol_width + symbol_x_shift > parent_rect.x_max {
-                        let screen_space_new_line_distance =
-                            font.line_metrics.new_line_size * scale_factor;
                         glyph_origin.set_x(parent_rect.x_min);
-                        glyph_origin.set_y(glyph_origin.y() - screen_space_new_line_distance)
+                        glyph_origin.set_y(glyph_origin.y() - new_line_screen_space_span)
                     }
                 }
 

@@ -58,5 +58,7 @@ fn fs_main(in: VertexShaderOutput) -> @location(0) vec4<f32> {
 
     let colour = vec4<f32>(in.colour.rgb, coverage);
 
+    // let colour = vec4<f32>(1f, 1f, 1f, 1f);
+
     return colour;
 }

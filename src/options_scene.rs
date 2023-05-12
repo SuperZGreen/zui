@@ -1,5 +1,5 @@
 use crate::{
-    zui::{premade_widgets::Button, Axis, Colour, Scene, Span, Text, TextSegment, Widget},
+    zui::{premade_widgets::Button, Axis, Colour, Scene, Span, Text, TextSegment, Widget, TextConfiguration, LineWrapping, TextSize},
     OptionsMenuMessage, SceneIdentifier, UiMessage,
 };
 
@@ -43,9 +43,9 @@ impl Scene for OptionsScene {
                     .with_background(Some(Colour::rgb(0.1f32, 0.1f32, 0.1f32)))
                     .with_text(
                         Text::new()
-                            .with_segment(TextSegment::new("This is my text!", Colour::WHITE))
+                            .with_segment(TextSegment::new("This is my text! ", Colour::WHITE))
                             .with_segment(TextSegment::new(
-                                " This is another part of my text!",
+                                "This is another part of my text! ",
                                 Colour::rgb(0f32, 1f32, 1f32),
                             ))
                             .with_segment(TextSegment::new(
@@ -57,7 +57,12 @@ impl Scene for OptionsScene {
                                 "FAVOURITE ",
                                 Colour::rgb(0.7f32, 1f32, 0.7f32),
                             ))
-                            .with_segment(TextSegment::new("text!", Colour::WHITE)),
+                            .with_segment(TextSegment::new("text!", Colour::WHITE))
+                            .with_segment(TextSegment::new(" Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec ac sagittis nisl. Vivamus fermentum imperdiet magna eu vulputate. Phasellus vitae ex ut turpis dictum dictum vel egestas lorem. Vestibulum eu tortor eget nisl suscipit dictum ut quis dolor. Duis vitae diam eu eros mattis tincidunt a in dui. Curabitur euismod, tortor a feugiat mattis, orci libero lacinia turpis, in elementum risus erat id augue. Nulla non pharetra diam. Nullam nibh mauris, volutpat at nisl eu, scelerisque iaculis ipsum. Curabitur porta varius augue. Suspendisse id dui ante. Vivamus at lorem dictum, mollis dolor sit amet, porttitor sapien. Praesent sodales in tortor ac volutpat. Mauris in pharetra magna. Curabitur fermentum volutpat magna a vehicula.", Colour::WHITE))
+                            .with_configuration(TextConfiguration {
+                                size: TextSize::ParentHeight(0.05f32),
+                                ..Default::default()
+                            }),
                     ),
             )
             .push(Widget::new())

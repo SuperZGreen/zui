@@ -20,7 +20,7 @@ pub use renderable::Renderable;
 use renderer::Renderer;
 pub use scene::Scene;
 pub use scene_handle::SceneHandle;
-pub use text::{Text, TextSegment};
+pub use text::{Text, TextSegment, TextConfiguration, LineWrapping, TextSize};
 use text_renderer::TextRenderer;
 pub use widget::{Axis, Span, Widget};
 pub use scene_store::SceneStore;
