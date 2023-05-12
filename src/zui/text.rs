@@ -1,4 +1,4 @@
-use super::{primitives::Rectangle, Font};
+use super::{primitives::Rectangle, Colour, Font};
 
 #[derive(Clone)]
 #[allow(dead_code)]
@@ -22,9 +22,24 @@ impl Default for TextConfiguration {
 }
 
 #[derive(Clone)]
+pub struct TextSegment {
+    pub string: String,
+    pub colour: Colour,
+}
+
+impl TextSegment {
+    pub fn new(string: &str, colour: Colour) -> Self {
+        Self {
+            string: String::from(string),
+            colour,
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct Text {
     /// The actual content of the string
-    pub string: String,
+    pub segments: Vec<TextSegment>,
 
     /// The per-character rendering information of the text
     pub symbols: Vec<Symbol>,
@@ -34,12 +49,20 @@ pub struct Text {
 }
 
 impl Text {
-    pub fn new(string: &str) -> Text {
+    
+    /// A new empty Text object
+    pub fn new() -> Text {
         Self {
-            string: String::from(string),
+            segments: Vec::new(),
             symbols: Vec::new(),
             configuration: TextConfiguration::default(),
         }
+    }
+    
+    /// Adds the text segment to the Text object
+    pub fn with_segment(mut self, segment: TextSegment) -> Self {
+        self.segments.push(segment);
+        self
     }
 
     #[allow(dead_code)]
@@ -55,45 +78,50 @@ impl Text {
             parent_rect.y_max - font.line_metrics.ascent * scale_factor,
         );
 
-        for character in self.string.chars() {
-            let (info, uv_top_left, uv_bottom_right) = match font.get_symbol(character) {
-                Some(res) => res,
-                None => {
-                    error!("could not find glyph for character: {}!", character);
-                    continue;
+        for segment in self.segments.iter() {
+            for character in segment.string.chars() {
+                let (info, uv_top_left, uv_bottom_right) = match font.get_symbol(character) {
+                    Some(res) => res,
+                    None => {
+                        error!("could not find glyph for character: {}!", character);
+                        continue;
+                    }
+                };
+
+                let symbol_metrics = &info.metrics;
+
+                let symbol_width = symbol_metrics.width as f32 * scale_factor / aspect_ratio;
+                let symbol_height = symbol_metrics.height as f32 * scale_factor;
+                let symbol_x_shift = symbol_metrics.xmin as f32 * scale_factor / aspect_ratio;
+                let symbol_y_shift = symbol_metrics.ymin as f32 * scale_factor;
+                let symbol_advance_width =
+                    symbol_metrics.advance_width * scale_factor / aspect_ratio;
+
+                // line wrapping
+                if matches!(self.configuration.line_wrapping, LineWrapping::Letter) {
+                    if glyph_origin.x() + symbol_width + symbol_x_shift > parent_rect.x_max {
+                        let screen_space_new_line_distance =
+                            font.line_metrics.new_line_size * scale_factor;
+                        glyph_origin.set_x(parent_rect.x_min);
+                        glyph_origin.set_y(glyph_origin.y() - screen_space_new_line_distance)
+                    }
                 }
-            };
 
-            let symbol_metrics = &info.metrics;
+                self.symbols.push(Symbol {
+                    character,
+                    colour: segment.colour,
+                    region: Rectangle::new(
+                        glyph_origin.x() + symbol_x_shift,
+                        glyph_origin.x() + symbol_x_shift + symbol_width,
+                        glyph_origin.y() + symbol_y_shift,
+                        glyph_origin.y() + symbol_y_shift + symbol_height,
+                    ),
+                    uv_top_left,
+                    uv_bottom_right,
+                });
 
-            let symbol_width = symbol_metrics.width as f32 * scale_factor / aspect_ratio;
-            let symbol_height = symbol_metrics.height as f32 * scale_factor;
-            let symbol_x_shift = symbol_metrics.xmin as f32 * scale_factor / aspect_ratio;
-            let symbol_y_shift = symbol_metrics.ymin as f32 * scale_factor;
-            let symbol_advance_width = symbol_metrics.advance_width * scale_factor / aspect_ratio;
-
-            // line wrapping
-            if matches!(self.configuration.line_wrapping, LineWrapping::Letter) {
-                if glyph_origin.x() + symbol_width + symbol_x_shift  > parent_rect.x_max {
-                    let screen_space_new_line_distance = font.line_metrics.new_line_size * scale_factor;
-                    glyph_origin.set_x(parent_rect.x_min);
-                    glyph_origin.set_y(glyph_origin.y() - screen_space_new_line_distance)
-                }
+                glyph_origin[0] += symbol_advance_width;
             }
-
-            self.symbols.push(Symbol {
-                character,
-                region: Rectangle::new(
-                    glyph_origin.x() + symbol_x_shift,
-                    glyph_origin.x() + symbol_x_shift + symbol_width,
-                    glyph_origin.y() + symbol_y_shift,
-                    glyph_origin.y() + symbol_y_shift + symbol_height,
-                ),
-                uv_top_left,
-                uv_bottom_right,
-            });
-
-            glyph_origin[0] += symbol_advance_width;
         }
     }
 }
@@ -102,6 +130,8 @@ impl Text {
 pub struct Symbol {
     /// The character that a symbol represents
     pub character: char,
+    /// The colour of a character
+    pub colour: Colour,
     /// The screen space region of a symbol
     pub region: Rectangle,
     /// The top left UV coordinate of the symbol

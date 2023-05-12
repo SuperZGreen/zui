@@ -1,5 +1,5 @@
 use crate::{
-    zui::{premade_widgets::Button, Axis, Colour, Scene, Span, Widget},
+    zui::{premade_widgets::Button, Axis, Colour, Scene, Span, Text, TextSegment, Widget},
     OptionsMenuMessage, SceneIdentifier, UiMessage,
 };
 
@@ -41,13 +41,34 @@ impl Scene for OptionsScene {
                 Widget::new()
                     .with_span(Span::ParentWeight(10f32))
                     .with_background(Some(Colour::rgb(0.1f32, 0.1f32, 0.1f32)))
-                    .with_text("This is the Options Menu Text. As you can see this is a very good options menu with lots of options that you can click on and enjoy. I hope that you enjoy your time in the options menu as I obviously spent quite a bit of time doing it up and making it look nice and everything."),
+                    .with_text(
+                        Text::new()
+                            .with_segment(TextSegment::new("This is my text!", Colour::WHITE))
+                            .with_segment(TextSegment::new(
+                                " This is another part of my text!",
+                                Colour::rgb(0f32, 1f32, 1f32),
+                            ))
+                            .with_segment(TextSegment::new(
+                                "This is some more text ",
+                                Colour::WHITE,
+                            ))
+                            .with_segment(TextSegment::new("This is my ", Colour::WHITE))
+                            .with_segment(TextSegment::new(
+                                "FAVOURITE ",
+                                Colour::rgb(0.7f32, 1f32, 0.7f32),
+                            ))
+                            .with_segment(TextSegment::new("text!", Colour::WHITE)),
+                    ),
             )
             .push(Widget::new())
             .push(
-                Button::new(UiMessage::OptionsMenuMessage(OptionsMenuMessage::BackClicked))
-                    .with_span(Span::ParentWeight(2f32))
-                    .with_text("Back to Start Menu"),
+                Button::new(UiMessage::OptionsMenuMessage(
+                    OptionsMenuMessage::BackClicked,
+                ))
+                .with_span(Span::ParentWeight(2f32))
+                .with_text(
+                    Text::new().with_segment(TextSegment::new("Back to Start", Colour::WHITE)),
+                ),
             )
             .push(Widget::new());
 

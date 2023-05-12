@@ -11,6 +11,7 @@ mod texture_atlas;
 pub mod util;
 mod widget;
 mod scene_store;
+mod colour;
 // mod tree;
 
 pub use font::Font;
@@ -19,9 +20,11 @@ pub use renderable::Renderable;
 use renderer::Renderer;
 pub use scene::Scene;
 pub use scene_handle::SceneHandle;
+pub use text::{Text, TextSegment};
 use text_renderer::TextRenderer;
-pub use widget::{Axis, Colour, Span, Widget};
+pub use widget::{Axis, Span, Widget};
 pub use scene_store::SceneStore;
+pub use colour::Colour;
 
 use winit::{dpi::PhysicalPosition, event::{MouseButton, ElementState}};
 

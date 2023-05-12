@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use super::{text::Text, CursorState, Font, Rectangle};
+use super::{text::Text, CursorState, Font, Rectangle, Colour};
 
 #[derive(Copy, Clone)]
 pub enum Axis {
@@ -78,30 +78,6 @@ impl Span {
             Axis::Vertical => view_width * aspect_ratio * 2f32,
             Axis::Horizontal => view_width * 2f32,
         }
-    }
-}
-
-#[derive(Debug, Copy, Clone)]
-pub struct Colour {
-    pub r: f32,
-    pub g: f32,
-    pub b: f32,
-    pub a: f32,
-}
-
-impl Colour {
-    pub fn rgb(r: f32, g: f32, b: f32) -> Self {
-        Self { r, g, b, a: 1f32 }
-    }
-
-    pub fn rgba(r: f32, g: f32, b: f32, a: f32) -> Self {
-        Self { r, g, b, a }
-    }
-}
-
-impl From<Colour> for glam::Vec4 {
-    fn from(colour: Colour) -> Self {
-        Self::new(colour.r, colour.g, colour.b, colour.a)
     }
 }
 
@@ -213,8 +189,8 @@ where
     }
 
     #[allow(dead_code)]
-    pub fn with_text(mut self, string: &str) -> Self {
-        self.text = Some(Text::new(string));
+    pub fn with_text(mut self, text: Text) -> Self {
+        self.text = Some(text);
         self
     }
 

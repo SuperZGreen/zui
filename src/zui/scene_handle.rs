@@ -169,7 +169,6 @@ where
             }
 
             // adding text vertices if text exists
-            let text_colour = Colour::rgb(1f32, 1f32, 1f32);
             if let Some(text) = &widget.text {
                 for symbol in text.symbols.iter() {
                     let region_vertices = symbol.region.vertices();
@@ -186,28 +185,28 @@ where
                     let a = TextVertex::new(
                         region_vertices[0],
                         uv_top_left,
-                        text_colour.into(),
+                        symbol.colour.into(),
                         &rectangle,
                         viewport_dimensions_px,
                     );
                     let b = TextVertex::new(
                         region_vertices[1],
                         uv_top_right,
-                        text_colour.into(),
+                        symbol.colour.into(),
                         &rectangle,
                         viewport_dimensions_px,
                     );
                     let c = TextVertex::new(
                         region_vertices[2],
                         uv_bottom_left,
-                        text_colour.into(),
+                        symbol.colour.into(),
                         &rectangle,
                         viewport_dimensions_px,
                     );
                     let d = TextVertex::new(
                         region_vertices[3],
                         uv_bottom_right,
-                        text_colour.into(),
+                        symbol.colour.into(),
                         &rectangle,
                         viewport_dimensions_px,
                     );
