@@ -67,7 +67,7 @@ where
 
         // updating widget text
         self.update_text_symbols(font, aspect_ratio);
-        
+
         self.widget_recreation_required = false;
     }
 
@@ -170,55 +170,7 @@ where
 
             // adding text vertices if text exists
             if let Some(text) = &widget.text {
-                for symbol in text.symbols.iter() {
-                    let region_vertices = symbol.region.vertices();
-
-                    // println!("rect: {:?}", symbol.region);
-
-                    let uv_top_left = symbol.uv_top_left;
-                    let uv_top_right =
-                        glam::Vec2::new(symbol.uv_bottom_right.x(), symbol.uv_top_left.y());
-                    let uv_bottom_left =
-                        glam::Vec2::new(symbol.uv_top_left.x(), symbol.uv_bottom_right.y());
-                    let uv_bottom_right = symbol.uv_bottom_right;
-
-                    let a = TextVertex::new(
-                        region_vertices[0],
-                        uv_top_left,
-                        symbol.colour.into(),
-                        &rectangle,
-                        viewport_dimensions_px,
-                    );
-                    let b = TextVertex::new(
-                        region_vertices[1],
-                        uv_top_right,
-                        symbol.colour.into(),
-                        &rectangle,
-                        viewport_dimensions_px,
-                    );
-                    let c = TextVertex::new(
-                        region_vertices[2],
-                        uv_bottom_left,
-                        symbol.colour.into(),
-                        &rectangle,
-                        viewport_dimensions_px,
-                    );
-                    let d = TextVertex::new(
-                        region_vertices[3],
-                        uv_bottom_right,
-                        symbol.colour.into(),
-                        &rectangle,
-                        viewport_dimensions_px,
-                    );
-
-                    text_vertices.push(a);
-                    text_vertices.push(c);
-                    text_vertices.push(b);
-
-                    text_vertices.push(b);
-                    text_vertices.push(c);
-                    text_vertices.push(d);
-                }
+                text_vertices.append(&mut text.to_vertices(rectangle, viewport_dimensions_px));
             }
         });
 

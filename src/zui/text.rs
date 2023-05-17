@@ -1,4 +1,4 @@
-use super::{primitives::Rectangle, Colour, Font};
+use super::{primitives::Rectangle, text_renderer::TextVertex, Colour, Font};
 
 #[derive(Clone)]
 #[allow(dead_code)]
@@ -204,6 +204,69 @@ impl Text {
             }
             symbols
         };
+    }
+
+    /// Produces a Vec of TextVertexs for the Symbols of a Text object
+    pub fn to_vertices(
+        &self,
+        // The clipping region of the parent widget, can not render fragments outside of this rect. Given in NDC/screen space
+        parent_clip_region: Rectangle,
+        // The viewport dimensions in pixels, used to calculate the clip bounds for the text fragment shader
+        viewport_dimensions_px: glam::Vec2,
+    ) -> Vec<TextVertex> {
+        //the number of vertices produced by a symbol
+        let vertices_per_symbol = 6usize;
+        let mut vertices = Vec::with_capacity(self.symbols.len() * vertices_per_symbol);
+        for symbol in self.symbols.iter() {
+            let region_vertices = symbol.region.vertices();
+
+            // println!("rect: {:?}", symbol.region);
+
+            let uv_top_left = symbol.uv_top_left;
+            let uv_top_right = glam::Vec2::new(symbol.uv_bottom_right.x(), symbol.uv_top_left.y());
+            let uv_bottom_left =
+                glam::Vec2::new(symbol.uv_top_left.x(), symbol.uv_bottom_right.y());
+            let uv_bottom_right = symbol.uv_bottom_right;
+
+            let a = TextVertex::new(
+                region_vertices[0],
+                uv_top_left,
+                symbol.colour.into(),
+                &parent_clip_region,
+                viewport_dimensions_px,
+            );
+            let b = TextVertex::new(
+                region_vertices[1],
+                uv_top_right,
+                symbol.colour.into(),
+                &parent_clip_region,
+                viewport_dimensions_px,
+            );
+            let c = TextVertex::new(
+                region_vertices[2],
+                uv_bottom_left,
+                symbol.colour.into(),
+                &parent_clip_region,
+                viewport_dimensions_px,
+            );
+            let d = TextVertex::new(
+                region_vertices[3],
+                uv_bottom_right,
+                symbol.colour.into(),
+                &parent_clip_region,
+                viewport_dimensions_px,
+            );
+
+            vertices.push(a);
+            vertices.push(c);
+            vertices.push(b);
+
+            vertices.push(b);
+            vertices.push(c);
+            vertices.push(d);
+        }
+
+        vertices
     }
 }
 
