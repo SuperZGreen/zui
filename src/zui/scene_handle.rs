@@ -1,8 +1,8 @@
 use std::collections::VecDeque;
 
 use super::{
-    primitives::Rectangle, renderer::SimpleVertex, text_renderer::TextVertex, Colour, CursorState,
-    Font, Renderable, Scene, Widget,
+    primitives::Rectangle, renderer::SimpleVertex, text_renderer::TextVertex, widget::Widget,
+    BaseWidget, Colour, CursorState, Font, Renderable, Scene,
 };
 
 /// Allows for caching of the widgets produced by Scene::view
@@ -11,7 +11,7 @@ where
     Message: Clone + Copy,
 {
     // the root widget produced by the scene
-    root_widget: Option<Widget<Message>>,
+    root_widget: Option<BaseWidget<Message>>,
 
     // the scene implemented by the user
     scene: Box<dyn Scene<Message = Message>>,
@@ -145,33 +145,9 @@ where
 
         // simple rectangle vertices
         root_widget.traverse(&mut |widget| {
-            let rectangle = match widget.rectangle {
-                Some(r) => r,
-                None => return,
-            };
-
-            // adding the background box vertices if it contains a colour/background setting
-            if let Some(colour) = widget.background {
-                let rectangle_vertices = rectangle.vertices();
-
-                let a = SimpleVertex::new(rectangle_vertices[0], colour.into());
-                let b = SimpleVertex::new(rectangle_vertices[1], colour.into());
-                let c = SimpleVertex::new(rectangle_vertices[2], colour.into());
-                let d = SimpleVertex::new(rectangle_vertices[3], colour.into());
-
-                simple_vertices.push(a);
-                simple_vertices.push(c);
-                simple_vertices.push(b);
-
-                simple_vertices.push(b);
-                simple_vertices.push(c);
-                simple_vertices.push(d);
-            }
-
-            // adding text vertices if text exists
-            if let Some(text) = &widget.text {
-                text_vertices.append(&mut text.to_vertices(rectangle, viewport_dimensions_px));
-            }
+            let (mut sv, mut tv) = widget.to_vertices(viewport_dimensions_px);
+            simple_vertices.append(&mut sv);
+            text_vertices.append(&mut tv);
         });
 
         (simple_vertices, text_vertices)

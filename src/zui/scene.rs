@@ -1,4 +1,4 @@
-use super::Widget;
+use super::BaseWidget;
 
 pub trait Scene {
     type Message: Copy + Clone;
@@ -9,7 +9,7 @@ pub trait Scene {
     fn handle_message(&mut self, message: Self::Message) -> (Option<Self::Message>, bool);
 
     /// Returns the root widget of the scene, window's aspect ratio included for user conveninence
-    fn view(&self, aspect_ratio: f32) -> Widget<Self::Message>
+    fn view(&self, aspect_ratio: f32) -> BaseWidget<Self::Message>
     where
         <Self as Scene>::Message: std::marker::Copy;
 }

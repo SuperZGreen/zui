@@ -1,6 +1,9 @@
 use std::collections::VecDeque;
 
-use super::{text::Text, CursorState, Font, Rectangle, Colour};
+use super::{
+    renderer::SimpleVertex, text::Text, text_renderer::TextVertex, Colour, CursorState, Font,
+    Rectangle,
+};
 
 #[derive(Copy, Clone)]
 pub enum Axis {
@@ -82,11 +85,11 @@ impl Span {
 }
 
 #[derive(Clone)]
-pub struct Widget<Message>
+pub struct BaseWidget<Message>
 where
     Message: Clone + Copy,
 {
-    children: Vec<Widget<Message>>,
+    children: Vec<BaseWidget<Message>>,
 
     // structure
     pub axis: Axis,
@@ -112,7 +115,7 @@ where
     pub text: Option<Text>,
 }
 
-impl<Message> Widget<Message>
+impl<Message> BaseWidget<Message>
 where
     Message: Clone + Copy,
 {
@@ -195,7 +198,7 @@ where
     }
 
     #[allow(dead_code)]
-    pub fn push(mut self, child: Widget<Message>) -> Self {
+    pub fn push(mut self, child: BaseWidget<Message>) -> Self {
         self.children.push(child);
         self
     }
@@ -303,7 +306,7 @@ where
     // TODO: will need to change
     /// Gets the amount of space (normalised to the parent's directional span) available
     fn get_parent_normalised_space_available(
-        children: &[Widget<Message>],
+        children: &[BaseWidget<Message>],
         parent_widget_axis: Axis,
         parent_screen_space_span: f32,
         aspect_ratio: f32,
@@ -332,7 +335,7 @@ where
         normalised_space_available
     }
 
-    fn get_sum_of_child_span_weights(children: &[Widget<Message>]) -> f32 {
+    fn get_sum_of_child_span_weights(children: &[BaseWidget<Message>]) -> f32 {
         let mut sum = 0f32;
         for child in children.iter() {
             match child.span {
@@ -348,7 +351,7 @@ where
 
     pub fn traverse<F>(&self, f: &mut F)
     where
-        F: FnMut(&Widget<Message>),
+        F: FnMut(&BaseWidget<Message>),
     {
         f(self);
 
@@ -410,5 +413,90 @@ where
         for child in self.children.iter_mut() {
             child.update_cursor_events_recursively(cursor_state, message_queue)
         }
+    }
+}
+
+impl<Message> Widget for BaseWidget<Message>
+where
+    Message: Clone + Copy,
+{
+    fn handle_event(&mut self, event: Event) {
+        match event {
+            Event::MouseEvent(me) => println!("widget mouse event: {:?}", me),
+            Event::WindowEvent(we) => println!("widget window event: {:?}", we),
+        }
+    }
+
+    fn to_vertices(
+        &self,
+        viewport_dimensions_px: glam::Vec2,
+    ) -> (Vec<SimpleVertex>, Vec<TextVertex>) {
+        let mut text_vertices = Vec::new();
+        if let Some(text) = &self.text {
+            if let Some(clip_rectangle) = self.rectangle {
+                text_vertices.append(&mut text.to_vertices(clip_rectangle, viewport_dimensions_px));
+            }
+        }
+
+        // adding the background box vertices if it contains a colour/background setting
+        let mut simple_vertices = Vec::new();
+        if let Some(rectangle) = self.rectangle {
+            if let Some(colour) = self.background {
+                let rectangle_vertices = rectangle.vertices();
+
+                let a = SimpleVertex::new(rectangle_vertices[0], colour.into());
+                let b = SimpleVertex::new(rectangle_vertices[1], colour.into());
+                let c = SimpleVertex::new(rectangle_vertices[2], colour.into());
+                let d = SimpleVertex::new(rectangle_vertices[3], colour.into());
+
+                simple_vertices.push(a);
+                simple_vertices.push(c);
+                simple_vertices.push(b);
+
+                simple_vertices.push(b);
+                simple_vertices.push(c);
+                simple_vertices.push(d);
+            }
+        }
+
+        (simple_vertices, text_vertices)
+    }
+}
+
+#[derive(Debug)]
+pub enum MouseEvent {
+    ButtonPressed,
+    ButtonReleased,
+    CursorEnteredWindow,
+    CursorExitedWindow,
+    CursorMoved(glam::Vec2),
+}
+
+#[derive(Debug)]
+pub enum WindowEvent {
+    Resized {
+        /// Width in pixels
+        width: u32,
+        /// Height in pixels
+        height: u32,
+    },
+}
+
+#[derive(Debug)]
+pub enum Event {
+    MouseEvent(MouseEvent),
+    WindowEvent(WindowEvent),
+}
+
+pub trait Widget {
+    /// Handles interaction events
+    fn handle_event(&mut self, event: Event);
+
+    /// Returns the vertices necessary to render a widget
+    fn to_vertices(
+        &self,
+        viewport_dimensions_px: glam::Vec2,
+    ) -> (Vec<SimpleVertex>, Vec<TextVertex>) {
+        (Vec::new(), Vec::new())
     }
 }
