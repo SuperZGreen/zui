@@ -1,5 +1,8 @@
 use crate::{
-    zui::{premade_widgets::Button, Axis, Colour, Scene, Span, Text, TextSegment, BaseWidget, TextConfiguration, LineWrapping, TextSize},
+    zui::{
+        premade_widgets::Button, Axis, BaseWidget, Colour, LineWrapping, Scene, Span, Text,
+        TextConfiguration, TextSegment, TextSize, Widget,
+    },
     OptionsMenuMessage, SceneIdentifier, UiMessage,
 };
 
@@ -33,7 +36,10 @@ impl Scene for OptionsScene {
         }
     }
 
-    fn view(&self, aspect_ratio: f32) -> BaseWidget<Self::Message> {
+    fn view(&self, aspect_ratio: f32) -> Box<dyn Widget<Self::Message>> {
+        let button_off_colour = Colour::rgb(0.2f32, 0.3f32, 0.4f32);
+        let button_on_colour = Colour::rgb(0.3f32, 0.4f32, 0.6f32);
+
         let central_content = BaseWidget::new()
             .with_axis(Axis::Vertical)
             .push(BaseWidget::new())
@@ -69,7 +75,10 @@ impl Scene for OptionsScene {
             .push(
                 Button::new(UiMessage::OptionsMenuMessage(
                     OptionsMenuMessage::BackClicked,
-                ))
+                ),
+                    button_off_colour,
+                    button_on_colour,
+            )
                 .with_span(Span::ParentWeight(2f32))
                 .with_text(
                     Text::new().with_segment(TextSegment::new("Back to Start", Colour::WHITE)),
@@ -89,5 +98,6 @@ impl Scene for OptionsScene {
             .push(BaseWidget::new())
             .push(central_content.with_span(central_container_span))
             .push(BaseWidget::new())
+            .into()
     }
 }

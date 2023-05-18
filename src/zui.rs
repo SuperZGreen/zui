@@ -22,7 +22,7 @@ pub use scene::Scene;
 pub use scene_handle::SceneHandle;
 pub use text::{Text, TextSegment, TextConfiguration, LineWrapping, TextSize};
 use text_renderer::TextRenderer;
-pub use widget::{Axis, Span, BaseWidget};
+pub use widget::{Widget, Event, MouseEvent, Axis, Span, BaseWidget};
 pub use scene_store::SceneStore;
 pub use colour::Colour;
 

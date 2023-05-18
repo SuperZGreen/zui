@@ -1,6 +1,6 @@
 use winit::dpi::PhysicalPosition;
 
-use super::Axis;
+use super::{renderer::SimpleVertex, Axis, Colour};
 
 #[derive(Debug, Copy, Clone)]
 pub struct ScreenSpacePosition {
@@ -78,6 +78,27 @@ impl Rectangle {
         let bottom_right = glam::Vec2::new(self.x_max, self.y_min);
 
         [top_left, top_right, bottom_left, bottom_right]
+    }
+
+    /// Converts the Rectangle into a Vec of SimpleVertexs, that can be easily rendererd
+    pub fn to_simple_vertices(&self, colour: Colour) -> Vec<SimpleVertex> {
+        let mut simple_vertices = Vec::with_capacity(6);
+        let rectangle_vertices = self.vertices();
+
+        let a = SimpleVertex::new(rectangle_vertices[0], colour.into());
+        let b = SimpleVertex::new(rectangle_vertices[1], colour.into());
+        let c = SimpleVertex::new(rectangle_vertices[2], colour.into());
+        let d = SimpleVertex::new(rectangle_vertices[3], colour.into());
+
+        simple_vertices.push(a);
+        simple_vertices.push(c);
+        simple_vertices.push(b);
+
+        simple_vertices.push(b);
+        simple_vertices.push(c);
+        simple_vertices.push(d);
+        
+        simple_vertices
     }
 
     /// Returns the space width of the rectangle

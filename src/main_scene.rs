@@ -1,7 +1,7 @@
 use crate::{
     zui::{
         premade_widgets::Button, Axis, BaseWidget, Colour, Scene, Span, Text, TextConfiguration,
-        TextSegment, TextSize,
+        TextSegment, TextSize, Widget,
     },
     SceneIdentifier, StartMenuMessage, UiMessage,
 };
@@ -25,7 +25,10 @@ impl Scene for MainScene {
         (Some(message), false)
     }
 
-    fn view(&self, aspect_ratio: f32) -> crate::zui::BaseWidget<Self::Message> {
+    fn view(&self, aspect_ratio: f32) -> Box<dyn Widget<Self::Message>> {
+        let button_off_colour = Colour::rgb(0.2f32, 0.3f32, 0.4f32);
+        let button_on_colour = Colour::rgb(0.3f32, 0.4f32, 0.6f32);
+
         let central_content = BaseWidget::new()
             .with_axis(Axis::Vertical)
             .push(BaseWidget::new())
@@ -44,33 +47,41 @@ impl Scene for MainScene {
             )
             .push(BaseWidget::new())
             .push(
-                Button::new(UiMessage::StartMenuMessage(StartMenuMessage::StartClicked))
-                    .with_span(Span::ParentWeight(2f32))
-                    .with_text(
-                        Text::new()
-                            .with_configuration(TextConfiguration {
-                                size: TextSize::ParentHeight(0.5f32),
-                                ..Default::default()
-                            })
-                            .with_segment(TextSegment::new("Start", Colour::WHITE)),
-                    ),
+                Button::new(
+                    UiMessage::StartMenuMessage(StartMenuMessage::StartClicked),
+                    button_off_colour,
+                    button_on_colour,
+                )
+                .with_span(Span::ParentWeight(2f32))
+                .with_text(
+                    Text::new()
+                        .with_configuration(TextConfiguration {
+                            size: TextSize::ParentHeight(0.5f32),
+                            ..Default::default()
+                        })
+                        .with_segment(TextSegment::new("Start", Colour::WHITE)),
+                ),
             )
             .push(BaseWidget::new())
             .push(
-                Button::new(UiMessage::GoToScene(SceneIdentifier::OptionsMenu))
-                    .with_span(Span::ParentWeight(2f32))
-                    .with_text(
-                        Text::new()
-                            .with_configuration(TextConfiguration {
-                                size: TextSize::ParentHeight(0.5f32),
-                                ..Default::default()
-                            })
-                            .with_segment(TextSegment::new("Tests/Options", Colour::WHITE)),
-                    ),
+                Button::new(
+                    UiMessage::GoToScene(SceneIdentifier::OptionsMenu),
+                    button_off_colour,
+                    button_on_colour,
+                )
+                .with_span(Span::ParentWeight(2f32))
+                .with_text(
+                    Text::new()
+                        .with_configuration(TextConfiguration {
+                            size: TextSize::ParentHeight(0.5f32),
+                            ..Default::default()
+                        })
+                        .with_segment(TextSegment::new("Tests/Options", Colour::WHITE)),
+                ),
             )
             .push(BaseWidget::new())
             .push(
-                Button::new(UiMessage::Exit)
+                Button::new(UiMessage::Exit, button_off_colour, button_on_colour)
                     .with_span(Span::ParentWeight(2f32))
                     .with_text(
                         Text::new()
@@ -103,5 +114,6 @@ impl Scene for MainScene {
             .push(BaseWidget::new())
             .push(central_content.with_span(central_container_span))
             .push(BaseWidget::new())
+            .into()
     }
 }

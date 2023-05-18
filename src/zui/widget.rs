@@ -4,7 +4,7 @@ use crunch::Rect;
 
 use super::{
     renderer::SimpleVertex, text::Text, text_renderer::TextVertex, Colour, CursorState, Font,
-    Rectangle,
+    Rectangle, ScreenSpacePosition,
 };
 
 #[derive(Copy, Clone)]
@@ -286,7 +286,10 @@ where
             // updating accumulator
             used_screen_space_accumulator += child_screen_space_span;
 
-            child.handle_event(Event::FitRectangle((child_rectangle, resizing_information)));
+            child.handle_event(&Event::FitRectangle((
+                child_rectangle,
+                resizing_information,
+            )));
         }
     }
 
@@ -422,18 +425,11 @@ impl<Message> Widget<Message> for BaseWidget<Message>
 where
     Message: Clone + Copy,
 {
-    fn handle_event(&mut self, event: Event) -> (EventResponse, Option<Message>) {
+    fn handle_event(&mut self, event: &Event) -> EventResponse<Message> {
         match event {
-            Event::MouseEvent(me) => {
-                println!("widget mouse event: {:?}", me);
-                (EventResponse::Ignored, None)
-            }
-            Event::WindowEvent(we) => {
-                println!("widget window event: {:?}", we);
-                (EventResponse::Consumed, None)
-            }
+            Event::MouseEvent(_) => EventResponse::Propagate,
             Event::FitRectangle((rectangle, resizing_information)) => {
-                self.rectangle = Some(rectangle);
+                self.rectangle = Some(*rectangle);
                 if let Some(text) = &mut self.text {
                     text.update_symbols(
                         resizing_information.font,
@@ -442,7 +438,8 @@ where
                     );
                 }
                 self.update_child_rectangles(resizing_information);
-                (EventResponse::Ignored, None)
+
+                EventResponse::Consumed
             }
         }
     }
@@ -469,24 +466,11 @@ where
             }
         }
 
-        // adding the background box vertices if it contains a colour/background setting
+        // adding own rectangle/simple vertices
         let mut simple_vertices = Vec::new();
         if let Some(rectangle) = self.rectangle {
             if let Some(colour) = self.background {
-                let rectangle_vertices = rectangle.vertices();
-
-                let a = SimpleVertex::new(rectangle_vertices[0], colour.into());
-                let b = SimpleVertex::new(rectangle_vertices[1], colour.into());
-                let c = SimpleVertex::new(rectangle_vertices[2], colour.into());
-                let d = SimpleVertex::new(rectangle_vertices[3], colour.into());
-
-                simple_vertices.push(a);
-                simple_vertices.push(c);
-                simple_vertices.push(b);
-
-                simple_vertices.push(b);
-                simple_vertices.push(c);
-                simple_vertices.push(d);
+                simple_vertices.append(&mut rectangle.to_simple_vertices(colour));
             }
         }
 
@@ -524,7 +508,7 @@ pub enum MouseEvent {
     ButtonReleased,
     CursorEnteredWindow,
     CursorExitedWindow,
-    CursorMoved(glam::Vec2),
+    CursorMoved(ScreenSpacePosition),
 }
 
 #[derive(Debug)]
@@ -542,18 +526,17 @@ pub enum Event<'a> {
     /// An event that involves mouse interaction
     MouseEvent(MouseEvent),
 
-    /// An event that involves the window context
-    WindowEvent(WindowEvent),
-
     /// The widget is commanded to fit the provided rectangle
     FitRectangle((Rectangle, &'a ResizingInformation<'a>)),
 }
 
-pub enum EventResponse {
+pub enum EventResponse<Message> {
     /// The [`Event`] is consumed by the widget and will not be propagated to its children
     Consumed,
+    /// The [`Event`] is consumed by the widget and a message is produced
+    Message(Message),
     /// The [`Event`] is not consumed by the widget and will be propagated to its children
-    Ignored,
+    Propagate,
 }
 
 pub struct ResizingInformation<'a> {
@@ -572,8 +555,8 @@ impl<'a> std::fmt::Debug for ResizingInformation<'a> {
 pub trait Widget<Message> {
     /// Handles interaction events, returning the EventResponse that determines whether events
     /// should be propagated to children
-    fn handle_event(&mut self, _event: Event) -> (EventResponse, Option<Message>) {
-        (EventResponse::Ignored, None)
+    fn handle_event(&mut self, _event: &Event) -> EventResponse<Message> {
+        EventResponse::Propagate
     }
 
     /// A mutable iterator for all direct children, used for propagating events

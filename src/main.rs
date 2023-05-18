@@ -21,7 +21,7 @@ use main_scene::MainScene;
 mod options_scene;
 use options_scene::OptionsScene;
 
-use crate::zui::{SceneHandle, Scene, SceneStore};
+use crate::zui::{SceneStore, ScreenSpacePosition};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum SceneIdentifier {
@@ -80,7 +80,7 @@ fn main() {
     let mut scene_store = SceneStore::new();
     scene_store.add_scene(SceneIdentifier::StartMenu, Box::new(MainScene::new()));
     scene_store.add_scene(SceneIdentifier::OptionsMenu, Box::new(OptionsScene::new()));
-    scene_store.set_current_scene(SceneIdentifier::StartMenu);
+    _ = scene_store.set_current_scene(SceneIdentifier::StartMenu);
 
     // let mut main_scene_handle: SceneHandle<UiMessage> =
     //     SceneHandle::new(Box::new(MainScene::new()), zui.font(), zui.aspect_ratio());
@@ -102,7 +102,10 @@ fn main() {
                     WindowEvent::Resized(physical_size) => {
                         render_state.resize(physical_size);
                         zui.resize(physical_size.width, physical_size.height);
-                        scene_store.current_scene_mut().unwrap().queue_widget_recreation();
+                        scene_store
+                            .current_scene_mut()
+                            .unwrap()
+                            .queue_widget_recreation();
                     }
                     WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
                         render_state.resize(*new_inner_size);
@@ -118,18 +121,40 @@ fn main() {
                         exit(control_flow);
                     }
                     WindowEvent::CursorMoved { position, .. } => {
-                        zui.update_cursor_position(*position);
+                        let screen_space_position =
+                            ScreenSpacePosition::from_cursor_physical_position(
+                                *position,
+                                zui.width_px(),
+                                zui.height_px(),
+                            );
+
+                        let current_scene_mut = scene_store.current_scene_mut().unwrap();
+                        current_scene_mut.handle_event(zui::Event::MouseEvent(
+                            zui::MouseEvent::CursorMoved(screen_space_position),
+                        ));
+
+                        // zui.update_cursor_position(*position);
                     }
                     WindowEvent::ModifiersChanged(_) => {
                         // TODO
                     }
                     WindowEvent::CursorEntered { .. } => {}
                     WindowEvent::CursorLeft { .. } => {
-                        zui.cursor_left();
+                        let current_scene_mut = scene_store.current_scene_mut().unwrap();
+                        current_scene_mut.handle_event(zui::Event::MouseEvent(
+                            zui::MouseEvent::CursorExitedWindow,
+                        ));
+                        // zui.cursor_left();
                     }
                     WindowEvent::MouseWheel { .. } => {}
-                    WindowEvent::MouseInput { button, state, .. } => {
-                        zui.mouse_input(*button, *state);
+                    WindowEvent::MouseInput { button: _button, state, .. } => {
+                        let current_scene_mut = scene_store.current_scene_mut().unwrap();
+                        let event = match state {
+                            winit::event::ElementState::Pressed => zui::Event::MouseEvent(zui::MouseEvent::ButtonPressed),
+                            winit::event::ElementState::Released => zui::Event::MouseEvent(zui::MouseEvent::ButtonReleased),
+                        };
+                        current_scene_mut.handle_event(event);
+                        // zui.mouse_input(*button, *state);
                     }
                     _ => {}
                 }
@@ -155,13 +180,18 @@ fn main() {
                             set_scene_destination = Some(scene_identifier);
                         }
                         UiMessage::Exit => exit(control_flow),
-                        _ => {println!("unhandled message!")},
+                        _ => {
+                            println!("unhandled message!")
+                        }
                     }
                 }
 
                 if let Some(scene_identifier) = set_scene_destination {
                     _ = scene_store.set_current_scene(scene_identifier);
-                    scene_store.current_scene_mut().unwrap().rebuild_scene(zui.font(), zui.aspect_ratio());
+                    scene_store
+                        .current_scene_mut()
+                        .unwrap()
+                        .rebuild_scene(zui.font(), zui.aspect_ratio());
                 }
 
                 window.request_redraw();
