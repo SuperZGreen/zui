@@ -1,7 +1,10 @@
 use std::collections::VecDeque;
 
 use super::{
-    primitives::Rectangle, renderer::SimpleVertex, text_renderer::TextVertex, widget::Widget,
+    primitives::Rectangle,
+    renderer::SimpleVertex,
+    text_renderer::TextVertex,
+    widget::{Event, ResizingInformation, Widget},
     BaseWidget, Colour, CursorState, Font, Renderable, Scene,
 };
 
@@ -62,32 +65,30 @@ where
         // recreating widgets
         self.root_widget = Some(self.scene.view(aspect_ratio));
 
-        // updating widget rectangles
-        self.update_widget_rectangles(aspect_ratio);
+        let resizing_information = ResizingInformation { font, aspect_ratio };
 
-        // updating widget text
-        self.update_text_symbols(font, aspect_ratio);
+        // updating widget rectangles
+        // self.resize_widgets(resizing_information);
+        self.root_widget
+            .as_mut()
+            .unwrap()
+            .handle_event(Event::FitRectangle((
+                Rectangle::new(-1f32, 1f32, -1f32, 1f32),
+                &resizing_information,
+            )));
+
+        // // updating widget text
+        // self.update_text_symbols(font, aspect_ratio);
 
         self.widget_recreation_required = false;
     }
 
-    /// Recalculates all the widget rectangles/regions in a scene
-    fn update_widget_rectangles(&mut self, aspect_ratio: f32) {
-        if let Some(root_widget) = &mut self.root_widget {
-            // setting the root widget's rectangle to the whole screen
-            root_widget.set_rectangle(Some(Rectangle::new(-1f32, 1f32, -1f32, 1f32)));
-
-            // updating the child rectangles
-            root_widget.update_child_rectangles_recursively(aspect_ratio);
-        }
-    }
-
-    /// Updates the text symbols (and rectangles) for a scene
-    fn update_text_symbols(&mut self, font: &Font, aspect_ratio: f32) {
-        if let Some(root_widget) = &mut self.root_widget {
-            root_widget.update_text_symbols_recursively(font, aspect_ratio);
-        }
-    }
+    // /// Updates the text symbols (and rectangles) for a scene
+    // fn update_text_symbols(&mut self, font: &Font, aspect_ratio: f32) {
+    //     if let Some(root_widget) = &mut self.root_widget {
+    //         root_widget.update_text_symbols_recursively(font, aspect_ratio);
+    //     }
+    // }
 
     /// Propagates through all widgets and adds to self.messages queue if widget contains an on_x
     /// message
@@ -132,8 +133,8 @@ where
         &self,
         viewport_dimensions_px: glam::Vec2,
     ) -> (Vec<SimpleVertex>, Vec<TextVertex>) {
-        let mut simple_vertices = Vec::new();
-        let mut text_vertices = Vec::new();
+        // let mut simple_vertices = Vec::new();
+        // let mut text_vertices = Vec::new();
 
         let root_widget = match &self.root_widget {
             Some(rw) => rw,
@@ -144,11 +145,13 @@ where
         };
 
         // simple rectangle vertices
-        root_widget.traverse(&mut |widget| {
-            let (mut sv, mut tv) = widget.to_vertices(viewport_dimensions_px);
-            simple_vertices.append(&mut sv);
-            text_vertices.append(&mut tv);
-        });
+        // root_widget.traverse(&mut |widget| {
+        //     let (mut sv, mut tv) = widget.to_vertices(viewport_dimensions_px);
+        //     simple_vertices.append(&mut sv);
+        //     text_vertices.append(&mut tv);
+        // });
+
+        let (simple_vertices, text_vertices) = root_widget.to_vertices(viewport_dimensions_px);
 
         (simple_vertices, text_vertices)
     }

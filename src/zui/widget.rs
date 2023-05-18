@@ -1,5 +1,7 @@
 use std::collections::VecDeque;
 
+use crunch::Rect;
+
 use super::{
     renderer::SimpleVertex, text::Text, text_renderer::TextVertex, Colour, CursorState, Font,
     Rectangle,
@@ -84,12 +86,11 @@ impl Span {
     }
 }
 
-#[derive(Clone)]
 pub struct BaseWidget<Message>
 where
     Message: Clone + Copy,
 {
-    children: Vec<BaseWidget<Message>>,
+    children: Vec<Box<dyn Widget<Message>>>,
 
     // structure
     pub axis: Axis,
@@ -198,33 +199,29 @@ where
     }
 
     #[allow(dead_code)]
-    pub fn push(mut self, child: BaseWidget<Message>) -> Self {
-        self.children.push(child);
+    pub fn push(mut self, child: impl Into<Box<dyn Widget<Message>>>) -> Self {
+        self.children.push(child.into());
         self
     }
 
-    /// Creates a new widget with padding widgets
-    #[allow(dead_code)]
-    pub fn push_padded(self, child: Self, padding_widget: Self) -> Self {
-        let vertical_container = Self::new()
-            .with_axis(Axis::Vertical)
-            .push(padding_widget.clone())
-            .push(child)
-            .push(padding_widget.clone());
-        let horizontal_container = Self::new()
-            .with_axis(Axis::Horizontal)
-            .push(padding_widget.clone())
-            .push(vertical_container)
-            .push(padding_widget.clone());
+    // /// Creates a new widget with padding widgets
+    // #[allow(dead_code)]
+    // pub fn push_padded(self, child: Self, padding_widget: Self) -> Self {
+    //     let vertical_container = Self::new()
+    //         .with_axis(Axis::Vertical)
+    //         .push(padding_widget.clone())
+    //         .push(child)
+    //         .push(padding_widget.clone());
+    //     let horizontal_container = Self::new()
+    //         .with_axis(Axis::Horizontal)
+    //         .push(padding_widget.clone())
+    //         .push(vertical_container)
+    //         .push(padding_widget.clone());
 
-        self.push(horizontal_container)
-    }
+    //     self.push(horizontal_container)
+    // }
 
-    pub fn set_rectangle(&mut self, rectangle: Option<Rectangle>) {
-        self.rectangle = rectangle;
-    }
-
-    pub fn update_child_rectangles_recursively(&mut self, aspect_ratio: f32) {
+    pub fn update_child_rectangles(&mut self, resizing_information: &ResizingInformation) {
         let self_rectangle = self.rectangle.unwrap();
 
         // getting the amount of free space within the self span for child widgets
@@ -232,7 +229,7 @@ where
             &self.children,
             self.axis,
             self_rectangle.span_by_axis(self.axis),
-            aspect_ratio,
+            resizing_information.aspect_ratio,
         );
 
         if self_normalised_space_available < 0.0f32 {
@@ -247,16 +244,22 @@ where
         let mut used_screen_space_accumulator = 0f32;
 
         for child in self.children.iter_mut() {
-            let child_screen_space_span = match child.span {
-                Span::ViewWidth(vw) => {
-                    Span::view_width_to_screen_space_span(vw, aspect_ratio, self.axis)
-                }
-                Span::ViewHeight(vh) => {
-                    Span::view_height_to_screen_space_span(vh, aspect_ratio, self.axis)
-                }
-                Span::ViewMin(vm) => {
-                    Span::view_min_to_screen_space_span(vm, aspect_ratio, self.axis)
-                }
+            let child_screen_space_span = match child.span() {
+                Span::ViewWidth(vw) => Span::view_width_to_screen_space_span(
+                    vw,
+                    resizing_information.aspect_ratio,
+                    self.axis,
+                ),
+                Span::ViewHeight(vh) => Span::view_height_to_screen_space_span(
+                    vh,
+                    resizing_information.aspect_ratio,
+                    self.axis,
+                ),
+                Span::ViewMin(vm) => Span::view_min_to_screen_space_span(
+                    vm,
+                    resizing_information.aspect_ratio,
+                    self.axis,
+                ),
                 Span::ParentWeight(pw) => {
                     pw / sum_of_child_span_weights
                         * self_normalised_space_available
@@ -283,37 +286,36 @@ where
             // updating accumulator
             used_screen_space_accumulator += child_screen_space_span;
 
-            child.set_rectangle(Some(child_rectangle));
-            child.update_child_rectangles_recursively(aspect_ratio);
+            child.handle_event(Event::FitRectangle((child_rectangle, resizing_information)));
         }
     }
 
-    /// Updates the text symbols for self and child widgets if applicable
-    pub fn update_text_symbols_recursively(&mut self, font: &Font, aspect_ratio: f32) {
-        // updating own text
-        if let Some(text) = &mut self.text {
-            if let Some(self_rectangle) = &self.rectangle {
-                text.update_symbols(font, self_rectangle, aspect_ratio);
-            }
-        }
+    // /// Updates the text symbols for self and child widgets if applicable
+    // pub fn update_text_symbols_recursively(&mut self, font: &Font, aspect_ratio: f32) {
+    //     // updating own text
+    //     if let Some(text) = &mut self.text {
+    //         if let Some(self_rectangle) = &self.rectangle {
+    //             text.update_symbols(font, self_rectangle, aspect_ratio);
+    //         }
+    //     }
 
-        // calling for children
-        for child in &mut self.children {
-            child.update_text_symbols_recursively(font, aspect_ratio);
-        }
-    }
+    //     // calling for children
+    //     for child in &mut self.children {
+    //         child.update_text_symbols_recursively(font, aspect_ratio);
+    //     }
+    // }
 
     // TODO: will need to change
     /// Gets the amount of space (normalised to the parent's directional span) available
     fn get_parent_normalised_space_available(
-        children: &[BaseWidget<Message>],
+        children: &[Box<dyn Widget<Message>>],
         parent_widget_axis: Axis,
         parent_screen_space_span: f32,
         aspect_ratio: f32,
     ) -> f32 {
         let mut normalised_space_available = 1f32;
         for child in children.iter() {
-            let child_space_used = match child.span {
+            let child_space_used = match child.span() {
                 Span::ViewHeight(vh) => {
                     Span::view_height_to_screen_space_span(vh, aspect_ratio, parent_widget_axis)
                         / parent_screen_space_span
@@ -335,10 +337,10 @@ where
         normalised_space_available
     }
 
-    fn get_sum_of_child_span_weights(children: &[BaseWidget<Message>]) -> f32 {
+    fn get_sum_of_child_span_weights(children: &[Box<dyn Widget<Message>>]) -> f32 {
         let mut sum = 0f32;
         for child in children.iter() {
-            match child.span {
+            match child.span() {
                 Span::ViewHeight(_) => {}
                 Span::ViewWidth(_) => {}
                 Span::ViewMin(_) => {}
@@ -349,16 +351,16 @@ where
         sum
     }
 
-    pub fn traverse<F>(&self, f: &mut F)
-    where
-        F: FnMut(&BaseWidget<Message>),
-    {
-        f(self);
+    // pub fn traverse<F>(&self, f: &mut F)
+    // where
+    //     F: FnMut(&BaseWidget<Message>),
+    // {
+    //     f(self);
 
-        for child in self.children.iter() {
-            child.traverse(f);
-        }
-    }
+    //     for child in self.children.iter() {
+    //         child.traverse(f);
+    //     }
+    // }
 
     /// Traverses through widgets, adding their on_x messages to the message queue if satisfied
     pub fn update_cursor_events_recursively(
@@ -408,29 +410,58 @@ where
             }
         }
 
-        // TODO: always propagates to children (whether over the widget or not), add conditional
-        // propagation to children
-        for child in self.children.iter_mut() {
-            child.update_cursor_events_recursively(cursor_state, message_queue)
-        }
+        // // TODO: always propagates to children (whether over the widget or not), add conditional
+        // // propagation to children
+        // for child in self.children.iter_mut() {
+        //     child.update_cursor_events_recursively(cursor_state, message_queue)
+        // }
     }
 }
 
-impl<Message> Widget for BaseWidget<Message>
+impl<Message> Widget<Message> for BaseWidget<Message>
 where
     Message: Clone + Copy,
 {
-    fn handle_event(&mut self, event: Event) {
+    fn handle_event(&mut self, event: Event) -> (EventResponse, Option<Message>) {
         match event {
-            Event::MouseEvent(me) => println!("widget mouse event: {:?}", me),
-            Event::WindowEvent(we) => println!("widget window event: {:?}", we),
+            Event::MouseEvent(me) => {
+                println!("widget mouse event: {:?}", me);
+                (EventResponse::Ignored, None)
+            }
+            Event::WindowEvent(we) => {
+                println!("widget window event: {:?}", we);
+                (EventResponse::Consumed, None)
+            }
+            Event::FitRectangle((rectangle, resizing_information)) => {
+                self.rectangle = Some(rectangle);
+                if let Some(text) = &mut self.text {
+                    text.update_symbols(
+                        resizing_information.font,
+                        &rectangle,
+                        resizing_information.aspect_ratio,
+                    );
+                }
+                self.update_child_rectangles(resizing_information);
+                (EventResponse::Ignored, None)
+            }
         }
+    }
+
+    fn clip_rectangle(&self) -> Option<Rectangle> {
+        self.rectangle
+    }
+
+    fn children_iter_mut(
+        &mut self,
+    ) -> Option<std::slice::IterMut<'_, Box<(dyn Widget<Message> + 'static)>>> {
+        Some(self.children.iter_mut())
     }
 
     fn to_vertices(
         &self,
         viewport_dimensions_px: glam::Vec2,
     ) -> (Vec<SimpleVertex>, Vec<TextVertex>) {
+        // adding own text vertices
         let mut text_vertices = Vec::new();
         if let Some(text) = &self.text {
             if let Some(clip_rectangle) = self.rectangle {
@@ -459,7 +490,31 @@ where
             }
         }
 
+        // adding children's vertices
+        for child in self.children.iter() {
+            let (mut sv, mut tv) = child.to_vertices(viewport_dimensions_px);
+            simple_vertices.append(&mut sv);
+            text_vertices.append(&mut tv);
+        }
+
         (simple_vertices, text_vertices)
+    }
+
+    fn span(&self) -> Span {
+        self.span
+    }
+
+    fn axis(&self) -> Axis {
+        self.axis
+    }
+}
+
+impl<'a, Message> Into<Box<dyn Widget<Message> + 'a>> for BaseWidget<Message>
+where
+    Message: Clone + Copy + 'a,
+{
+    fn into(self) -> Box<dyn Widget<Message> + 'a> {
+        Box::new(self)
     }
 }
 
@@ -474,28 +529,79 @@ pub enum MouseEvent {
 
 #[derive(Debug)]
 pub enum WindowEvent {
-    Resized {
-        /// Width in pixels
-        width: u32,
-        /// Height in pixels
-        height: u32,
-    },
+    // Resized {
+    //     /// Width in pixels
+    //     width: u32,
+    //     /// Height in pixels
+    //     height: u32,
+    // },
 }
 
 #[derive(Debug)]
-pub enum Event {
+pub enum Event<'a> {
+    /// An event that involves mouse interaction
     MouseEvent(MouseEvent),
+
+    /// An event that involves the window context
     WindowEvent(WindowEvent),
+
+    /// The widget is commanded to fit the provided rectangle
+    FitRectangle((Rectangle, &'a ResizingInformation<'a>)),
 }
 
-pub trait Widget {
-    /// Handles interaction events
-    fn handle_event(&mut self, event: Event);
+pub enum EventResponse {
+    /// The [`Event`] is consumed by the widget and will not be propagated to its children
+    Consumed,
+    /// The [`Event`] is not consumed by the widget and will be propagated to its children
+    Ignored,
+}
+
+pub struct ResizingInformation<'a> {
+    pub font: &'a Font,
+    pub aspect_ratio: f32,
+}
+
+impl<'a> std::fmt::Debug for ResizingInformation<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ResizingInformation")
+            .field("aspect_ratio", &self.aspect_ratio)
+            .finish()
+    }
+}
+
+pub trait Widget<Message> {
+    /// Handles interaction events, returning the EventResponse that determines whether events
+    /// should be propagated to children
+    fn handle_event(&mut self, _event: Event) -> (EventResponse, Option<Message>) {
+        (EventResponse::Ignored, None)
+    }
+
+    /// A mutable iterator for all direct children, used for propagating events
+    fn children_iter_mut(
+        &mut self,
+    ) -> Option<std::slice::IterMut<'_, Box<(dyn Widget<Message> + 'static)>>> {
+        None
+    }
+
+    /// Returns the clipping rectangle of the widget
+    fn clip_rectangle(&self) -> Option<Rectangle> {
+        None
+    }
+
+    /// The [`Span`] of the widget
+    fn span(&self) -> Span {
+        Span::ParentWeight(1f32)
+    }
+
+    /// The [`Axis`] of the widget
+    fn axis(&self) -> Axis {
+        Axis::Vertical
+    }
 
     /// Returns the vertices necessary to render a widget
     fn to_vertices(
         &self,
-        viewport_dimensions_px: glam::Vec2,
+        _viewport_dimensions_px: glam::Vec2,
     ) -> (Vec<SimpleVertex>, Vec<TextVertex>) {
         (Vec::new(), Vec::new())
     }

@@ -1,7 +1,7 @@
 use crate::{
     zui::{
-        premade_widgets::Button, Axis, Colour, Scene, Span, Text, TextConfiguration, TextSegment,
-        TextSize, BaseWidget,
+        premade_widgets::Button, Axis, BaseWidget, Colour, Scene, Span, Text, TextConfiguration,
+        TextSegment, TextSize,
     },
     SceneIdentifier, StartMenuMessage, UiMessage,
 };
@@ -98,6 +98,7 @@ impl Scene for MainScene {
 
         // root widget
         BaseWidget::new()
+            .with_background(Some(Colour::rgb(0.1f32, 0.1f32, 0.1f32)))
             .with_axis(Axis::Horizontal)
             .push(BaseWidget::new())
             .push(central_content.with_span(central_container_span))
