@@ -1,12 +1,11 @@
 use std::collections::VecDeque;
 
 use super::{
-    Context,
     primitives::Rectangle,
     renderer::SimpleVertex,
     text_renderer::TextVertex,
     widget::{Event, EventResponse, Widget},
-    BaseWidget, Colour, Font, Renderable, Scene, ScreenSpacePosition,
+    BaseWidget, Colour, Context, Font, Renderable, Scene, ScreenSpacePosition,
 };
 
 /// Allows for caching of the widgets produced by Scene::view
@@ -45,7 +44,12 @@ where
     }
 
     /// Handles external events and rebuilds widgets and rectangles if required
-    pub fn update(&mut self, cursor_position: Option<ScreenSpacePosition>, font: &Font, aspect_ratio: f32) {
+    pub fn update(
+        &mut self,
+        cursor_position: Option<ScreenSpacePosition>,
+        font: &Font,
+        aspect_ratio: f32,
+    ) {
         // self.solve_cursor_events(cursor_state);
 
         self.handle_messages();
@@ -71,15 +75,16 @@ where
         // recreating widgets
         self.root_widget = Some(self.scene.view(aspect_ratio));
 
-        let context = Context { font, aspect_ratio, cursor_position };
+        let context = Context {
+            font,
+            aspect_ratio,
+            cursor_position,
+        };
 
         // updating widget rectangles
         // self.resize_widgets(context);
         self.root_widget.as_mut().unwrap().handle_event(
-            &Event::FitRectangle((
-                Rectangle::new(-1f32, 1f32, -1f32, 1f32),
-                &context,
-            )),
+            &Event::FitRectangle((Rectangle::new(-1f32, 1f32, -1f32, 1f32), &context)),
             &context,
         );
 
@@ -123,40 +128,39 @@ where
     /// Passes a certain event to the scene to be propageed through the widget tree
     pub fn handle_event(&mut self, event: Event, context: &Context) {
         if let Some(root_widget) = &mut self.root_widget {
-            match Self::handle_event_recursively(root_widget, &event, context) {
-                Some(message) => self.messages.push_back(message),
-                None => {} // Do nothing
-            }
+            Self::handle_event_recursively(root_widget, &event, context, &mut self.messages);
         }
     }
 
     /// Handles widget events recursively
     pub fn handle_event_recursively(
+        // The Widget to handle the event
         widget: &mut Box<dyn Widget<Message>>,
+
+        // The event for the Widget to handle
         event: &Event,
+
+        // The event Context (mouse position, aspect ratio, fonts, etc)
         context: &Context,
-    ) -> Option<Message> {
+
+        // The message as a result of the Widget handling the event
+        result_messages: &mut VecDeque<Message>,
+    ) {
         let event_response = widget.handle_event(event, context);
 
         match event_response {
             EventResponse::Consumed => {} // Do nothing
             EventResponse::Message(message) => {
-                return Some(message);
+                result_messages.push_back(message);
             }
             EventResponse::Propagate => {
                 if let Some(children_iter_mut) = widget.children_iter_mut() {
                     for child in children_iter_mut {
-                        if let Some(message) =
-                            Self::handle_event_recursively(child, event, context)
-                        {
-                            return Some(message);
-                        }
+                        Self::handle_event_recursively(child, event, context, result_messages);
                     }
                 }
             }
         }
-
-        None
     }
 
     /// Pops an external message from the queue
