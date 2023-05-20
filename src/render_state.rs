@@ -1,9 +1,9 @@
 use crate::zui::Zui;
 
 pub struct RenderState {
-    adapter: wgpu::Adapter,
+    _adapter: wgpu::Adapter,
     surface: wgpu::Surface,
-    surface_format: wgpu::TextureFormat,
+    _surface_format: wgpu::TextureFormat,
     surface_configuration: wgpu::SurfaceConfiguration,
     device: wgpu::Device,
     queue: wgpu::Queue,
@@ -72,9 +72,9 @@ impl RenderState {
         surface.configure(&device, &surface_configuration);
         
         let mut this = Self {
-            adapter,
+            _adapter: adapter,
             surface,
-            surface_format: format,
+            _surface_format: format,
             surface_configuration,
             device,
             queue,
@@ -177,7 +177,7 @@ impl RenderState {
     }
 
     pub fn surface_format(&self) -> wgpu::TextureFormat {
-        self.surface_format
+        self._surface_format
     }
     
     pub fn skip_rendering(&self) -> bool {

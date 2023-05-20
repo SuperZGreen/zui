@@ -26,10 +26,7 @@ pub use text::{LineWrapping, Text, TextConfiguration, TextSegment, TextSize};
 use text_renderer::TextRenderer;
 pub use widget::{Axis, BaseWidget, Event, MouseEvent, Span, Widget};
 
-use winit::{
-    dpi::{PhysicalPosition, PhysicalSize},
-    event::{ElementState, MouseButton},
-};
+use winit::dpi::{PhysicalPosition, PhysicalSize};
 
 use self::primitives::Rectangle;
 

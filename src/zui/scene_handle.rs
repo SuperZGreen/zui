@@ -4,8 +4,7 @@ use super::{
     primitives::Rectangle,
     renderer::SimpleVertex,
     text_renderer::TextVertex,
-    widget::{Event, EventResponse, Widget},
-    BaseWidget, Colour, Context, Font, Renderable, Scene, ScreenSpacePosition,
+    widget::{Event, EventResponse, Widget}, Context, Renderable, Scene,
 };
 
 /// Allows for caching of the widgets produced by Scene::view
@@ -44,10 +43,7 @@ where
     }
 
     /// Handles external events and rebuilds widgets and rectangles if required
-    pub fn update(
-        &mut self,
-        context: &Context,
-    ) {
+    pub fn update(&mut self, context: &Context) {
         // self.solve_cursor_events(cursor_state);
 
         self.handle_messages();
@@ -64,10 +60,7 @@ where
     }
 
     /// Recreates widgets, updates rectangles and text
-    pub fn rebuild_scene(
-        &mut self,
-        context: &Context,
-    ) {
+    pub fn rebuild_scene(&mut self, context: &Context) {
         // recreating widgets
         self.root_widget = Some(self.scene.view(context.aspect_ratio));
 
@@ -83,21 +76,6 @@ where
 
         self.widget_recreation_required = false;
     }
-
-    // /// Updates the text symbols (and rectangles) for a scene
-    // fn update_text_symbols(&mut self, font: &Font, aspect_ratio: f32) {
-    //     if let Some(root_widget) = &mut self.root_widget {
-    //         root_widget.update_text_symbols_recursively(font, aspect_ratio);
-    //     }
-    // }
-
-    // /// Propagates through all widgets and adds to self.messages queue if widget contains an on_x
-    // /// message
-    // fn solve_cursor_events(&mut self, cursor_state: &Option<CursorState>) {
-    //     if let Some(root_widget) = &mut self.root_widget {
-    //         root_widget.update_cursor_events_recursively(cursor_state, &mut self.messages);
-    //     }
-    // }
 
     /// Iterates through the self.messages queue and passes messages to the underlying scene one by
     /// one
@@ -157,11 +135,6 @@ where
     pub fn pop_external_message(&mut self) -> Option<Message> {
         self.external_messages.pop_front()
     }
-
-    // /// Gives a mut reference to the underlying scene
-    // pub fn scene_mut(&mut self) -> &mut Scene {
-    //     &mut self.scene
-    // }
 }
 
 impl<Message> Renderable for SceneHandle<Message>
@@ -172,9 +145,6 @@ where
         &self,
         viewport_dimensions_px: glam::Vec2,
     ) -> (Vec<SimpleVertex>, Vec<TextVertex>) {
-        // let mut simple_vertices = Vec::new();
-        // let mut text_vertices = Vec::new();
-
         let root_widget = match &self.root_widget {
             Some(rw) => rw,
             None => {
@@ -182,13 +152,6 @@ where
                 return (Vec::new(), Vec::new());
             }
         };
-
-        // simple rectangle vertices
-        // root_widget.traverse(&mut |widget| {
-        //     let (mut sv, mut tv) = widget.to_vertices(viewport_dimensions_px);
-        //     simple_vertices.append(&mut sv);
-        //     text_vertices.append(&mut tv);
-        // });
 
         let (simple_vertices, text_vertices) = root_widget.to_vertices(viewport_dimensions_px);
 

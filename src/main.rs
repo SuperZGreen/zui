@@ -21,7 +21,7 @@ use main_scene::MainScene;
 mod options_scene;
 use options_scene::OptionsScene;
 
-use crate::zui::{SceneStore, ScreenSpacePosition};
+use crate::zui::SceneStore;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum SceneIdentifier {

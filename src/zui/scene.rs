@@ -1,4 +1,4 @@
-use super::{BaseWidget, widget::Widget};
+use super::widget::Widget;
 
 pub trait Scene {
     type Message: Copy + Clone;

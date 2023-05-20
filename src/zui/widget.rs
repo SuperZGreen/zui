@@ -1,5 +1,5 @@
 use super::{
-    renderer::SimpleVertex, text::Text, text_renderer::TextVertex, Colour, Font,
+    renderer::SimpleVertex, text::Text, text_renderer::TextVertex, Colour,
     Rectangle, ScreenSpacePosition,
 };
 

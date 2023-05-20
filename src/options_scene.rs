@@ -1,8 +1,8 @@
 use crate::{
     zui::{
         premade_widgets::{Button, FillBar},
-        Axis, BaseWidget, Colour, LineWrapping, Scene, Span, Text, TextConfiguration, TextSegment,
-        TextSize, Widget,
+        Axis, BaseWidget, Colour, Scene, Span, Text, TextConfiguration, TextSegment, TextSize,
+        Widget,
     },
     OptionsMenuMessage, SceneIdentifier, UiMessage,
 };
@@ -23,8 +23,6 @@ impl Scene for OptionsScene {
     type Message = UiMessage;
 
     fn handle_message(&mut self, message: Self::Message) -> (Option<Self::Message>, bool) {
-        let rebuild_required = false;
-
         match message {
             UiMessage::OptionsMenuMessage(options_menu_message) => match options_menu_message {
                 OptionsMenuMessage::BackClicked => {
@@ -34,7 +32,7 @@ impl Scene for OptionsScene {
                         false,
                     )
                 }
-                OptionsMenuMessage::BarChanged(val) => {
+                OptionsMenuMessage::BarChanged(_val) => {
                     // println!("bar changed to: {val}");
                     (None, false)
                 }
