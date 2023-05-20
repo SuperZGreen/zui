@@ -1,11 +1,12 @@
 use std::collections::VecDeque;
 
 use super::{
+    Context,
     primitives::Rectangle,
     renderer::SimpleVertex,
     text_renderer::TextVertex,
-    widget::{Event, EventResponse, ResizingInformation, Widget},
-    BaseWidget, Colour, CursorState, Font, Renderable, Scene,
+    widget::{Event, EventResponse, Widget},
+    BaseWidget, Colour, Font, Renderable, Scene, ScreenSpacePosition,
 };
 
 /// Allows for caching of the widgets produced by Scene::view
@@ -44,14 +45,14 @@ where
     }
 
     /// Handles external events and rebuilds widgets and rectangles if required
-    pub fn update(&mut self, cursor_state: &Option<CursorState>, font: &Font, aspect_ratio: f32) {
+    pub fn update(&mut self, cursor_position: Option<ScreenSpacePosition>, font: &Font, aspect_ratio: f32) {
         // self.solve_cursor_events(cursor_state);
 
         self.handle_messages();
 
         // lazy widget recreation
         if self.widget_recreation_required {
-            self.rebuild_scene(font, aspect_ratio);
+            self.rebuild_scene(font, aspect_ratio, cursor_position);
         }
     }
 
@@ -61,21 +62,26 @@ where
     }
 
     /// Recreates widgets, updates rectangles and text
-    pub fn rebuild_scene(&mut self, font: &Font, aspect_ratio: f32) {
+    pub fn rebuild_scene(
+        &mut self,
+        font: &Font,
+        aspect_ratio: f32,
+        cursor_position: Option<ScreenSpacePosition>,
+    ) {
         // recreating widgets
         self.root_widget = Some(self.scene.view(aspect_ratio));
 
-        let resizing_information = ResizingInformation { font, aspect_ratio };
+        let context = Context { font, aspect_ratio, cursor_position };
 
         // updating widget rectangles
-        // self.resize_widgets(resizing_information);
-        self.root_widget
-            .as_mut()
-            .unwrap()
-            .handle_event(&Event::FitRectangle((
+        // self.resize_widgets(context);
+        self.root_widget.as_mut().unwrap().handle_event(
+            &Event::FitRectangle((
                 Rectangle::new(-1f32, 1f32, -1f32, 1f32),
-                &resizing_information,
-            )));
+                &context,
+            )),
+            &context,
+        );
 
         // // updating widget text
         // self.update_text_symbols(font, aspect_ratio);
@@ -115,11 +121,11 @@ where
     }
 
     /// Passes a certain event to the scene to be propageed through the widget tree
-    pub fn handle_event(&mut self, event: Event) {
+    pub fn handle_event(&mut self, event: Event, context: &Context) {
         if let Some(root_widget) = &mut self.root_widget {
-            match Self::handle_event_recursively(root_widget, &event) {
+            match Self::handle_event_recursively(root_widget, &event, context) {
                 Some(message) => self.messages.push_back(message),
-                None => {}, // Do nothing
+                None => {} // Do nothing
             }
         }
     }
@@ -128,18 +134,21 @@ where
     pub fn handle_event_recursively(
         widget: &mut Box<dyn Widget<Message>>,
         event: &Event,
+        context: &Context,
     ) -> Option<Message> {
-        let event_response = widget.handle_event(event);
+        let event_response = widget.handle_event(event, context);
 
         match event_response {
-            EventResponse::Consumed => {}, // Do nothing
+            EventResponse::Consumed => {} // Do nothing
             EventResponse::Message(message) => {
                 return Some(message);
             }
             EventResponse::Propagate => {
                 if let Some(children_iter_mut) = widget.children_iter_mut() {
                     for child in children_iter_mut {
-                        if let Some(message) =  Self::handle_event_recursively(child, event) {
+                        if let Some(message) =
+                            Self::handle_event_recursively(child, event, context)
+                        {
                             return Some(message);
                         }
                     }

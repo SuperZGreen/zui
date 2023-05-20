@@ -2,7 +2,7 @@ use crate::zui::{
     self,
     primitives::Rectangle,
     widget::{Event, MouseEvent, Widget},
-    Colour, Span, Text,
+    Colour, Context, Span, Text,
 };
 
 pub struct Button<Message> {
@@ -64,7 +64,11 @@ impl<Message> Widget<Message> for Button<Message>
 where
     Message: Copy + Clone,
 {
-    fn handle_event(&mut self, event: &Event) -> zui::widget::EventResponse<Message> {
+    fn handle_event(
+        &mut self,
+        event: &Event,
+        context: &Context,
+    ) -> zui::widget::EventResponse<Message> {
         match event {
             Event::MouseEvent(MouseEvent::CursorExitedWindow) => {
                 self.cursor_is_over = false;
@@ -91,15 +95,11 @@ where
                 }
             }
 
-            crate::zui::widget::Event::FitRectangle((clip_rectangle, resizing_information)) => {
+            crate::zui::widget::Event::FitRectangle((clip_rectangle, context)) => {
                 self.clip_rectangle = Some(*clip_rectangle);
 
                 if let Some(text) = &mut self.text {
-                    text.update_symbols(
-                        resizing_information.font,
-                        &clip_rectangle,
-                        resizing_information.aspect_ratio,
-                    );
+                    text.update_symbols(context.font, &clip_rectangle, context.aspect_ratio);
                 }
 
                 crate::zui::widget::EventResponse::Propagate
@@ -115,7 +115,7 @@ where
     }
 
     fn clip_rectangle(&self) -> Option<crate::zui::primitives::Rectangle> {
-        None
+        self.clip_rectangle
     }
 
     fn span(&self) -> Span {

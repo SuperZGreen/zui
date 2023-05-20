@@ -92,7 +92,6 @@ impl Text {
         self
     }
 
-    #[allow(dead_code)]
     pub fn with_configuration(mut self, configuration: TextConfiguration) -> Self {
         self.configuration = configuration;
         self

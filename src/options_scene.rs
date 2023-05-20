@@ -1,7 +1,8 @@
 use crate::{
     zui::{
-        premade_widgets::Button, Axis, BaseWidget, Colour, LineWrapping, Scene, Span, Text,
-        TextConfiguration, TextSegment, TextSize, Widget,
+        premade_widgets::{Button, FillBar},
+        Axis, BaseWidget, Colour, LineWrapping, Scene, Span, Text, TextConfiguration, TextSegment,
+        TextSize, Widget,
     },
     OptionsMenuMessage, SceneIdentifier, UiMessage,
 };
@@ -25,13 +26,19 @@ impl Scene for OptionsScene {
         let rebuild_required = false;
 
         match message {
-            UiMessage::OptionsMenuMessage(OptionsMenuMessage::BackClicked) => {
-                info!("Back clicked!");
-                (
-                    Some(UiMessage::GoToScene(SceneIdentifier::StartMenu)),
-                    false,
-                )
-            }
+            UiMessage::OptionsMenuMessage(options_menu_message) => match options_menu_message {
+                OptionsMenuMessage::BackClicked => {
+                    info!("Back clicked!");
+                    (
+                        Some(UiMessage::GoToScene(SceneIdentifier::StartMenu)),
+                        false,
+                    )
+                }
+                OptionsMenuMessage::BarChanged(val) => {
+                    // println!("bar changed to: {val}");
+                    (None, false)
+                }
+            },
             _ => (None, false),
         }
     }
@@ -47,38 +54,88 @@ impl Scene for OptionsScene {
                 BaseWidget::new()
                     .with_span(Span::ParentWeight(10f32))
                     .with_background(Some(Colour::rgb(0.1f32, 0.1f32, 0.1f32)))
-                    .with_text(
-                        Text::new()
-                            .with_segment(TextSegment::new("This is my text! ", Colour::WHITE))
-                            .with_segment(TextSegment::new(
-                                "This is another part of my text! ",
-                                Colour::rgb(0f32, 1f32, 1f32),
-                            ))
-                            .with_segment(TextSegment::new(
-                                "This is some more text ",
-                                Colour::WHITE,
-                            ))
-                            .with_segment(TextSegment::new("This is my ", Colour::WHITE))
-                            .with_segment(TextSegment::new(
-                                "FAVOURITE ",
-                                Colour::rgb(0.7f32, 1f32, 0.7f32),
-                            ))
-                            .with_segment(TextSegment::new("text!", Colour::WHITE))
-                            .with_segment(TextSegment::new(" Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec ac sagittis nisl. Vivamus fermentum imperdiet magna eu vulputate. Phasellus vitae ex ut turpis dictum dictum vel egestas lorem. Vestibulum eu tortor eget nisl suscipit dictum ut quis dolor. Duis vitae diam eu eros mattis tincidunt a in dui. Curabitur euismod, tortor a feugiat mattis, orci libero lacinia turpis, in elementum risus erat id augue. Nulla non pharetra diam. Nullam nibh mauris, volutpat at nisl eu, scelerisque iaculis ipsum. Curabitur porta varius augue. Suspendisse id dui ante. Vivamus at lorem dictum, mollis dolor sit amet, porttitor sapien. Praesent sodales in tortor ac volutpat. Mauris in pharetra magna. Curabitur fermentum volutpat magna a vehicula.", Colour::WHITE))
-                            .with_configuration(TextConfiguration {
-                                size: TextSize::ParentHeight(0.05f32),
-                                ..Default::default()
-                            }),
+                    .push(
+                        BaseWidget::new()
+                            .with_span(Span::ViewHeight(0.05f32))
+                            .with_text(
+                                Text::new()
+                                    .with_segment(TextSegment::new("Options Menu", Colour::WHITE))
+                                    .with_configuration(TextConfiguration {
+                                        size: TextSize::ParentHeight(1f32),
+                                        ..Default::default()
+                                    }),
+                            ),
+                    )
+                    .push(
+                        BaseWidget::new()
+                            .with_span(Span::ParentWeight(10f32))
+                            .with_text(
+                                Text::new()
+                                    .with_segment(TextSegment::new(
+                                        "This is my text! ",
+                                        Colour::WHITE,
+                                    ))
+                                    .with_segment(TextSegment::new(
+                                        "This is another part of my text! ",
+                                        Colour::rgb(0f32, 1f32, 1f32),
+                                    ))
+                                    .with_segment(TextSegment::new(
+                                        "This is some more text ",
+                                        Colour::WHITE,
+                                    ))
+                                    .with_segment(TextSegment::new("This is my ", Colour::WHITE))
+                                    .with_segment(TextSegment::new(
+                                        "FAVOURITE ",
+                                        Colour::rgb(0.7f32, 1f32, 0.7f32),
+                                    ))
+                                    .with_segment(TextSegment::new("text!", Colour::WHITE))
+                                    .with_segment(TextSegment::new(
+                                        " Lorem ipsum dolor sit amet, conse\
+                                ctetur adipiscing elit. Donec ac sagittis nisl. Vivamus fermentum i\
+                                mperdiet magna eu vulputate. Phasellus vitae ex ut turpis dictum di\
+                                ctum vel egestas lorem. Vestibulum eu tortor eget nisl suscipit dic\
+                                tum ut quis dolor. Duis vitae diam eu eros mattis tincidunt a in du\
+                                i. Curabitur euismod, tortor a feugiat mattis, orci libero lacinia \
+                                turpis, in elementum risus erat id augue. Nulla non pharetra diam. \
+                                Nullam nibh mauris, volutpat at nisl eu, scelerisque iaculis ipsum.\
+                                Curabitur porta varius augue. Suspendisse id dui ante. Vivamus at l\
+                                orem dictum, mollis dolor sit amet, porttitor sapien. Praesent soda\
+                                les in tortor ac volutpat. Mauris in pharetra magna. Curabitur ferm\
+                                entum volutpat magna a vehicula.",
+                                        Colour::WHITE,
+                                    ))
+                                    .with_configuration(TextConfiguration {
+                                        size: TextSize::ParentHeight(0.05f32),
+                                        ..Default::default()
+                                    }),
+                            ),
+                    )
+                    .push(
+                        FillBar::new(0f32..=100f32, 20f32, false, |val| {
+                            UiMessage::OptionsMenuMessage(OptionsMenuMessage::BarChanged(*val))
+                        })
+                        .with_span(Span::ViewHeight(0.05f32)),
+                    )
+                    .push(
+                        FillBar::new(0f32..=100f32, 20f32, false, |val| {
+                            UiMessage::OptionsMenuMessage(OptionsMenuMessage::BarChanged(*val))
+                        })
+                        .with_span(Span::ViewHeight(0.05f32)),
+                    )
+                    .push(
+                        FillBar::new(0f32..=100f32, 20f32, false, |val| {
+                            UiMessage::OptionsMenuMessage(OptionsMenuMessage::BarChanged(*val))
+                        })
+                        .with_span(Span::ViewHeight(0.05f32)),
                     ),
             )
             .push(BaseWidget::new())
             .push(
-                Button::new(UiMessage::OptionsMenuMessage(
-                    OptionsMenuMessage::BackClicked,
-                ),
+                Button::new(
+                    UiMessage::OptionsMenuMessage(OptionsMenuMessage::BackClicked),
                     button_off_colour,
                     button_on_colour,
-            )
+                )
                 .with_span(Span::ParentWeight(2f32))
                 .with_text(
                     Text::new().with_segment(TextSegment::new("Back to Start", Colour::WHITE)),

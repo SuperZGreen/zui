@@ -1,11 +1,9 @@
-use std::collections::VecDeque;
-
-use crunch::Rect;
-
 use super::{
-    renderer::SimpleVertex, text::Text, text_renderer::TextVertex, Colour, CursorState, Font,
+    renderer::SimpleVertex, text::Text, text_renderer::TextVertex, Colour, Font,
     Rectangle, ScreenSpacePosition,
 };
+
+use crate::zui::Context;
 
 #[derive(Copy, Clone)]
 pub enum Axis {
@@ -221,7 +219,7 @@ where
     //     self.push(horizontal_container)
     // }
 
-    pub fn update_child_rectangles(&mut self, resizing_information: &ResizingInformation) {
+    pub fn update_child_rectangles(&mut self, context: &Context) {
         let self_rectangle = self.rectangle.unwrap();
 
         // getting the amount of free space within the self span for child widgets
@@ -229,7 +227,7 @@ where
             &self.children,
             self.axis,
             self_rectangle.span_by_axis(self.axis),
-            resizing_information.aspect_ratio,
+            context.aspect_ratio,
         );
 
         if self_normalised_space_available < 0.0f32 {
@@ -247,17 +245,17 @@ where
             let child_screen_space_span = match child.span() {
                 Span::ViewWidth(vw) => Span::view_width_to_screen_space_span(
                     vw,
-                    resizing_information.aspect_ratio,
+                    context.aspect_ratio,
                     self.axis,
                 ),
                 Span::ViewHeight(vh) => Span::view_height_to_screen_space_span(
                     vh,
-                    resizing_information.aspect_ratio,
+                    context.aspect_ratio,
                     self.axis,
                 ),
                 Span::ViewMin(vm) => Span::view_min_to_screen_space_span(
                     vm,
-                    resizing_information.aspect_ratio,
+                    context.aspect_ratio,
                     self.axis,
                 ),
                 Span::ParentWeight(pw) => {
@@ -288,8 +286,8 @@ where
 
             child.handle_event(&Event::FitRectangle((
                 child_rectangle,
-                resizing_information,
-            )));
+                context,
+            )), context);
         }
     }
 
@@ -365,79 +363,79 @@ where
     //     }
     // }
 
-    /// Traverses through widgets, adding their on_x messages to the message queue if satisfied
-    pub fn update_cursor_events_recursively(
-        &mut self,
-        cursor_state: &Option<CursorState>,
-        message_queue: &mut VecDeque<Message>,
-    ) {
-        let self_rectangle = match self.rectangle {
-            Some(r) => r,
-            None => return,
-        };
+    // /// Traverses through widgets, adding their on_x messages to the message queue if satisfied
+    // pub fn update_cursor_events_recursively(
+    //     &mut self,
+    //     cursor_state: &Option<CursorState>,
+    //     message_queue: &mut VecDeque<Message>,
+    // ) {
+    //     let self_rectangle = match self.rectangle {
+    //         Some(r) => r,
+    //         None => return,
+    //     };
 
-        let mut cursor_is_over_widget = false;
-        if let Some(cursor_state) = cursor_state {
-            if self_rectangle.is_in(cursor_state.screen_space_position()) {
-                cursor_is_over_widget = true;
+    //     let mut cursor_is_over_widget = false;
+    //     if let Some(cursor_state) = cursor_state {
+    //         if self_rectangle.is_in(cursor_state.screen_space_position()) {
+    //             cursor_is_over_widget = true;
 
-                if let Some(callback_cursor_on) = self.callback_cursor_on {
-                    callback_cursor_on(self);
-                }
+    //             if let Some(callback_cursor_on) = self.callback_cursor_on {
+    //                 callback_cursor_on(self);
+    //             }
 
-                if let Some(message) = self.message_cursor_on {
-                    message_queue.push_back(message);
-                }
+    //             if let Some(message) = self.message_cursor_on {
+    //                 message_queue.push_back(message);
+    //             }
 
-                if cursor_state.is_clicked() {
-                    if let Some(callback_cursor_clicked) = self.callback_cursor_clicked {
-                        callback_cursor_clicked(self);
-                    }
+    //             if cursor_state.is_clicked() {
+    //                 if let Some(callback_cursor_clicked) = self.callback_cursor_clicked {
+    //                     callback_cursor_clicked(self);
+    //                 }
 
-                    if let Some(message) = self.message_cursor_clicked {
-                        message_queue.push_back(message);
-                    }
-                }
-            } else {
-                cursor_is_over_widget = false;
-            }
-        }
+    //                 if let Some(message) = self.message_cursor_clicked {
+    //                     message_queue.push_back(message);
+    //                 }
+    //             }
+    //         } else {
+    //             cursor_is_over_widget = false;
+    //         }
+    //     }
 
-        if !cursor_is_over_widget {
-            if let Some(callback_cursor_off) = self.callback_cursor_off {
-                callback_cursor_off(self);
-            }
+    //     if !cursor_is_over_widget {
+    //         if let Some(callback_cursor_off) = self.callback_cursor_off {
+    //             callback_cursor_off(self);
+    //         }
 
-            if let Some(message) = self.message_cursor_off {
-                message_queue.push_back(message);
-            }
-        }
+    //         if let Some(message) = self.message_cursor_off {
+    //             message_queue.push_back(message);
+    //         }
+    //     }
 
         // // TODO: always propagates to children (whether over the widget or not), add conditional
         // // propagation to children
         // for child in self.children.iter_mut() {
         //     child.update_cursor_events_recursively(cursor_state, message_queue)
         // }
-    }
+    // }
 }
 
 impl<Message> Widget<Message> for BaseWidget<Message>
 where
     Message: Clone + Copy,
 {
-    fn handle_event(&mut self, event: &Event) -> EventResponse<Message> {
+    fn handle_event(&mut self, event: &Event, _context: &Context) -> EventResponse<Message> {
         match event {
             Event::MouseEvent(_) => EventResponse::Propagate,
-            Event::FitRectangle((rectangle, resizing_information)) => {
+            Event::FitRectangle((rectangle, context)) => {
                 self.rectangle = Some(*rectangle);
                 if let Some(text) = &mut self.text {
                     text.update_symbols(
-                        resizing_information.font,
+                        context.font,
                         &rectangle,
-                        resizing_information.aspect_ratio,
+                        context.aspect_ratio,
                     );
                 }
-                self.update_child_rectangles(resizing_information);
+                self.update_child_rectangles(context);
 
                 EventResponse::Consumed
             }
@@ -527,7 +525,7 @@ pub enum Event<'a> {
     MouseEvent(MouseEvent),
 
     /// The widget is commanded to fit the provided rectangle
-    FitRectangle((Rectangle, &'a ResizingInformation<'a>)),
+    FitRectangle((Rectangle, &'a Context<'a>)),
 }
 
 pub enum EventResponse<Message> {
@@ -539,23 +537,10 @@ pub enum EventResponse<Message> {
     Propagate,
 }
 
-pub struct ResizingInformation<'a> {
-    pub font: &'a Font,
-    pub aspect_ratio: f32,
-}
-
-impl<'a> std::fmt::Debug for ResizingInformation<'a> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ResizingInformation")
-            .field("aspect_ratio", &self.aspect_ratio)
-            .finish()
-    }
-}
-
 pub trait Widget<Message> {
     /// Handles interaction events, returning the EventResponse that determines whether events
     /// should be propagated to children
-    fn handle_event(&mut self, _event: &Event) -> EventResponse<Message> {
+    fn handle_event(&mut self, event: &Event, context: &Context) -> EventResponse<Message> {
         EventResponse::Propagate
     }
 

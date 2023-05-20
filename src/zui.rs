@@ -30,27 +30,27 @@ use winit::{dpi::PhysicalPosition, event::{MouseButton, ElementState}};
 
 use self::primitives::Rectangle;
 
-pub struct CursorState {
-    is_clicked: bool,
-    screen_space_position: ScreenSpacePosition,
-}
+// pub struct CursorState {
+//     is_clicked: bool,
+//     screen_space_position: ScreenSpacePosition,
+// }
 
-impl CursorState {
-    pub fn new(is_clicked: bool, screen_space_position: ScreenSpacePosition) -> Self {
-        Self {
-            is_clicked,
-            screen_space_position,
-        }
-    }
+// impl CursorState {
+//     pub fn new(is_clicked: bool, screen_space_position: ScreenSpacePosition) -> Self {
+//         Self {
+//             is_clicked,
+//             screen_space_position,
+//         }
+//     }
 
-    pub fn is_clicked(&self) -> bool {
-        self.is_clicked
-    }
+//     pub fn is_clicked(&self) -> bool {
+//         self.is_clicked
+//     }
 
-    pub fn screen_space_position(&self) -> ScreenSpacePosition {
-        self.screen_space_position
-    }
-}
+//     pub fn screen_space_position(&self) -> ScreenSpacePosition {
+//         self.screen_space_position
+//     }
+// }
 
 pub struct Zui {
     font: Font,
@@ -61,7 +61,8 @@ pub struct Zui {
     width_px: u32,
     height_px: u32,
     aspect_ratio: f32,
-    cursor_state: Option<CursorState>,
+    // cursor_state: Option<CursorState>,
+    cursor_position: Option<ScreenSpacePosition>,
 }
 
 impl Zui {
@@ -91,7 +92,7 @@ impl Zui {
             width_px,
             height_px,
             aspect_ratio: width_px as f32 / height_px as f32,
-            cursor_state: None,
+            cursor_position: None,
         })
     }
 
@@ -146,38 +147,63 @@ impl Zui {
             self.height_px,
         );
 
-        self.cursor_state = if screen_space_position.is_in_viewport_bounds() {
-            Some(CursorState {
-                is_clicked: false,
-                screen_space_position,
-            })
-        } else {
-            None
-        }
+        // self.cursor_position = if screen_space_position.is_in_viewport_bounds() {
+        //     Some(screen_space_position)
+        // } else {
+        //     None
+        // }
+        
+        // NOTE: the cursor can be out of the window if clicked, held and dragged out of the window
+        self.cursor_position = Some(screen_space_position)
     }
     
     /// Called when the cursor leaves the screen
     pub fn cursor_left(&mut self) {
-        self.cursor_state = None;
+        self.cursor_position = None;
     }
     
-    /// Handles mouse clicks via winit's types
-    pub fn mouse_input(&mut self, _button: MouseButton, state: ElementState) {
-        if let Some(cursor_state) = &mut self.cursor_state {
-            cursor_state.is_clicked = match state {
-                ElementState::Pressed => true,
-                ElementState::Released => false,
-            }
-        }
-    }
+    // /// Handles mouse clicks via winit's types
+    // pub fn mouse_input(&mut self, _button: MouseButton, state: ElementState) {
+    //     if let Some(cursor_state) = &mut self.cursor_state {
+    //         cursor_state.is_clicked = match state {
+    //             ElementState::Pressed => true,
+    //             ElementState::Released => false,
+    //         }
+    //     }
+    // }
     
-    pub fn update(&mut self) {
-        if let Some(cursor_state) = &mut self.cursor_state {
-            cursor_state.is_clicked = false
-        }
-    }
+    // pub fn update(&mut self) {
+    //     if let Some(cursor_state) = &mut self.cursor_state {
+    //         cursor_state.is_clicked = false
+    //     }
+    // }
 
-    pub fn cursor_state(&self) -> &Option<CursorState> {
-        &self.cursor_state
+    pub fn cursor_position(&self) -> Option<ScreenSpacePosition> {
+        self.cursor_position
+    }
+    
+    /// Gets the context for an event
+    pub fn context<'a>(&self) -> Context {
+        Context {
+            font: &self.font,
+            aspect_ratio: self.aspect_ratio,
+            cursor_position: self.cursor_position,
+        }
     }
 }
+
+/// The context for an event
+pub struct Context<'a> {
+    pub font: &'a Font,
+    pub aspect_ratio: f32,
+    pub cursor_position: Option<ScreenSpacePosition>
+}
+
+impl<'a> std::fmt::Debug for Context<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Context")
+            .field("aspect_ratio", &self.aspect_ratio)
+            .finish()
+    }
+}
+

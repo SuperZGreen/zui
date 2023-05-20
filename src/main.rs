@@ -45,6 +45,7 @@ pub enum StartMenuMessage {
 #[derive(Clone, Copy)]
 pub enum OptionsMenuMessage {
     BackClicked,
+    BarChanged(f32),
 }
 
 fn main() {
@@ -120,18 +121,25 @@ fn main() {
                     } => {
                         exit(control_flow);
                     }
-                    WindowEvent::CursorMoved { position, .. } => {
-                        let screen_space_position =
-                            ScreenSpacePosition::from_cursor_physical_position(
-                                *position,
-                                zui.width_px(),
-                                zui.height_px(),
-                            );
+                    WindowEvent::CursorMoved {
+                        position: cursor_physical_position,
+                        ..
+                    } => {
+                        // let screen_space_position =
+                        //     ScreenSpacePosition::from_cursor_physical_position(
+                        //         *position,
+                        //         zui.width_px(),
+                        //         zui.height_px(),
+                        //     );
+                        zui.update_cursor_position(*cursor_physical_position);
 
                         let current_scene_mut = scene_store.current_scene_mut().unwrap();
-                        current_scene_mut.handle_event(zui::Event::MouseEvent(
-                            zui::MouseEvent::CursorMoved(screen_space_position),
-                        ));
+                        current_scene_mut.handle_event(
+                            zui::Event::MouseEvent(zui::MouseEvent::CursorMoved(
+                                zui.cursor_position().unwrap(),
+                            )),
+                            &zui.context(),
+                        );
 
                         // zui.update_cursor_position(*position);
                     }
@@ -140,20 +148,29 @@ fn main() {
                     }
                     WindowEvent::CursorEntered { .. } => {}
                     WindowEvent::CursorLeft { .. } => {
+                        zui.cursor_left();
                         let current_scene_mut = scene_store.current_scene_mut().unwrap();
-                        current_scene_mut.handle_event(zui::Event::MouseEvent(
-                            zui::MouseEvent::CursorExitedWindow,
-                        ));
-                        // zui.cursor_left();
+                        current_scene_mut.handle_event(
+                            zui::Event::MouseEvent(zui::MouseEvent::CursorExitedWindow),
+                            &zui.context(),
+                        );
                     }
                     WindowEvent::MouseWheel { .. } => {}
-                    WindowEvent::MouseInput { button: _button, state, .. } => {
+                    WindowEvent::MouseInput {
+                        button: _button,
+                        state,
+                        ..
+                    } => {
                         let current_scene_mut = scene_store.current_scene_mut().unwrap();
                         let event = match state {
-                            winit::event::ElementState::Pressed => zui::Event::MouseEvent(zui::MouseEvent::ButtonPressed),
-                            winit::event::ElementState::Released => zui::Event::MouseEvent(zui::MouseEvent::ButtonReleased),
+                            winit::event::ElementState::Pressed => {
+                                zui::Event::MouseEvent(zui::MouseEvent::ButtonPressed)
+                            }
+                            winit::event::ElementState::Released => {
+                                zui::Event::MouseEvent(zui::MouseEvent::ButtonReleased)
+                            }
                         };
-                        current_scene_mut.handle_event(event);
+                        current_scene_mut.handle_event(event, &zui.context());
                         // zui.mouse_input(*button, *state);
                     }
                     _ => {}
@@ -168,8 +185,7 @@ fn main() {
             Event::MainEventsCleared => {
                 // TODO: Solving
                 let current_scene_mut = scene_store.current_scene_mut().unwrap();
-                current_scene_mut.update(zui.cursor_state(), zui.font(), zui.aspect_ratio());
-                zui.update();
+                current_scene_mut.update(zui.cursor_position(), zui.font(), zui.aspect_ratio());
 
                 // solving user behaviour
                 let mut set_scene_destination = None;
@@ -188,10 +204,11 @@ fn main() {
 
                 if let Some(scene_identifier) = set_scene_destination {
                     _ = scene_store.set_current_scene(scene_identifier);
-                    scene_store
-                        .current_scene_mut()
-                        .unwrap()
-                        .rebuild_scene(zui.font(), zui.aspect_ratio());
+                    scene_store.current_scene_mut().unwrap().rebuild_scene(
+                        zui.font(),
+                        zui.aspect_ratio(),
+                        zui.cursor_position(),
+                    );
                 }
 
                 window.request_redraw();
