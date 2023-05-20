@@ -105,7 +105,8 @@ impl Scene for OptionsScene {
                                         Colour::WHITE,
                                     ))
                                     .with_configuration(TextConfiguration {
-                                        size: TextSize::ParentHeight(0.05f32),
+                                        // size: TextSize::ParentHeight(0.05f32),
+                                        size: TextSize::Pixels(16f32),
                                         ..Default::default()
                                     }),
                             ),

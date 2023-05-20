@@ -41,21 +41,21 @@ impl TextVertex {
         // clip bounds are frame buffer coordinates
         let clip_bound_x_min = Self::normalised_device_space_to_frame_buffer_space_x(
             parent_rectangle.x_min,
-            viewport_dimensions_px.x(),
+            viewport_dimensions_px.x,
         );
         let clip_bound_x_max = Self::normalised_device_space_to_frame_buffer_space_x(
             parent_rectangle.x_max,
-            viewport_dimensions_px.x(),
+            viewport_dimensions_px.x,
         );
         
         // Note: the max and min will swap due to the y-down nature of wgpu's frame buffer coordinates
         let clip_bound_y_max = Self::normalised_device_space_to_frame_buffer_space_y(
             parent_rectangle.y_min,
-            viewport_dimensions_px.y(),
+            viewport_dimensions_px.y,
         );
         let clip_bound_y_min = Self::normalised_device_space_to_frame_buffer_space_y(
             parent_rectangle.y_max,
-            viewport_dimensions_px.y(),
+            viewport_dimensions_px.y,
         );
 
         TextVertex {

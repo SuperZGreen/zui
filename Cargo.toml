@@ -11,7 +11,7 @@ wgpu = "0.14"
 pollster = "0.2.4"
 log = "0.4.17"
 env_logger = "0.9.0"
-glam = "0.8.5"
+glam = "0.24.0"
 fontdue = { version = "0.7.2" }
 rustc-hash = { version = "1.1.0" }
 crunch = { version = "0.5.3" }

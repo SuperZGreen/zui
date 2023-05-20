@@ -46,9 +46,7 @@ where
     /// Handles external events and rebuilds widgets and rectangles if required
     pub fn update(
         &mut self,
-        cursor_position: Option<ScreenSpacePosition>,
-        font: &Font,
-        aspect_ratio: f32,
+        context: &Context,
     ) {
         // self.solve_cursor_events(cursor_state);
 
@@ -56,7 +54,7 @@ where
 
         // lazy widget recreation
         if self.widget_recreation_required {
-            self.rebuild_scene(font, aspect_ratio, cursor_position);
+            self.rebuild_scene(context);
         }
     }
 
@@ -68,18 +66,10 @@ where
     /// Recreates widgets, updates rectangles and text
     pub fn rebuild_scene(
         &mut self,
-        font: &Font,
-        aspect_ratio: f32,
-        cursor_position: Option<ScreenSpacePosition>,
+        context: &Context,
     ) {
         // recreating widgets
-        self.root_widget = Some(self.scene.view(aspect_ratio));
-
-        let context = Context {
-            font,
-            aspect_ratio,
-            cursor_position,
-        };
+        self.root_widget = Some(self.scene.view(context.aspect_ratio));
 
         // updating widget rectangles
         // self.resize_widgets(context);

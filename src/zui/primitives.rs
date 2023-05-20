@@ -1,4 +1,4 @@
-use winit::dpi::PhysicalPosition;
+use winit::dpi::{PhysicalPosition, PhysicalSize};
 
 use super::{renderer::SimpleVertex, Axis, Colour};
 
@@ -15,12 +15,11 @@ impl ScreenSpacePosition {
 
     pub fn from_cursor_physical_position(
         cursor_position: PhysicalPosition<f64>,
-        viewport_width_px: u32,
-        viewport_height_px: u32,
+        viewport_dimensions_px: PhysicalSize<u32>,
     ) -> Self {
         Self {
-            x: cursor_position.x as f32 / viewport_width_px as f32 * 2f32 - 1f32,
-            y: -(cursor_position.y as f32 / viewport_height_px as f32 * 2f32 - 1f32),
+            x: cursor_position.x as f32 / viewport_dimensions_px.width as f32 * 2f32 - 1f32,
+            y: -(cursor_position.y as f32 / viewport_dimensions_px.height as f32 * 2f32 - 1f32),
         }
     }
 

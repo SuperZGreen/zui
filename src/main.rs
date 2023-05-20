@@ -67,14 +67,13 @@ fn main() {
     let mut render_state = pollster::block_on(RenderState::new(&window));
 
     // zui
-    let resolution = window.inner_size();
+    let viewport_dimensions_px = window.inner_size();
     let mut zui = Zui::new(
         "resources/zui/fonts/Roboto-Regular.ttf",
         render_state.device(),
         render_state.queue(),
         render_state.surface_configuration(),
-        resolution.width,
-        resolution.height,
+        viewport_dimensions_px,
     )
     .unwrap();
 
@@ -102,7 +101,7 @@ fn main() {
                     }
                     WindowEvent::Resized(physical_size) => {
                         render_state.resize(physical_size);
-                        zui.resize(physical_size.width, physical_size.height);
+                        zui.resize(*physical_size);
                         scene_store
                             .current_scene_mut()
                             .unwrap()
@@ -185,7 +184,7 @@ fn main() {
             Event::MainEventsCleared => {
                 // TODO: Solving
                 let current_scene_mut = scene_store.current_scene_mut().unwrap();
-                current_scene_mut.update(zui.cursor_position(), zui.font(), zui.aspect_ratio());
+                current_scene_mut.update(&zui.context());
 
                 // solving user behaviour
                 let mut set_scene_destination = None;
@@ -204,11 +203,10 @@ fn main() {
 
                 if let Some(scene_identifier) = set_scene_destination {
                     _ = scene_store.set_current_scene(scene_identifier);
-                    scene_store.current_scene_mut().unwrap().rebuild_scene(
-                        zui.font(),
-                        zui.aspect_ratio(),
-                        zui.cursor_position(),
-                    );
+                    scene_store
+                        .current_scene_mut()
+                        .unwrap()
+                        .rebuild_scene(&zui.context());
                 }
 
                 window.request_redraw();

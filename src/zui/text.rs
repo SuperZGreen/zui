@@ -170,13 +170,13 @@ impl Text {
             for presymbol in presymbols {
                 // line wrapping
                 if matches!(self.configuration.line_wrapping, LineWrapping::Symbol) {
-                    if glyph_origin.x()
+                    if glyph_origin.x
                         + presymbol.symbol_metrics.width
                         + presymbol.symbol_metrics.x_shift
                         > parent_rect.x_max
                     {
-                        glyph_origin.set_x(parent_rect.x_min);
-                        glyph_origin.set_y(glyph_origin.y() - new_line_screen_space_span)
+                        glyph_origin.x = parent_rect.x_min;
+                        glyph_origin.y = glyph_origin.y - new_line_screen_space_span;
                     }
                 }
 
@@ -185,12 +185,12 @@ impl Text {
                     character: presymbol.character,
                     colour: presymbol.colour,
                     region: Rectangle::new(
-                        glyph_origin.x() + presymbol.symbol_metrics.x_shift,
-                        glyph_origin.x()
+                        glyph_origin.x + presymbol.symbol_metrics.x_shift,
+                        glyph_origin.x
                             + presymbol.symbol_metrics.x_shift
                             + presymbol.symbol_metrics.width,
-                        glyph_origin.y() + presymbol.symbol_metrics.y_shift,
-                        glyph_origin.y()
+                        glyph_origin.y + presymbol.symbol_metrics.y_shift,
+                        glyph_origin.y
                             + presymbol.symbol_metrics.y_shift
                             + presymbol.symbol_metrics.height,
                     ),
@@ -222,9 +222,9 @@ impl Text {
             // println!("rect: {:?}", symbol.region);
 
             let uv_top_left = symbol.uv_top_left;
-            let uv_top_right = glam::Vec2::new(symbol.uv_bottom_right.x(), symbol.uv_top_left.y());
+            let uv_top_right = glam::Vec2::new(symbol.uv_bottom_right.x, symbol.uv_top_left.y);
             let uv_bottom_left =
-                glam::Vec2::new(symbol.uv_top_left.x(), symbol.uv_bottom_right.y());
+                glam::Vec2::new(symbol.uv_top_left.x, symbol.uv_bottom_right.y);
             let uv_bottom_right = symbol.uv_bottom_right;
 
             let a = TextVertex::new(

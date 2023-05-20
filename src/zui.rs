@@ -1,3 +1,4 @@
+mod colour;
 mod font;
 pub mod premade_widgets;
 mod primitives;
@@ -5,52 +6,32 @@ mod renderable;
 mod renderer;
 mod scene;
 mod scene_handle;
+mod scene_store;
 mod text;
 mod text_renderer;
 mod texture_atlas;
 pub mod util;
 mod widget;
-mod scene_store;
-mod colour;
 // mod tree;
 
+pub use colour::Colour;
 pub use font::Font;
 pub use primitives::ScreenSpacePosition;
 pub use renderable::Renderable;
 use renderer::Renderer;
 pub use scene::Scene;
 pub use scene_handle::SceneHandle;
-pub use text::{Text, TextSegment, TextConfiguration, LineWrapping, TextSize};
-use text_renderer::TextRenderer;
-pub use widget::{Widget, Event, MouseEvent, Axis, Span, BaseWidget};
 pub use scene_store::SceneStore;
-pub use colour::Colour;
+pub use text::{LineWrapping, Text, TextConfiguration, TextSegment, TextSize};
+use text_renderer::TextRenderer;
+pub use widget::{Axis, BaseWidget, Event, MouseEvent, Span, Widget};
 
-use winit::{dpi::PhysicalPosition, event::{MouseButton, ElementState}};
+use winit::{
+    dpi::{PhysicalPosition, PhysicalSize},
+    event::{ElementState, MouseButton},
+};
 
 use self::primitives::Rectangle;
-
-// pub struct CursorState {
-//     is_clicked: bool,
-//     screen_space_position: ScreenSpacePosition,
-// }
-
-// impl CursorState {
-//     pub fn new(is_clicked: bool, screen_space_position: ScreenSpacePosition) -> Self {
-//         Self {
-//             is_clicked,
-//             screen_space_position,
-//         }
-//     }
-
-//     pub fn is_clicked(&self) -> bool {
-//         self.is_clicked
-//     }
-
-//     pub fn screen_space_position(&self) -> ScreenSpacePosition {
-//         self.screen_space_position
-//     }
-// }
 
 pub struct Zui {
     font: Font,
@@ -58,10 +39,8 @@ pub struct Zui {
     renderer: Renderer,
     text_renderer: TextRenderer,
 
-    width_px: u32,
-    height_px: u32,
+    viewport_dimensions_px: PhysicalSize<u32>,
     aspect_ratio: f32,
-    // cursor_state: Option<CursorState>,
     cursor_position: Option<ScreenSpacePosition>,
 }
 
@@ -71,8 +50,7 @@ impl Zui {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         surface_configuration: &wgpu::SurfaceConfiguration,
-        width_px: u32,
-        height_px: u32,
+        viewport_dimensions_px: PhysicalSize<u32>,
     ) -> Result<Self, ()> {
         let font_default = match Font::new(file, 128, device, queue) {
             Ok(f) => f,
@@ -89,17 +67,19 @@ impl Zui {
             font: font_default,
             renderer: Renderer::new(device, surface_configuration),
             text_renderer,
-            width_px,
-            height_px,
-            aspect_ratio: width_px as f32 / height_px as f32,
+            viewport_dimensions_px,
+            aspect_ratio: viewport_dimensions_px.width as f32
+                / viewport_dimensions_px.height as f32,
             cursor_position: None,
         })
     }
 
     /// Turns the Widget's rectangles into vertices, uploads them to the GPU
     pub fn upload_vertices(&mut self, device: &wgpu::Device, renderable: &dyn Renderable) {
-        let (simple_vertices, text_vertices) =
-            renderable.to_vertices(glam::Vec2::new(self.width_px as f32, self.height_px as f32));
+        let (simple_vertices, text_vertices) = renderable.to_vertices(glam::Vec2::new(
+            self.viewport_dimensions_px.width as f32,
+            self.viewport_dimensions_px.height as f32,
+        ));
 
         self.renderer.upload(device, &simple_vertices);
         self.text_renderer.upload(device, &text_vertices);
@@ -113,10 +93,10 @@ impl Zui {
     }
 
     /// Resizes the zui context
-    pub fn resize(&mut self, width_px: u32, height_px: u32) {
-        self.width_px = width_px;
-        self.height_px = height_px;
-        self.aspect_ratio = width_px as f32 / height_px as f32;
+    pub fn resize(&mut self, viewport_dimensions_px: PhysicalSize<u32>) {
+        self.viewport_dimensions_px = viewport_dimensions_px;
+        self.aspect_ratio =
+            viewport_dimensions_px.width as f32 / viewport_dimensions_px.height as f32;
     }
 
     /// Gives the current Font
@@ -129,22 +109,11 @@ impl Zui {
         self.aspect_ratio
     }
 
-    /// Gives the width of the application window surface in pixels
-    pub fn width_px(&self) -> u32 {
-        self.width_px
-    }
-
-    /// Gives the height of the application window surface in pixels
-    pub fn height_px(&self) -> u32 {
-        self.height_px
-    }
-
     /// Updates the cursor state tracked by zui, will only ever be called when cursor is over viewport
     pub fn update_cursor_position(&mut self, cursor_physical_position: PhysicalPosition<f64>) {
         let screen_space_position = ScreenSpacePosition::from_cursor_physical_position(
             cursor_physical_position,
-            self.width_px,
-            self.height_px,
+            self.viewport_dimensions_px,
         );
 
         // self.cursor_position = if screen_space_position.is_in_viewport_bounds() {
@@ -152,16 +121,16 @@ impl Zui {
         // } else {
         //     None
         // }
-        
+
         // NOTE: the cursor can be out of the window if clicked, held and dragged out of the window
         self.cursor_position = Some(screen_space_position)
     }
-    
+
     /// Called when the cursor leaves the screen
     pub fn cursor_left(&mut self) {
         self.cursor_position = None;
     }
-    
+
     // /// Handles mouse clicks via winit's types
     // pub fn mouse_input(&mut self, _button: MouseButton, state: ElementState) {
     //     if let Some(cursor_state) = &mut self.cursor_state {
@@ -171,7 +140,7 @@ impl Zui {
     //         }
     //     }
     // }
-    
+
     // pub fn update(&mut self) {
     //     if let Some(cursor_state) = &mut self.cursor_state {
     //         cursor_state.is_clicked = false
@@ -181,13 +150,14 @@ impl Zui {
     pub fn cursor_position(&self) -> Option<ScreenSpacePosition> {
         self.cursor_position
     }
-    
+
     /// Gets the context for an event
     pub fn context<'a>(&self) -> Context {
         Context {
             font: &self.font,
             aspect_ratio: self.aspect_ratio,
             cursor_position: self.cursor_position,
+            viewport_dimensions_px: self.viewport_dimensions_px,
         }
     }
 }
@@ -196,14 +166,12 @@ impl Zui {
 pub struct Context<'a> {
     pub font: &'a Font,
     pub aspect_ratio: f32,
-    pub cursor_position: Option<ScreenSpacePosition>
+    pub cursor_position: Option<ScreenSpacePosition>,
+    pub viewport_dimensions_px: PhysicalSize<u32>,
 }
 
 impl<'a> std::fmt::Debug for Context<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Context")
-            .field("aspect_ratio", &self.aspect_ratio)
-            .finish()
+        f.debug_struct("Context").finish()
     }
 }
-
