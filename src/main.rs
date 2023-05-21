@@ -108,7 +108,8 @@ fn main() {
                         scene_store
                             .current_scene_mut()
                             .unwrap()
-                            .queue_widget_recreation();
+                            // .queue_widget_recreation();
+                            .resize_scene(&zui.context());
                     }
                     WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
                         render_state.resize(*new_inner_size);

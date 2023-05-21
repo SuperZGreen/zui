@@ -202,10 +202,14 @@ where
             crate::zui::Event::FitRectangle((clip_rectangle, context)) => {
                 self.clip_rectangle = Some(*clip_rectangle);
                 self.bar_background_rectangle = Some(*clip_rectangle);
+
+                // sizing the foreground bar
                 let mut bar_foreground_rectangle = *clip_rectangle;
                 bar_foreground_rectangle.x_max =
-                    (bar_foreground_rectangle.x_min + bar_foreground_rectangle.x_max) / 2f32;
+                    Self::screen_space_position_from_value(&self.range, *clip_rectangle, &self.value);
                 self.bar_foreground_rectangle = Some(bar_foreground_rectangle);
+
+                // regenerating text symbols
                 self.text.place_symbols(
                     context.font,
                     &clip_rectangle,

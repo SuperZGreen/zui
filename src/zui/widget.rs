@@ -517,6 +517,7 @@ pub enum Event<'a> {
     MouseEvent(MouseEvent),
 
     /// The widget is commanded to fit the provided rectangle
+    // TODO: remove Context from this
     FitRectangle((Rectangle, &'a Context<'a>)),
 }
 

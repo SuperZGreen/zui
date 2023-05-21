@@ -4,7 +4,8 @@ use super::{
     primitives::Rectangle,
     renderer::SimpleVertex,
     text_renderer::TextVertex,
-    widget::{Event, EventResponse, Widget}, Context, Renderable, Scene,
+    widget::{Event, EventResponse, Widget},
+    Context, Renderable, Scene,
 };
 
 /// Allows for caching of the widgets produced by Scene::view
@@ -59,7 +60,8 @@ where
         self.widget_recreation_required = true;
     }
 
-    /// Recreates widgets, updates rectangles and text
+    /// Rebuilds the scene using Scene::view, refits the Widgets to the Normalised Device
+    /// Coordinates square
     pub fn rebuild_scene(&mut self, context: &Context) {
         // recreating widgets
         self.root_widget = Some(self.scene.view(context.aspect_ratio));
@@ -71,10 +73,19 @@ where
             &context,
         );
 
-        // // updating widget text
-        // self.update_text_symbols(font, aspect_ratio);
-
         self.widget_recreation_required = false;
+    }
+
+    /// Queues resizing the root widget
+    pub fn resize_scene(&mut self, context: &Context) {
+        if let Some(root_widget) = &mut self.root_widget {
+            root_widget.handle_event(
+                &Event::FitRectangle((Rectangle::new(-1f32, 1f32, -1f32, 1f32), &context)),
+                &context,
+            );
+        } else {
+            warn!("no root widget to resize!");
+        }
     }
 
     /// Iterates through the self.messages queue and passes messages to the underlying scene one by
