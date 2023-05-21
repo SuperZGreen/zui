@@ -95,8 +95,12 @@ where
         } else {
             self.text = Self::format_text(&value, self.range.end());
             if let Some(background_rectangle) = self.bar_background_rectangle {
-                self.text
-                    .update_symbols(context.font, &background_rectangle, context.aspect_ratio);
+                self.text.place_symbols(
+                    context.font,
+                    &background_rectangle,
+                    context.aspect_ratio,
+                    context.viewport_dimensions_px,
+                );
 
                 if let Some(foreground_rectangle) = &mut self.bar_foreground_rectangle {
                     let bar_position = Self::screen_space_position_from_value(
@@ -202,8 +206,12 @@ where
                 bar_foreground_rectangle.x_max =
                     (bar_foreground_rectangle.x_min + bar_foreground_rectangle.x_max) / 2f32;
                 self.bar_foreground_rectangle = Some(bar_foreground_rectangle);
-                self.text
-                    .update_symbols(context.font, &clip_rectangle, context.aspect_ratio);
+                self.text.place_symbols(
+                    context.font,
+                    &clip_rectangle,
+                    context.aspect_ratio,
+                    context.viewport_dimensions_px,
+                );
 
                 crate::zui::widget::EventResponse::Consumed
             }

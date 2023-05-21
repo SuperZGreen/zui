@@ -67,7 +67,7 @@ where
     fn handle_event(
         &mut self,
         event: &Event,
-        context: &Context,
+        _context: &Context,
     ) -> zui::widget::EventResponse<Message> {
         match event {
             Event::MouseEvent(MouseEvent::CursorExitedWindow) => {
@@ -99,7 +99,12 @@ where
                 self.clip_rectangle = Some(*clip_rectangle);
 
                 if let Some(text) = &mut self.text {
-                    text.update_symbols(context.font, &clip_rectangle, context.aspect_ratio);
+                    text.place_symbols(
+                        context.font,
+                        &clip_rectangle,
+                        context.aspect_ratio,
+                        context.viewport_dimensions_px,
+                    );
                 }
 
                 crate::zui::widget::EventResponse::Propagate

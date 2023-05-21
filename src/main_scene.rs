@@ -48,7 +48,7 @@ impl Scene for MainScene {
             .push(BaseWidget::new())
             .push(
                 Button::new(
-                    UiMessage::StartMenuMessage(StartMenuMessage::StartClicked),
+                    UiMessage::GoToScene(SceneIdentifier::GameScene),
                     button_off_colour,
                     button_on_colour,
                 )

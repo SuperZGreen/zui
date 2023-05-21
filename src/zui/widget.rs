@@ -1,6 +1,6 @@
 use super::{
-    renderer::SimpleVertex, text::Text, text_renderer::TextVertex, Colour,
-    Rectangle, ScreenSpacePosition,
+    renderer::SimpleVertex, text::Text, text_renderer::TextVertex, Colour, Rectangle,
+    ScreenSpacePosition,
 };
 
 use crate::zui::Context;
@@ -243,21 +243,15 @@ where
 
         for child in self.children.iter_mut() {
             let child_screen_space_span = match child.span() {
-                Span::ViewWidth(vw) => Span::view_width_to_screen_space_span(
-                    vw,
-                    context.aspect_ratio,
-                    self.axis,
-                ),
-                Span::ViewHeight(vh) => Span::view_height_to_screen_space_span(
-                    vh,
-                    context.aspect_ratio,
-                    self.axis,
-                ),
-                Span::ViewMin(vm) => Span::view_min_to_screen_space_span(
-                    vm,
-                    context.aspect_ratio,
-                    self.axis,
-                ),
+                Span::ViewWidth(vw) => {
+                    Span::view_width_to_screen_space_span(vw, context.aspect_ratio, self.axis)
+                }
+                Span::ViewHeight(vh) => {
+                    Span::view_height_to_screen_space_span(vh, context.aspect_ratio, self.axis)
+                }
+                Span::ViewMin(vm) => {
+                    Span::view_min_to_screen_space_span(vm, context.aspect_ratio, self.axis)
+                }
                 Span::ParentWeight(pw) => {
                     pw / sum_of_child_span_weights
                         * self_normalised_space_available
@@ -284,10 +278,7 @@ where
             // updating accumulator
             used_screen_space_accumulator += child_screen_space_span;
 
-            child.handle_event(&Event::FitRectangle((
-                child_rectangle,
-                context,
-            )), context);
+            child.handle_event(&Event::FitRectangle((child_rectangle, context)), context);
         }
     }
 
@@ -411,11 +402,11 @@ where
     //         }
     //     }
 
-        // // TODO: always propagates to children (whether over the widget or not), add conditional
-        // // propagation to children
-        // for child in self.children.iter_mut() {
-        //     child.update_cursor_events_recursively(cursor_state, message_queue)
-        // }
+    // // TODO: always propagates to children (whether over the widget or not), add conditional
+    // // propagation to children
+    // for child in self.children.iter_mut() {
+    //     child.update_cursor_events_recursively(cursor_state, message_queue)
+    // }
     // }
 }
 
@@ -429,10 +420,11 @@ where
             Event::FitRectangle((rectangle, context)) => {
                 self.rectangle = Some(*rectangle);
                 if let Some(text) = &mut self.text {
-                    text.update_symbols(
+                    text.place_symbols(
                         context.font,
                         &rectangle,
                         context.aspect_ratio,
+                        context.viewport_dimensions_px,
                     );
                 }
                 self.update_child_rectangles(context);
@@ -537,6 +529,7 @@ pub enum EventResponse<Message> {
     Propagate,
 }
 
+#[allow(unused_variables)]
 pub trait Widget<Message> {
     /// Handles interaction events, returning the EventResponse that determines whether events
     /// should be propagated to children
@@ -569,7 +562,7 @@ pub trait Widget<Message> {
     /// Returns the vertices necessary to render a widget
     fn to_vertices(
         &self,
-        _viewport_dimensions_px: glam::Vec2,
+        viewport_dimensions_px: glam::Vec2,
     ) -> (Vec<SimpleVertex>, Vec<TextVertex>) {
         (Vec::new(), Vec::new())
     }

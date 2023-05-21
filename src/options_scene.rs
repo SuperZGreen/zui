@@ -12,6 +12,8 @@ pub struct OptionsScene {
 }
 
 impl OptionsScene {
+    const NORMAL_FONT_SIZE_PX: f32 = 22f32;
+
     pub fn new() -> Self {
         Self {
             // TODO
@@ -59,7 +61,7 @@ impl Scene for OptionsScene {
                                 Text::new()
                                     .with_segment(TextSegment::new("Options Menu", Colour::WHITE))
                                     .with_configuration(TextConfiguration {
-                                        size: TextSize::ParentHeight(1f32),
+                                        size: TextSize::Pixels(Self::NORMAL_FONT_SIZE_PX * 2f32),
                                         ..Default::default()
                                     }),
                             ),
@@ -103,8 +105,7 @@ impl Scene for OptionsScene {
                                         Colour::WHITE,
                                     ))
                                     .with_configuration(TextConfiguration {
-                                        // size: TextSize::ParentHeight(0.05f32),
-                                        size: TextSize::Pixels(16f32),
+                                        size: TextSize::Pixels(Self::NORMAL_FONT_SIZE_PX),
                                         ..Default::default()
                                     }),
                             ),

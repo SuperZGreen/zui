@@ -17,9 +17,10 @@ use zui::Zui;
 
 mod main_scene;
 use main_scene::MainScene;
-
 mod options_scene;
 use options_scene::OptionsScene;
+mod game_scene;
+use game_scene::GameScene;
 
 use crate::zui::SceneStore;
 
@@ -27,6 +28,7 @@ use crate::zui::SceneStore;
 pub enum SceneIdentifier {
     StartMenu,
     OptionsMenu,
+    GameScene,
 }
 
 #[derive(Clone, Copy)]
@@ -80,6 +82,7 @@ fn main() {
     let mut scene_store = SceneStore::new();
     scene_store.add_scene(SceneIdentifier::StartMenu, Box::new(MainScene::new()));
     scene_store.add_scene(SceneIdentifier::OptionsMenu, Box::new(OptionsScene::new()));
+    scene_store.add_scene(SceneIdentifier::GameScene, Box::new(GameScene::new()));
     _ = scene_store.set_current_scene(SceneIdentifier::StartMenu);
 
     // let mut main_scene_handle: SceneHandle<UiMessage> =

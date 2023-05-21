@@ -1,3 +1,5 @@
+use winit::dpi::PhysicalSize;
+
 use super::{primitives::Rectangle, text_renderer::TextVertex, Colour, Font};
 
 #[derive(Clone)]
@@ -15,8 +17,8 @@ pub enum TextSize {
 
     /// Height of the text in pixels
     Pixels(f32),
-    // /// Height of the text in screen space units
-    // ScreenSpace(f32),
+    /// Height of the text in screen space units
+    ScreenSpace(f32),
 }
 
 impl TextSize {
@@ -28,8 +30,12 @@ impl TextSize {
     ) -> f32 {
         match self {
             TextSize::ParentHeight(proportion) => proportion * parent_rectangle_height,
-            TextSize::Pixels(pixels) => pixels / viewport_height_px as f32 / 2f32,
-            // TextSize::ScreenSpace() => todo!(),
+            TextSize::Pixels(pixels) => {
+                let results = pixels / viewport_height_px as f32 * 2f32;
+                // println!("pixels / viewport_height_px = {}, {} / {} as f32 * 2f32 = {}", pixels / viewport_height_px as f32, pixels, viewport_height_px, results);
+                results
+            }
+            TextSize::ScreenSpace(ss) => *ss,
         }
     }
 }
@@ -97,13 +103,22 @@ impl Text {
         self
     }
 
-    pub fn update_symbols(&mut self, font: &Font, parent_rect: &Rectangle, aspect_ratio: f32) {
+    /// Updates/places/caluclates the symbol dimensions and locations from the Text's TextSegments,
+    /// performing line wrapping, alignment etc
+    pub fn place_symbols(
+        &mut self,
+        font: &Font,
+        parent_rect: &Rectangle,
+        aspect_ratio: f32,
+        viewport_dimensions_px: PhysicalSize<u32>,
+    ) {
         // the screen space height of a symbol
         // TODO, remove fixed pixels size
         let text_height_screen_space = self
             .configuration
             .size
-            .to_screen_space_span(parent_rect.height(), 100u32);
+            .to_screen_space_span(parent_rect.height(), viewport_dimensions_px.height);
+        // println!("viewport height: {}", viewport_dimensions_px.height);
 
         // the span of the original rasterised symbol
         let rasterised_font_height_px = font.line_metrics.ascent - font.line_metrics.descent;
@@ -223,8 +238,7 @@ impl Text {
 
             let uv_top_left = symbol.uv_top_left;
             let uv_top_right = glam::Vec2::new(symbol.uv_bottom_right.x, symbol.uv_top_left.y);
-            let uv_bottom_left =
-                glam::Vec2::new(symbol.uv_top_left.x, symbol.uv_bottom_right.y);
+            let uv_bottom_left = glam::Vec2::new(symbol.uv_top_left.x, symbol.uv_bottom_right.y);
             let uv_bottom_right = symbol.uv_bottom_right;
 
             let a = TextVertex::new(
