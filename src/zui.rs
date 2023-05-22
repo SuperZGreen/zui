@@ -159,7 +159,8 @@ impl Zui {
     }
 }
 
-/// The context for an event
+/// The 'context' for zui. Intended to give a Widget everything it needs to know to rebuild itself
+/// correctly.
 pub struct Context<'a> {
     pub font: &'a Font,
     pub aspect_ratio: f32,

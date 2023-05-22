@@ -65,7 +65,7 @@ where
 
     fn format_text(value: &T, max: &T) -> Text {
         Text::new()
-            .with_segment(TextSegment::new(
+            .push_segment(TextSegment::new(
                 &format!("{:.2}/{:.2}", value, max),
                 Colour::WHITE,
             ))

@@ -46,8 +46,11 @@ pub enum StartMenuMessage {
 
 #[derive(Clone, Copy)]
 pub enum OptionsMenuMessage {
-    BackClicked,
-    BarChanged(f32),
+    MasterVolumeChanged(f32),
+    MusicVolumeChanged(f32),
+    SoundEffectsVolumeChanged(f32),
+    
+    BackClicked
 }
 
 fn main() {
@@ -84,11 +87,6 @@ fn main() {
     scene_store.add_scene(SceneIdentifier::OptionsMenu, Box::new(OptionsScene::new()));
     scene_store.add_scene(SceneIdentifier::GameScene, Box::new(GameScene::new()));
     _ = scene_store.change_scene(SceneIdentifier::StartMenu, &zui.context());
-
-    // let mut main_scene_handle: SceneHandle<UiMessage> =
-    //     SceneHandle::new(Box::new(MainScene::new()), zui.font(), zui.aspect_ratio());
-    // let mut options_scene_handle =
-    //     SceneHandle::new(Box::new(OptionsScene::new()), zui.font(), zui.aspect_ratio());
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
@@ -127,7 +125,8 @@ fn main() {
                             exit(control_flow);
                         }
                         VirtualKeyCode::Escape => {
-                            _ = scene_store.change_scene(SceneIdentifier::StartMenu, &zui.context());
+                            _ = scene_store
+                                .change_scene(SceneIdentifier::StartMenu, &zui.context());
                         }
                         _ => {}
                     },
@@ -135,12 +134,6 @@ fn main() {
                         position: cursor_physical_position,
                         ..
                     } => {
-                        // let screen_space_position =
-                        //     ScreenSpacePosition::from_cursor_physical_position(
-                        //         *position,
-                        //         zui.width_px(),
-                        //         zui.height_px(),
-                        //     );
                         zui.update_cursor_position(*cursor_physical_position);
 
                         let current_scene_mut = scene_store.current_scene_mut().unwrap();
@@ -150,8 +143,6 @@ fn main() {
                             )),
                             &zui.context(),
                         );
-
-                        // zui.update_cursor_position(*position);
                     }
                     WindowEvent::ModifiersChanged(_) => {
                         // TODO

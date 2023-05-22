@@ -42,7 +42,7 @@ impl Scene for MainScene {
                                 size: TextSize::ParentHeight(0.8f32),
                                 ..Default::default()
                             })
-                            .with_segment(TextSegment::new("Welcome! :^)", Colour::WHITE)),
+                            .push_segment(TextSegment::new("Welcome! :^)", Colour::WHITE)),
                     ),
             )
             .push(BaseWidget::new())
@@ -59,7 +59,7 @@ impl Scene for MainScene {
                             size: TextSize::ParentHeight(0.5f32),
                             ..Default::default()
                         })
-                        .with_segment(TextSegment::new("Start", Colour::WHITE)),
+                        .push_segment(TextSegment::new("Start", Colour::WHITE)),
                 ),
             )
             .push(BaseWidget::new())
@@ -76,7 +76,7 @@ impl Scene for MainScene {
                             size: TextSize::ParentHeight(0.5f32),
                             ..Default::default()
                         })
-                        .with_segment(TextSegment::new("Tests/Options", Colour::WHITE)),
+                        .push_segment(TextSegment::new("Tests/Options", Colour::WHITE)),
                 ),
             )
             .push(BaseWidget::new())
@@ -89,7 +89,7 @@ impl Scene for MainScene {
                                 size: TextSize::ParentHeight(0.5f32),
                                 ..Default::default()
                             })
-                            .with_segment(TextSegment::new("Exit", Colour::WHITE)),
+                            .push_segment(TextSegment::new("Exit", Colour::WHITE)),
                     ),
             )
             .push(BaseWidget::new());

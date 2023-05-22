@@ -50,7 +50,7 @@ impl Default for TextConfiguration {
     fn default() -> Self {
         Self {
             line_wrapping: LineWrapping::Symbol,
-            size: TextSize::ParentHeight(0.5f32),
+            size: TextSize::ParentHeight(1f32),
         }
     }
 }
@@ -93,7 +93,7 @@ impl Text {
     }
 
     /// Adds the text segment to the Text object
-    pub fn with_segment(mut self, segment: TextSegment) -> Self {
+    pub fn push_segment(mut self, segment: TextSegment) -> Self {
         self.segments.push(segment);
         self
     }

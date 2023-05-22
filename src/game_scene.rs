@@ -32,7 +32,7 @@ impl Scene for GameScene {
             .push(
                 BaseWidget::new().with_text(
                     Text::new()
-                        .with_segment(TextSegment::new("p", Colour::WHITE))
+                        .push_segment(TextSegment::new("p", Colour::WHITE))
                         .with_configuration(TextConfiguration {
                             size: TextSize::Pixels(1387f32),
                             ..Default::default()
@@ -42,7 +42,7 @@ impl Scene for GameScene {
             .push(
                 BaseWidget::new().with_text(
                     Text::new()
-                        .with_segment(TextSegment::new("p", Colour::WHITE))
+                        .push_segment(TextSegment::new("p", Colour::WHITE))
                         .with_configuration(TextConfiguration {
                             size: TextSize::ParentHeight(1f32),
                             ..Default::default()
