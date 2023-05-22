@@ -1,10 +1,14 @@
 use crunch::{Item, Rotation};
 use image::{DynamicImage, GenericImage};
 
+use super::primitives::Rectangle;
+
 struct UnpackedSprite {
+    /// The image that is to be packed
     image: DynamicImage,
-    width_px: u32,
-    height_px: u32,
+
+    /// The dimensions of the space to reserve when packing into the final atlas
+    dimensions_px: glam::UVec2,
 }
 
 pub struct TextureAtlasBuilder {
@@ -12,11 +16,14 @@ pub struct TextureAtlasBuilder {
 }
 
 pub struct PackedSprite {
+    /// The name of the packed sprite
     pub name: String,
-    pub top_left: glam::Vec2,
-    pub bottom_right: glam::Vec2,
-    pub width_px: u32,
-    pub height_px: u32,
+
+    /// The UV region of the packed sprite
+    pub uv_region: Rectangle,
+
+    /// The dimensions of the final packed region, not including padding
+    dimensions_px: glam::UVec2,
 }
 
 impl TextureAtlasBuilder {
@@ -32,8 +39,7 @@ impl TextureAtlasBuilder {
     pub fn add_sprite(&mut self, image: DynamicImage, width_px: u32, height_px: u32) {
         self.unpacked_sprites.push(UnpackedSprite {
             image,
-            width_px,
-            height_px,
+            dimensions_px: glam::UVec2::new(width_px, height_px),
         });
     }
 
@@ -43,8 +49,8 @@ impl TextureAtlasBuilder {
         for (index, unpacked_sprite) in self.unpacked_sprites.iter().enumerate() {
             rects_to_place.push(Item::new(
                 index,
-                (unpacked_sprite.width_px + Self::PADDING * 2) as usize,
-                (unpacked_sprite.height_px + Self::PADDING * 2) as usize,
+                (unpacked_sprite.dimensions_px.x + Self::PADDING * 2) as usize,
+                (unpacked_sprite.dimensions_px.y + Self::PADDING * 2) as usize,
                 Rotation::None,
             ));
         }
@@ -187,22 +193,16 @@ impl TextureAtlasBuilder {
                 .find(|item| item.data == index)
                 .expect(&format!("could not find pack result with id = {}", index));
 
-            let top_left = glam::Vec2::new(
-                rect.rect.x as f32 / atlas_width as f32,
-                rect.rect.y as f32 / atlas_height as f32,
-            );
-            let bottom_right = top_left
-                + glam::Vec2::new(
-                    rect.rect.w as f32 / atlas_width as f32,
-                    rect.rect.h as f32 / atlas_height as f32,
-                );
+            // uvs
+            let x_min = rect.rect.x as f32 / atlas_width as f32;
+            let x_max = x_min + rect.rect.w as f32 / atlas_width as f32;
+            let y_min = rect.rect.y as f32 / atlas_height as f32;
+            let y_max = y_min + rect.rect.h as f32 / atlas_height as f32;
 
             packed_sprites.push(PackedSprite {
                 name: String::from("TODO"),
-                top_left,
-                bottom_right,
-                width_px: rect.rect.w as u32,
-                height_px: rect.rect.h as u32,
+                dimensions_px: glam::UVec2::new(rect.rect.w as u32, rect.rect.h as u32),
+                uv_region: Rectangle::new(x_min, x_max, y_min, y_max),
             });
         }
 

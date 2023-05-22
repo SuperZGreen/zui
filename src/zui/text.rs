@@ -30,11 +30,7 @@ impl TextSize {
     ) -> f32 {
         match self {
             TextSize::ParentHeight(proportion) => proportion * parent_rectangle_height,
-            TextSize::Pixels(pixels) => {
-                let results = pixels / viewport_height_px as f32 * 2f32;
-                // println!("pixels / viewport_height_px = {}, {} / {} as f32 * 2f32 = {}", pixels / viewport_height_px as f32, pixels, viewport_height_px, results);
-                results
-            }
+            TextSize::Pixels(pixels) => pixels / viewport_height_px as f32 * 2f32,
             TextSize::ScreenSpace(ss) => *ss,
         }
     }
@@ -138,7 +134,7 @@ impl Text {
             let mut ps = Vec::new();
             for segment in self.segments.iter() {
                 for character in segment.string.chars() {
-                    let (info, uv_top_left, uv_bottom_right) = match font.get_symbol(character) {
+                    let (info, uv_region) = match font.get_symbol(character) {
                         Some(res) => res,
                         None => {
                             error!("could not find glyph for character: {}!", character);
@@ -169,8 +165,7 @@ impl Text {
                     ps.push(Presymbol {
                         character,
                         colour: segment.colour,
-                        uv_top_left,
-                        uv_bottom_right,
+                        uv_region,
                         symbol_metrics,
                     })
                 }
@@ -209,8 +204,7 @@ impl Text {
                             + presymbol.symbol_metrics.y_shift
                             + presymbol.symbol_metrics.height,
                     ),
-                    uv_top_left: presymbol.uv_top_left,
-                    uv_bottom_right: presymbol.uv_bottom_right,
+                    uv_region: presymbol.uv_region,
                 });
 
                 // moving the origin accumulator
@@ -236,10 +230,10 @@ impl Text {
 
             // println!("rect: {:?}", symbol.region);
 
-            let uv_top_left = symbol.uv_top_left;
-            let uv_top_right = glam::Vec2::new(symbol.uv_bottom_right.x, symbol.uv_top_left.y);
-            let uv_bottom_left = glam::Vec2::new(symbol.uv_top_left.x, symbol.uv_bottom_right.y);
-            let uv_bottom_right = symbol.uv_bottom_right;
+            let uv_top_left = glam::Vec2::new(symbol.uv_region.x_min, symbol.uv_region.y_min);
+            let uv_top_right = glam::Vec2::new(symbol.uv_region.x_max, symbol.uv_region.y_min);
+            let uv_bottom_left = glam::Vec2::new(symbol.uv_region.x_min, symbol.uv_region.y_max);
+            let uv_bottom_right = glam::Vec2::new(symbol.uv_region.x_max, symbol.uv_region.y_max);
 
             let a = TextVertex::new(
                 region_vertices[0],
@@ -291,10 +285,9 @@ pub struct Symbol {
     pub colour: Colour,
     /// The screen space region of a symbol
     pub region: Rectangle,
-    /// The top left UV coordinate of the symbol
-    pub uv_top_left: glam::Vec2,
-    /// The bottom right UV coordinate of the symbol
-    pub uv_bottom_right: glam::Vec2,
+    /// The UV region of the symbol, using UV coordinates where (0, 0) is top left, (1, 1) is bottom
+    /// right
+    pub uv_region: Rectangle,
 }
 
 struct Presymbol {
@@ -302,10 +295,9 @@ struct Presymbol {
     pub character: char,
     /// The colour of a character
     pub colour: Colour,
-    /// The top left UV coordinate of the symbol
-    pub uv_top_left: glam::Vec2,
-    /// The bottom right UV coordinate of the symbol
-    pub uv_bottom_right: glam::Vec2,
+    /// The UV region of the symbol, using UV coordinates where (0, 0) is top left, (1, 1) is bottom
+    /// right
+    pub uv_region: Rectangle,
     /// The screen space dimension/attributes of the symbol
     pub symbol_metrics: SymbolMetrics,
 }

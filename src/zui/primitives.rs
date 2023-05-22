@@ -30,8 +30,8 @@ impl ScreenSpacePosition {
     }
 }
 
-/// A rectangular region of screen-space using WGPU coordinates, where top left: (-1, 1), and bottom
-/// right: (1, -1)
+/// A rectangular region, often representing screen-space using WGPU coordinates, where top left:
+/// (-1, 1), and bottom right: (1, -1)
 #[derive(Debug, Clone, Copy)]
 pub struct Rectangle {
     /// The minimum bounding x value of the rectangle

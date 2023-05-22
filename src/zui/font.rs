@@ -4,7 +4,7 @@ use fontdue::{LineMetrics, Metrics};
 use image::{DynamicImage, ImageBuffer, Luma};
 use rustc_hash::FxHashMap;
 
-use super::texture_atlas::TextureAtlas;
+use super::{primitives::Rectangle, texture_atlas::TextureAtlas};
 use crate::zui::texture_atlas::TextureAtlasBuilder;
 
 pub struct Font {
@@ -74,14 +74,10 @@ impl Font {
     }
 
     /// Gets the SymbolInfo and top-left, bottom-right UVs for a symbol
-    pub fn get_symbol(&self, character: char) -> Option<(&SymbolInfo, glam::Vec2, glam::Vec2)> {
+    pub fn get_symbol(&self, character: char) -> Option<(&SymbolInfo, Rectangle)> {
         let symbol_info = self.symbols.get(&character)?;
         let packed_sprite = self.texture_atlas.get(symbol_info.atlas_index)?;
 
-        Some((
-            symbol_info,
-            packed_sprite.top_left,
-            packed_sprite.bottom_right,
-        ))
+        Some((symbol_info, packed_sprite.uv_region))
     }
 }
