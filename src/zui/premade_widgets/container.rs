@@ -125,18 +125,11 @@ where
         let self_rectangle = self.rectangle.unwrap();
 
         // getting the amount of free space within the self span for child widgets
-        let self_normalised_space_available = Self::get_parent_normalised_space_available(
-            &self.children,
-            self.axis,
-            self_rectangle.span_by_axis(self.axis),
-            context.aspect_ratio,
-        );
+        let screen_space_available =
+            Self::get_screen_space_available(&self.children, &self_rectangle, self.axis, context);
 
-        if self_normalised_space_available < 0.0f32 {
-            warn!(
-                "overflowing: screen space span: {}",
-                self_normalised_space_available
-            );
+        if screen_space_available < 0.0f32 {
+            warn!("overflowing: screen space span: {}", screen_space_available);
         }
 
         let sum_of_child_span_weights = Self::get_sum_of_child_span_weights(&self.children);
@@ -144,23 +137,20 @@ where
         let mut used_screen_space_accumulator = 0f32;
 
         for child in self.children.iter_mut() {
-            let child_screen_space_span = match child.span() {
-                Span::ViewWidth(vw) => {
-                    Span::view_width_to_screen_space_span(vw, context.aspect_ratio, self.axis)
-                }
-                Span::ViewHeight(vh) => {
-                    Span::view_height_to_screen_space_span(vh, context.aspect_ratio, self.axis)
-                }
-                Span::ViewMin(vm) => {
-                    Span::view_min_to_screen_space_span(vm, context.aspect_ratio, self.axis)
-                }
-                Span::ParentWeight(pw) => {
-                    pw / sum_of_child_span_weights
-                        * self_normalised_space_available
-                        * self_rectangle.span_by_axis(self.axis)
-                }
-                Span::ParentRatio(pr) => pr * self_rectangle.span_by_axis(self.axis),
-            };
+            // let child_screen_space_span = match child.span() {
+            //     Span::ParentWeight(pw) => {
+            //         pw / sum_of_child_span_weights * self_rectangle.span_by_axis(self.axis)
+            //     }
+            //     Span::ParentRatio(pr) => pr * self_rectangle.span_by_axis(self.axis),
+            //     span => span.to_screen_space_span(&self_rectangle, self.axis, context),
+            // };
+            let child_screen_space_span = child.span().to_screen_space_span(
+                &self_rectangle,
+                self.axis,
+                sum_of_child_span_weights,
+                screen_space_available,
+                context,
+            );
 
             let child_rectangle = match self.axis {
                 Axis::Vertical => Rectangle::new(
@@ -184,47 +174,37 @@ where
         }
     }
 
-    // TODO: will need to change
-    /// Gets the amount of space (normalised to the parent's directional span) available
-    fn get_parent_normalised_space_available(
+    /// Goes through the containers child widgets to determine the amount of screen space available
+    /// in the container
+    fn get_screen_space_available(
         children: &[Box<dyn Widget<Message>>],
-        parent_widget_axis: Axis,
-        parent_screen_space_span: f32,
-        aspect_ratio: f32,
+        parent_rectangle: &Rectangle,
+        parent_axis: Axis,
+        context: &Context,
     ) -> f32 {
-        let mut normalised_space_available = 1f32;
+        let mut screen_space_span_available = parent_rectangle.span_by_axis(parent_axis);
         for child in children.iter() {
             let child_space_used = match child.span() {
-                Span::ViewHeight(vh) => {
-                    Span::view_height_to_screen_space_span(vh, aspect_ratio, parent_widget_axis)
-                        / parent_screen_space_span
-                }
-                Span::ViewWidth(vw) => {
-                    Span::view_width_to_screen_space_span(vw, aspect_ratio, parent_widget_axis)
-                        / parent_screen_space_span
-                }
-                Span::ViewMin(vm) => {
-                    Span::view_min_to_screen_space_span(vm, aspect_ratio, parent_widget_axis)
-                        / parent_screen_space_span
-                }
-                Span::ParentRatio(ratio) => ratio,
                 Span::ParentWeight(_) => 0f32,
+                span => span.to_screen_space_span(
+                    parent_rectangle,
+                    parent_axis,
+                    0f32, // Should not be used in to_screen_space_span!
+                    0f32, // Should not be used in to_screen_space_span!
+                    context,
+                ),
             };
-
-            normalised_space_available -= child_space_used;
+            screen_space_span_available -= child_space_used;
         }
-        normalised_space_available
+        screen_space_span_available
     }
 
     fn get_sum_of_child_span_weights(children: &[Box<dyn Widget<Message>>]) -> f32 {
         let mut sum = 0f32;
         for child in children.iter() {
             match child.span() {
-                Span::ViewHeight(_) => {}
-                Span::ViewWidth(_) => {}
-                Span::ViewMin(_) => {}
-                Span::ParentRatio(_) => {}
                 Span::ParentWeight(weight) => sum += weight,
+                _ => {}
             }
         }
         sum

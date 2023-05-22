@@ -94,11 +94,12 @@ impl Scene for MainScene {
             )
             .push(Container::new());
 
-        let central_container_span = if aspect_ratio <= 1.1f32 {
-            Span::ParentWeight(20f32)
-        } else {
-            Span::ViewMin(1f32)
-        };
+        // let central_container_span = if aspect_ratio <= 1.1f32 {
+        //     Span::ParentWeight(20f32)
+        // } else {
+        //     Span::ViewMin(1f32)
+        // };
+        let central_container_span = Span::ViewMin(1f32);
 
         // let central_container = Widget::new()
         //     .with_axis(Axis::Horizontal)

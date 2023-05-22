@@ -1,7 +1,4 @@
-use super::{
-    renderer::SimpleVertex, text_renderer::TextVertex, Rectangle,
-    ScreenSpacePosition,
-};
+use super::{renderer::SimpleVertex, text_renderer::TextVertex, Rectangle, ScreenSpacePosition};
 
 use crate::zui::Context;
 
@@ -82,6 +79,32 @@ impl Span {
             Axis::Horizontal => view_width * 2f32,
         }
     }
+
+    /// Converts the span into a screen space span value (in Normalised Device Coordinates) given
+    /// context and parent widget region and axis
+    pub fn to_screen_space_span(
+        &self,
+        parent_rectangle: &Rectangle,
+        parent_axis: Axis,
+        sum_of_parent_weights: f32,
+        // the amount of screen space not taken up by non-weighted widgets
+        screen_space_span_available: f32,
+        context: &Context,
+    ) -> f32 {
+        match self {
+            Span::ViewWidth(vw) => {
+                Self::view_width_to_screen_space_span(*vw, context.aspect_ratio, parent_axis)
+            }
+            Span::ViewHeight(vh) => {
+                Self::view_height_to_screen_space_span(*vh, context.aspect_ratio, parent_axis)
+            }
+            Span::ViewMin(vm) => {
+                Self::view_min_to_screen_space_span(*vm, context.aspect_ratio, parent_axis)
+            }
+            Span::ParentWeight(pw) => *pw / sum_of_parent_weights * screen_space_span_available,
+            Span::ParentRatio(ratio) => *ratio * parent_rectangle.span_by_axis(parent_axis),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -142,10 +165,8 @@ pub trait Widget<Message> {
         None
     }
 
-    /// The [`Span`] of the widget
-    fn span(&self) -> Span {
-        Span::ParentWeight(1f32)
-    }
+    /// The [`Span`] of the widget in screen space
+    fn span(&self) -> Span;
 
     /// The [`Axis`] of the widget
     fn axis(&self) -> Axis {

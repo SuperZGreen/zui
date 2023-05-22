@@ -2,7 +2,7 @@ use std::ops::RangeInclusive;
 
 use crate::zui::{
     primitives::Rectangle, widget::EventResponse, Colour, Context, LineWrapping, MouseEvent,
-    ScreenSpacePosition, Span, Text, TextConfiguration, TextSegment, TextSize, Widget,
+    ScreenSpacePosition, Span, Text, TextConfiguration, TextSegment, TextSize, Widget, Axis,
 };
 
 pub struct FillBar<'a, T, Message> {
@@ -205,8 +205,11 @@ where
 
                 // sizing the foreground bar
                 let mut bar_foreground_rectangle = *clip_rectangle;
-                bar_foreground_rectangle.x_max =
-                    Self::screen_space_position_from_value(&self.range, *clip_rectangle, &self.value);
+                bar_foreground_rectangle.x_max = Self::screen_space_position_from_value(
+                    &self.range,
+                    *clip_rectangle,
+                    &self.value,
+                );
                 self.bar_foreground_rectangle = Some(bar_foreground_rectangle);
 
                 // regenerating text symbols
