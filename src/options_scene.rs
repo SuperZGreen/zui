@@ -2,9 +2,8 @@ use std::ops::RangeInclusive;
 
 use crate::{
     zui::{
-        premade_widgets::{Button, FillBar},
-        Axis, BaseWidget, Colour, Scene, Span, Text, TextConfiguration, TextSegment, TextSize,
-        Widget,
+        premade_widgets::{Button, Container, FillBar},
+        Axis, Colour, Scene, Span, Text, TextConfiguration, TextSegment, TextSize, Widget,
     },
     OptionsMenuMessage, SceneIdentifier, UiMessage,
 };
@@ -31,7 +30,7 @@ impl OptionsScene {
         range: RangeInclusive<T>,
         value: T,
         on_change: F,
-    ) -> BaseWidget<UiMessage>
+    ) -> Container<UiMessage>
     where
         F: Fn(&T) -> UiMessage + 'static,
         T: 'static + From<f32> + std::cmp::PartialEq + std::fmt::Display + Copy,
@@ -40,15 +39,15 @@ impl OptionsScene {
         let text = Text::new().push_segment(TextSegment::new(name, Colour::WHITE));
 
         let fill_bar = FillBar::new(range, value, true, on_change);
-        let bar_container: BaseWidget<UiMessage> = BaseWidget::new()
+        let bar_container: Container<UiMessage> = Container::new()
             .with_span(Span::ParentWeight(3f32))
             .push(fill_bar);
 
-        BaseWidget::new()
+        Container::new()
             .with_span(Span::ViewHeight(0.025f32))
             .with_axis(Axis::Horizontal)
             .push(
-                BaseWidget::new()
+                Container::new()
                     .with_span(Span::ParentWeight(1f32))
                     .with_text(text),
             )
@@ -89,15 +88,15 @@ impl Scene for OptionsScene {
         let button_off_colour = Colour::rgb(0.2f32, 0.3f32, 0.4f32);
         let button_on_colour = Colour::rgb(0.3f32, 0.4f32, 0.6f32);
 
-        let central_content = BaseWidget::new()
+        let central_content = Container::new()
             .with_axis(Axis::Vertical)
-            .push(BaseWidget::new())
+            .push(Container::new())
             .push(
-                BaseWidget::new()
+                Container::new()
                     .with_span(Span::ParentWeight(10f32))
                     .with_background(Some(Colour::rgb(0.1f32, 0.1f32, 0.1f32)))
                     .push(
-                        BaseWidget::new()
+                        Container::new()
                             .with_span(Span::ViewHeight(0.05f32))
                             .with_text(
                                 Text::new()
@@ -109,7 +108,7 @@ impl Scene for OptionsScene {
                             ),
                     )
                     .push(
-                        BaseWidget::new()
+                        Container::new()
                             .with_span(Span::ParentWeight(10f32))
                             .with_text(
                                 Text::new()
@@ -201,7 +200,7 @@ impl Scene for OptionsScene {
                 //     .with_span(Span::ViewHeight(0.05f32)),
                 // ),
             )
-            .push(BaseWidget::new())
+            .push(Container::new())
             .push(
                 Button::new(
                     UiMessage::OptionsMenuMessage(OptionsMenuMessage::BackClicked),
@@ -213,7 +212,7 @@ impl Scene for OptionsScene {
                     Text::new().push_segment(TextSegment::new("Back to Start", Colour::WHITE)),
                 ),
             )
-            .push(BaseWidget::new());
+            .push(Container::new());
 
         let central_container_span = if aspect_ratio <= 1.1f32 {
             Span::ParentWeight(20f32)
@@ -222,11 +221,11 @@ impl Scene for OptionsScene {
         };
 
         // root widget
-        BaseWidget::new()
+        Container::new()
             .with_axis(Axis::Horizontal)
-            .push(BaseWidget::new())
+            .push(Container::new())
             .push(central_content.with_span(central_container_span))
-            .push(BaseWidget::new())
+            .push(Container::new())
             .into()
     }
 }

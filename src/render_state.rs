@@ -176,9 +176,9 @@ impl RenderState {
         &self.surface_configuration
     }
 
-    pub fn surface_format(&self) -> wgpu::TextureFormat {
-        self._surface_format
-    }
+    // pub fn surface_format(&self) -> wgpu::TextureFormat {
+    //     self._surface_format
+    // }
     
     pub fn skip_rendering(&self) -> bool {
         self.skip_rendering

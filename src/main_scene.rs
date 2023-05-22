@@ -1,9 +1,9 @@
 use crate::{
     zui::{
-        premade_widgets::Button, Axis, BaseWidget, Colour, Scene, Span, Text, TextConfiguration,
-        TextSegment, TextSize, Widget,
+        premade_widgets::{Button, Container},
+        Axis, Colour, Scene, Span, Text, TextConfiguration, TextSegment, TextSize, Widget,
     },
-    SceneIdentifier, StartMenuMessage, UiMessage,
+    SceneIdentifier, UiMessage,
 };
 
 pub struct MainScene {
@@ -29,11 +29,11 @@ impl Scene for MainScene {
         let button_off_colour = Colour::rgb(0.2f32, 0.3f32, 0.4f32);
         let button_on_colour = Colour::rgb(0.3f32, 0.4f32, 0.6f32);
 
-        let central_content = BaseWidget::new()
+        let central_content = Container::new()
             .with_axis(Axis::Vertical)
-            .push(BaseWidget::new())
+            .push(Container::new())
             .push(
-                BaseWidget::new()
+                Container::new()
                     .with_span(Span::ParentWeight(3f32))
                     .with_background(Some(Colour::rgb(0.2f32, 0.6f32, 0.1f32)))
                     .with_text(
@@ -45,7 +45,7 @@ impl Scene for MainScene {
                             .push_segment(TextSegment::new("Welcome! :^)", Colour::WHITE)),
                     ),
             )
-            .push(BaseWidget::new())
+            .push(Container::new())
             .push(
                 Button::new(
                     UiMessage::GoToScene(SceneIdentifier::GameScene),
@@ -62,7 +62,7 @@ impl Scene for MainScene {
                         .push_segment(TextSegment::new("Start", Colour::WHITE)),
                 ),
             )
-            .push(BaseWidget::new())
+            .push(Container::new())
             .push(
                 Button::new(
                     UiMessage::GoToScene(SceneIdentifier::OptionsMenu),
@@ -79,7 +79,7 @@ impl Scene for MainScene {
                         .push_segment(TextSegment::new("Tests/Options", Colour::WHITE)),
                 ),
             )
-            .push(BaseWidget::new())
+            .push(Container::new())
             .push(
                 Button::new(UiMessage::Exit, button_off_colour, button_on_colour)
                     .with_span(Span::ParentWeight(2f32))
@@ -92,7 +92,7 @@ impl Scene for MainScene {
                             .push_segment(TextSegment::new("Exit", Colour::WHITE)),
                     ),
             )
-            .push(BaseWidget::new());
+            .push(Container::new());
 
         let central_container_span = if aspect_ratio <= 1.1f32 {
             Span::ParentWeight(20f32)
@@ -108,12 +108,12 @@ impl Scene for MainScene {
         //     .push(Widget::new().with_span(Span::ParentWeight(1f32)));
 
         // root widget
-        BaseWidget::new()
+        Container::new()
             .with_background(Some(Colour::rgb(0.1f32, 0.1f32, 0.1f32)))
             .with_axis(Axis::Horizontal)
-            .push(BaseWidget::new())
+            .push(Container::new())
             .push(central_content.with_span(central_container_span))
-            .push(BaseWidget::new())
+            .push(Container::new())
             .into()
     }
 }

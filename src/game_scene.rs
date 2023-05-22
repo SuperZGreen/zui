@@ -1,6 +1,7 @@
 use crate::{
     zui::{
-        Axis, BaseWidget, Colour, Scene, Text, TextConfiguration, TextSegment, TextSize, Widget,
+        premade_widgets::Container, Axis, Colour, Scene, Text, TextConfiguration, TextSegment,
+        TextSize, Widget,
     },
     UiMessage,
 };
@@ -27,10 +28,10 @@ impl Scene for GameScene {
     }
 
     fn view(&self, _aspect_ratio: f32) -> Box<dyn Widget<Self::Message>> {
-        BaseWidget::new()
+        Container::new()
             .with_axis(Axis::Horizontal)
             .push(
-                BaseWidget::new().with_text(
+                Container::new().with_text(
                     Text::new()
                         .push_segment(TextSegment::new("p", Colour::WHITE))
                         .with_configuration(TextConfiguration {
@@ -40,7 +41,7 @@ impl Scene for GameScene {
                 ),
             )
             .push(
-                BaseWidget::new().with_text(
+                Container::new().with_text(
                     Text::new()
                         .push_segment(TextSegment::new("p", Colour::WHITE))
                         .with_configuration(TextConfiguration {

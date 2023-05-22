@@ -12,7 +12,6 @@ mod text_renderer;
 mod texture_atlas;
 pub mod util;
 mod widget;
-// mod tree;
 
 pub use colour::Colour;
 pub use font::Font;
@@ -24,7 +23,7 @@ pub use scene_handle::SceneHandle;
 pub use scene_store::SceneStore;
 pub use text::{LineWrapping, Text, TextConfiguration, TextSegment, TextSize};
 use text_renderer::TextRenderer;
-pub use widget::{Axis, BaseWidget, Event, MouseEvent, Span, Widget};
+pub use widget::{Axis, Event, MouseEvent, Span, Widget};
 
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 
@@ -96,28 +95,12 @@ impl Zui {
             viewport_dimensions_px.width as f32 / viewport_dimensions_px.height as f32;
     }
 
-    /// Gives the current Font
-    pub fn font(&self) -> &Font {
-        &self.font
-    }
-
-    /// Gives the overall aspect ratio of the application window surface
-    pub fn aspect_ratio(&self) -> f32 {
-        self.aspect_ratio
-    }
-
     /// Updates the cursor state tracked by zui, will only ever be called when cursor is over viewport
     pub fn update_cursor_position(&mut self, cursor_physical_position: PhysicalPosition<f64>) {
         let screen_space_position = ScreenSpacePosition::from_cursor_physical_position(
             cursor_physical_position,
             self.viewport_dimensions_px,
         );
-
-        // self.cursor_position = if screen_space_position.is_in_viewport_bounds() {
-        //     Some(screen_space_position)
-        // } else {
-        //     None
-        // }
 
         // NOTE: the cursor can be out of the window if clicked, held and dragged out of the window
         self.cursor_position = Some(screen_space_position)
@@ -127,22 +110,6 @@ impl Zui {
     pub fn cursor_left(&mut self) {
         self.cursor_position = None;
     }
-
-    // /// Handles mouse clicks via winit's types
-    // pub fn mouse_input(&mut self, _button: MouseButton, state: ElementState) {
-    //     if let Some(cursor_state) = &mut self.cursor_state {
-    //         cursor_state.is_clicked = match state {
-    //             ElementState::Pressed => true,
-    //             ElementState::Released => false,
-    //         }
-    //     }
-    // }
-
-    // pub fn update(&mut self) {
-    //     if let Some(cursor_state) = &mut self.cursor_state {
-    //         cursor_state.is_clicked = false
-    //     }
-    // }
 
     pub fn cursor_position(&self) -> Option<ScreenSpacePosition> {
         self.cursor_position
