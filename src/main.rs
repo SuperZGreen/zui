@@ -83,7 +83,7 @@ fn main() {
     scene_store.add_scene(SceneIdentifier::StartMenu, Box::new(MainScene::new()));
     scene_store.add_scene(SceneIdentifier::OptionsMenu, Box::new(OptionsScene::new()));
     scene_store.add_scene(SceneIdentifier::GameScene, Box::new(GameScene::new()));
-    _ = scene_store.set_current_scene(SceneIdentifier::StartMenu);
+    _ = scene_store.change_scene(SceneIdentifier::StartMenu, &zui.context());
 
     // let mut main_scene_handle: SceneHandle<UiMessage> =
     //     SceneHandle::new(Box::new(MainScene::new()), zui.font(), zui.aspect_ratio());
@@ -117,13 +117,20 @@ fn main() {
                     WindowEvent::KeyboardInput {
                         input:
                             KeyboardInput {
-                                virtual_keycode: Some(VirtualKeyCode::X),
+                                // virtual_keycode: Some(VirtualKeyCode::X),
+                                virtual_keycode: Some(virtual_key_code),
                                 ..
                             },
                         ..
-                    } => {
-                        exit(control_flow);
-                    }
+                    } => match virtual_key_code {
+                        VirtualKeyCode::X => {
+                            exit(control_flow);
+                        }
+                        VirtualKeyCode::Escape => {
+                            _ = scene_store.change_scene(SceneIdentifier::StartMenu, &zui.context());
+                        }
+                        _ => {}
+                    },
                     WindowEvent::CursorMoved {
                         position: cursor_physical_position,
                         ..
@@ -206,11 +213,7 @@ fn main() {
                 }
 
                 if let Some(scene_identifier) = set_scene_destination {
-                    _ = scene_store.set_current_scene(scene_identifier);
-                    scene_store
-                        .current_scene_mut()
-                        .unwrap()
-                        .rebuild_scene(&zui.context());
+                    _ = scene_store.change_scene(scene_identifier, &zui.context());
                 }
 
                 window.request_redraw();
