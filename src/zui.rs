@@ -21,7 +21,7 @@ use renderer::Renderer;
 pub use scene::Scene;
 pub use scene_handle::SceneHandle;
 pub use scene_store::SceneStore;
-pub use text::{LineWrapping, Text, TextConfiguration, TextSegment, TextSize};
+pub use text::{LineWrapping, Text, TextConfiguration, TextSegment, TextSize, TextAlignment};
 use text_renderer::TextRenderer;
 pub use widget::{Axis, Event, MouseEvent, Span, Widget};
 

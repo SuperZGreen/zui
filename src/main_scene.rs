@@ -1,7 +1,8 @@
 use crate::{
     zui::{
         premade_widgets::{Button, Container},
-        Axis, Colour, Scene, Span, Text, TextConfiguration, TextSegment, TextSize, Widget,
+        Axis, Colour, Scene, Span, Text, TextAlignment, TextConfiguration, TextSegment, TextSize,
+        Widget,
     },
     SceneIdentifier, UiMessage,
 };
@@ -57,6 +58,7 @@ impl Scene for MainScene {
                     Text::new()
                         .with_configuration(TextConfiguration {
                             size: TextSize::ParentHeight(0.5f32),
+                            alignment: TextAlignment::Centre,
                             ..Default::default()
                         })
                         .push_segment(TextSegment::new("Start", Colour::WHITE)),
@@ -74,6 +76,7 @@ impl Scene for MainScene {
                     Text::new()
                         .with_configuration(TextConfiguration {
                             size: TextSize::ParentHeight(0.5f32),
+                            alignment: TextAlignment::Centre,
                             ..Default::default()
                         })
                         .push_segment(TextSegment::new("Tests/Options", Colour::WHITE)),
@@ -87,6 +90,7 @@ impl Scene for MainScene {
                         Text::new()
                             .with_configuration(TextConfiguration {
                                 size: TextSize::ParentHeight(0.5f32),
+                                alignment: TextAlignment::Centre,
                                 ..Default::default()
                             })
                             .push_segment(TextSegment::new("Exit", Colour::WHITE)),

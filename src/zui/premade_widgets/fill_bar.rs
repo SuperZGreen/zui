@@ -2,7 +2,7 @@ use std::ops::RangeInclusive;
 
 use crate::zui::{
     primitives::Rectangle, widget::EventResponse, Colour, Context, LineWrapping, MouseEvent,
-    ScreenSpacePosition, Span, Text, TextConfiguration, TextSegment, TextSize, Widget, Axis,
+    ScreenSpacePosition, Span, Text, TextConfiguration, TextSegment, TextSize, Widget, Axis, text::TextAlignment,
 };
 
 pub struct FillBar<'a, T, Message> {
@@ -72,6 +72,7 @@ where
             .with_configuration(TextConfiguration {
                 size: TextSize::ParentHeight(1f32),
                 line_wrapping: LineWrapping::None,
+                alignment: TextAlignment::Right,
             })
     }
 
