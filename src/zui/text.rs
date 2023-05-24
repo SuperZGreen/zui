@@ -167,7 +167,6 @@ impl Text {
         self.symbols.clear();
         let mut origin = GlyphOrigin::at_top_left(parent_rect, &font_metrics_ss);
         for line in lines.iter() {
-
             // integrating text alignment
             let horizontal_offset = match self.configuration.alignment {
                 TextAlignment::Left => 0f32,
@@ -261,11 +260,7 @@ impl Text {
         if presymbols.len() > 0 {
             let mut origin = GlyphOrigin::at_top_left(clip_rectangle, font_metrics_ss);
             let mut line_start_index = 0usize;
-            let mut line_min_x = if let Some(presymbol) = presymbols.get(0) {
-                origin.screen_space_position.x + presymbol.symbol_metrics.x_shift
-            } else {
-                origin.screen_space_position.x
-            };
+            let mut line_min_x = origin.screen_space_position.x;
             let mut line_max_x = origin.screen_space_position.x;
 
             for (index, presymbol) in presymbols.iter().enumerate() {
@@ -279,7 +274,7 @@ impl Text {
                     origin = GlyphOrigin::at_top_left(clip_rectangle, font_metrics_ss);
 
                     // calculating the new line x min
-                    line_min_x = origin.screen_space_position.x + presymbol.symbol_metrics.x_shift;
+                    line_min_x = origin.screen_space_position.x;
 
                     // pushing the line
                     let line_end_index = index.checked_sub(1).unwrap_or(0);
