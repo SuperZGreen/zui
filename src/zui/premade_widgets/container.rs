@@ -29,6 +29,9 @@ where
     // calculated screen space area
     pub rectangle: Option<Rectangle>,
 
+    // calculated screen space span
+    pub screen_space_span: Option<f32>,
+
     // Text contained within a widget's area
     pub text: Option<Text>,
 }
@@ -51,6 +54,7 @@ where
             message_cursor_off: None,
             background: None,
             rectangle: None,
+            screen_space_span: None,
             text: None,
         }
     }
@@ -124,9 +128,27 @@ where
     pub fn update_child_rectangles(&mut self, context: &Context) {
         let self_rectangle = self.rectangle.unwrap();
 
+        // updating the child screen spaces
+        for child in &mut self.children {
+            child.update_screen_space_span(&self_rectangle, self.axis, None, None, context);
+            // println!(
+            //     "child screen space span: {}",
+            //     child.screen_space_span().unwrap_or(0f32)
+            // );
+        }
+        // println!("");
+
         // getting the amount of free space within the self span for child widgets
-        let screen_space_available =
-            Self::get_screen_space_available(&self.children, &self_rectangle, self.axis, context);
+        // let screen_space_available =
+        //     Self::get_screen_space_available(&self.children, &self_rectangle, self.axis, context);
+
+        let mut screen_space_used = 0f32;
+        for child in &self.children {
+            if let Some(screen_space_span) = child.screen_space_span() {
+                screen_space_used += screen_space_span;
+            }
+        }
+        let screen_space_available = self_rectangle.span_by_axis(self.axis) - screen_space_used;
 
         if screen_space_available < 0.0f32 {
             warn!("overflowing: screen space span: {}", screen_space_available);
@@ -136,21 +158,23 @@ where
         // let mut top_left_accumulator = glam::Vec2::new(self_rectangle.x_min, self_rectangle.y_max);
         let mut used_screen_space_accumulator = 0f32;
 
+        // setting the child rectangles
         for child in self.children.iter_mut() {
-            // let child_screen_space_span = match child.span() {
-            //     Span::ParentWeight(pw) => {
-            //         pw / sum_of_child_span_weights * self_rectangle.span_by_axis(self.axis)
-            //     }
-            //     Span::ParentRatio(pr) => pr * self_rectangle.span_by_axis(self.axis),
-            //     span => span.to_screen_space_span(&self_rectangle, self.axis, context),
-            // };
-            let child_screen_space_span = child.span().to_screen_space_span(
-                &self_rectangle,
-                self.axis,
-                sum_of_child_span_weights,
-                screen_space_available,
-                context,
-            );
+            // updating the child weight if not previously updated, ie for weighted spans
+            match child.span() {
+                Span::ParentWeight(_) => {
+                    child.update_screen_space_span(
+                        &self_rectangle,
+                        self.axis,
+                        Some(sum_of_child_span_weights),
+                        Some(screen_space_available),
+                        context,
+                    );
+                }
+                _ => {}
+            }
+
+            let child_screen_space_span = child.screen_space_span().unwrap_or(0f32);
 
             let child_rectangle = match self.axis {
                 Axis::Vertical => Rectangle::new(
@@ -174,30 +198,24 @@ where
         }
     }
 
-    /// Goes through the containers child widgets to determine the amount of screen space available
-    /// in the container
-    fn get_screen_space_available(
-        children: &[Box<dyn Widget<Message>>],
-        parent_rectangle: &Rectangle,
-        parent_axis: Axis,
-        context: &Context,
-    ) -> f32 {
-        let mut screen_space_span_available = parent_rectangle.span_by_axis(parent_axis);
-        for child in children.iter() {
-            let child_space_used = match child.span() {
-                Span::ParentWeight(_) => 0f32,
-                span => span.to_screen_space_span(
-                    parent_rectangle,
-                    parent_axis,
-                    0f32, // Should not be used in to_screen_space_span!
-                    0f32, // Should not be used in to_screen_space_span!
-                    context,
-                ),
-            };
-            screen_space_span_available -= child_space_used;
-        }
-        screen_space_span_available
-    }
+    // /// Goes through the containers child widgets to determine the amount of screen space available
+    // /// in the container
+    // fn get_screen_space_available(
+    //     children: &[Box<dyn Widget<Message>>],
+    //     parent_rectangle: &Rectangle,
+    //     parent_axis: Axis,
+    //     context: &Context,
+    // ) -> f32 {
+    //     let mut screen_space_span_available = parent_rectangle.span_by_axis(parent_axis);
+    //     for child in children.iter() {
+    //         let child_space_used = match child.span() {
+    //             Span::ParentWeight(_) => 0f32,
+    //             _ => child.screen_space_span(),
+    //         };
+    //         screen_space_span_available -= child_space_used;
+    //     }
+    //     screen_space_span_available
+    // }
 
     fn get_sum_of_child_span_weights(children: &[Box<dyn Widget<Message>>]) -> f32 {
         let mut sum = 0f32;
@@ -273,6 +291,44 @@ where
         }
 
         (simple_vertices, text_vertices)
+    }
+
+    fn update_screen_space_span(
+        &mut self,
+        clip_rectangle: &Rectangle,
+        parent_axis: Axis,
+        sum_of_parent_weights: Option<f32>,
+        // the amount of screen space not taken up by non-weighted widgets
+        screen_space_span_available: Option<f32>,
+        context: &Context,
+    ) {
+        self.screen_space_span = Some(match self.span {
+            Span::FitContents => {
+                if let Some(text) = &mut self.text {
+                    text.update_screen_space_dimensions(
+                        context.font,
+                        clip_rectangle,
+                        context.aspect_ratio,
+                        context.viewport_dimensions_px,
+                    );
+                    text.screen_space_span(parent_axis).unwrap_or(0f32)
+                } else {
+                    0f32
+                }
+            }
+            span => span.to_screen_space_span(
+                clip_rectangle,
+                parent_axis,
+                sum_of_parent_weights,
+                screen_space_span_available,
+                context,
+                0f32,
+            ),
+        })
+    }
+
+    fn screen_space_span(&self) -> Option<f32> {
+        self.screen_space_span
     }
 
     fn span(&self) -> Span {

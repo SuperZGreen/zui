@@ -2,7 +2,7 @@ use std::ops::RangeInclusive;
 
 use winit::dpi::PhysicalSize;
 
-use super::{font, primitives::Rectangle, text_renderer::TextVertex, Colour, Font};
+use super::{font, primitives::Rectangle, text_renderer::TextVertex, Axis, Colour, Font};
 
 #[derive(Clone)]
 #[allow(dead_code)]
@@ -86,6 +86,9 @@ pub struct Text {
     /// The per-character rendering information of the text
     pub symbols: Vec<Symbol>,
 
+    /// The screen space dimensions of the text
+    pub dimensions_ss: Option<glam::Vec2>,
+
     /// Includes layout and styling information for the text
     pub configuration: TextConfiguration,
 }
@@ -96,6 +99,7 @@ impl Text {
         Self {
             segments: Vec::new(),
             symbols: Vec::new(),
+            dimensions_ss: None,
             configuration: TextConfiguration::default(),
         }
     }
@@ -109,6 +113,49 @@ impl Text {
     pub fn with_configuration(mut self, configuration: TextConfiguration) -> Self {
         self.configuration = configuration;
         self
+    }
+
+    /// Calculates the screen space dimensions of the text for a given clip rectangle
+    pub fn update_screen_space_dimensions(
+        &mut self,
+        font: &Font,
+        clip_rectangle: &Rectangle,
+        aspect_ratio: f32,
+        viewport_dimensions_px: PhysicalSize<u32>,
+    ) {
+        // converting the line metrics of Fontdue to screen space
+        let font_metrics_ss = ScreenSpaceFontMetrics::new(
+            self.configuration
+                .size
+                .to_screen_space_span(clip_rectangle.height(), viewport_dimensions_px.height),
+            &font.line_metrics,
+        );
+
+        // calculating the screen space metrics of all symbols
+        let presymbols = Self::generate_presymbols(&self, font, &font_metrics_ss, aspect_ratio);
+
+        // getting lines
+        let lines = Self::lines_from_presymbols(&presymbols, clip_rectangle, &font_metrics_ss);
+
+        // lines max width
+        let mut width = 0f32;
+        for line in lines.iter() {
+            if line.screen_space_dimensions.x > width {
+                width = line.screen_space_dimensions.x;
+            }
+        }
+
+        // lines height
+        let mut height = 0f32;
+        if let Some(first_line) = lines.first() {
+            height += first_line.screen_space_dimensions.y;
+
+            for line in &lines[1..lines.len()] {
+                height += line.screen_space_dimensions.y + font_metrics_ss.line_gap;
+            }
+        }
+        
+        self.dimensions_ss = Some(glam::Vec2::new(width, height));
     }
 
     /// Updates/places/caluclates the symbol dimensions and locations from the Text's TextSegments,
@@ -129,36 +176,12 @@ impl Text {
         );
 
         // calculating the screen space metrics of all symbols
-        let presymbols = {
-            let mut ps = Vec::new();
-            for segment in self.segments.iter() {
-                for character in segment.string.chars() {
-                    let (info, uv_region) = match font.get_symbol(character) {
-                        Some(res) => res,
-                        None => {
-                            error!("could not find glyph for character: {}!", character);
-                            continue;
-                        }
-                    };
-
-                    let symbol_metrics = ScreenSpaceSymbolMetrics::new(
-                        &info.metrics,
-                        &font.line_metrics,
-                        &font_metrics_ss,
-                        aspect_ratio,
-                    );
-
-                    ps.push(Presymbol {
-                        character,
-                        colour: segment.colour,
-                        uv_region,
-                        symbol_metrics,
-                    })
-                }
-            }
-
-            ps
-        };
+        let presymbols = Self::generate_presymbols(
+            &self,
+            &font,
+            &font_metrics_ss,
+            aspect_ratio,
+        );
 
         // getting lines
         let lines = Self::lines_from_presymbols(&presymbols, parent_rect, &font_metrics_ss);
@@ -182,6 +205,16 @@ impl Text {
                 origin.increment_by_presymbol(presymbol);
             }
             origin.new_line(parent_rect, &font_metrics_ss);
+        }
+    }
+
+    /// Gives the screen space span of the text along a given axis
+    pub fn screen_space_span(&self, axis: Axis) -> Option<f32> {
+        let axis_index = axis.to_index();
+        if let Some(dimensions_ss) = self.dimensions_ss {
+            Some(dimensions_ss[axis_index])
+        } else {
+            None
         }
     }
 
@@ -296,6 +329,42 @@ impl Text {
         }
 
         lines
+    }
+
+    fn generate_presymbols(
+        &self,
+        font: &Font,
+        font_metrics_ss: &ScreenSpaceFontMetrics,
+        aspect_ratio: f32,
+    ) -> Vec<Presymbol> {
+        let mut ps = Vec::new();
+        for segment in self.segments.iter() {
+            for character in segment.string.chars() {
+                let (info, uv_region) = match font.get_symbol(character) {
+                    Some(res) => res,
+                    None => {
+                        error!("could not find glyph for character: {}!", character);
+                        continue;
+                    }
+                };
+
+                let symbol_metrics = ScreenSpaceSymbolMetrics::new(
+                    &info.metrics,
+                    &font.line_metrics,
+                    &font_metrics_ss,
+                    aspect_ratio,
+                );
+
+                ps.push(Presymbol {
+                    character,
+                    colour: segment.colour,
+                    uv_region,
+                    symbol_metrics,
+                })
+            }
+        }
+
+        ps
     }
 }
 

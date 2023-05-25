@@ -9,7 +9,7 @@ pub enum Axis {
 }
 
 impl Axis {
-    pub fn _to_index(&self) -> usize {
+    pub fn to_index(&self) -> usize {
         match self {
             Axis::Horizontal => 0usize,
             Axis::Vertical => 1usize,
@@ -35,7 +35,7 @@ pub enum Span {
     // TODO: ViewMax?
 
     //
-    //  Flexible Sizes, dynamically resizes depending on the size of the parent widget
+    //  Parent-based Sizes, dynamically resizes depending on the size of the parent widget
     //
     /// Weighted size with respect to the parent's size. Is summed up and divided amongst other
     /// child's sizes to determine the actual screen-space size of the widget
@@ -43,6 +43,11 @@ pub enum Span {
 
     /// The size as a proportion of the parent's size
     ParentRatio(f32),
+
+    //
+    //  Contents based sizes, dynamically resizes based on the size of the contents
+    //
+    FitContents,
 }
 
 impl Span {
@@ -86,10 +91,11 @@ impl Span {
         &self,
         parent_rectangle: &Rectangle,
         parent_axis: Axis,
-        sum_of_parent_weights: f32,
+        sum_of_parent_weights: Option<f32>,
         // the amount of screen space not taken up by non-weighted widgets
-        screen_space_span_available: f32,
+        screen_space_span_available: Option<f32>,
         context: &Context,
+        fit_contents_span_ss: f32,
     ) -> f32 {
         match self {
             Span::ViewWidth(vw) => {
@@ -101,8 +107,15 @@ impl Span {
             Span::ViewMin(vm) => {
                 Self::view_min_to_screen_space_span(*vm, context.aspect_ratio, parent_axis)
             }
-            Span::ParentWeight(pw) => *pw / sum_of_parent_weights * screen_space_span_available,
+            Span::ParentWeight(pw) => {
+                if sum_of_parent_weights.is_none() || screen_space_span_available.is_none() {
+                    0f32
+                } else {
+                    *pw / sum_of_parent_weights.unwrap() * screen_space_span_available.unwrap()
+                }
+            }
             Span::ParentRatio(ratio) => *ratio * parent_rectangle.span_by_axis(parent_axis),
+            Span::FitContents => fit_contents_span_ss,
         }
     }
 }
@@ -165,8 +178,26 @@ pub trait Widget<Message> {
         None
     }
 
-    /// The [`Span`] of the widget in screen space
+    /// The [`Span`] of the widget in screen space, returns None if is a weighted value and must be
+    /// set by the parent
+    fn screen_space_span(&self) -> Option<f32> {
+        None
+    }
+
+    /// Returns the [`Span`] of a widget
     fn span(&self) -> Span;
+
+    /// Updates the screen space span of the [`Widget`], giving it everything it might need to
+    /// calculate the span
+    fn update_screen_space_span(
+        &mut self,
+        clip_rectangle: &Rectangle,
+        parent_axis: Axis,
+        sum_of_parent_weights: Option<f32>,
+        // the amount of screen space not taken up by non-weighted widgets
+        screen_space_span_available: Option<f32>,
+        context: &Context,
+    );
 
     /// The [`Axis`] of the widget
     fn axis(&self) -> Axis {

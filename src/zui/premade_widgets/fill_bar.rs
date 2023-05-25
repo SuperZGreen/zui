@@ -1,8 +1,9 @@
 use std::ops::RangeInclusive;
 
 use crate::zui::{
-    primitives::Rectangle, widget::EventResponse, Colour, Context, LineWrapping, MouseEvent,
-    ScreenSpacePosition, Span, Text, TextConfiguration, TextSegment, TextSize, Widget, Axis, text::TextAlignment,
+    self, primitives::Rectangle, text::TextAlignment, widget::EventResponse, Axis, Colour, Context,
+    LineWrapping, MouseEvent, ScreenSpacePosition, Span, Text, TextConfiguration, TextSegment,
+    TextSize, Widget,
 };
 
 pub struct FillBar<'a, T, Message> {
@@ -28,6 +29,8 @@ pub struct FillBar<'a, T, Message> {
     bar_foreground_rectangle: Option<Rectangle>,
 
     span: Span,
+    screen_space_span: Option<f32>,
+
     text: Text,
 }
 
@@ -54,6 +57,7 @@ where
             bar_background_rectangle: None,
             bar_foreground_rectangle: None,
             span: Span::ParentWeight(1f32),
+            screen_space_span: None,
             text,
         }
     }
@@ -230,6 +234,44 @@ where
 
     fn span(&self) -> Span {
         self.span
+    }
+
+    fn screen_space_span(&self) -> Option<f32> {
+        self.screen_space_span
+    }
+
+    fn update_screen_space_span(
+        &mut self,
+        parent_rectangle: &Rectangle,
+        parent_axis: zui::Axis,
+        sum_of_parent_weights: Option<f32>,
+        // the amount of screen space not taken up by non-weighted widgets
+        screen_space_span_available: Option<f32>,
+        context: &Context,
+    ) {
+        self.screen_space_span = Some(match self.span {
+            Span::FitContents => {
+                if let Some(clip_rectangle) = &self.clip_rectangle {
+                    self.text.update_screen_space_dimensions(
+                        context.font,
+                        clip_rectangle,
+                        context.aspect_ratio,
+                        context.viewport_dimensions_px,
+                    );
+                    self.text.screen_space_span(parent_axis).unwrap_or(0f32)
+                } else {
+                    0f32
+                }
+            }
+            span => span.to_screen_space_span(
+                parent_rectangle,
+                parent_axis,
+                sum_of_parent_weights,
+                screen_space_span_available,
+                context,
+                0f32,
+            ),
+        })
     }
 
     fn to_vertices(
