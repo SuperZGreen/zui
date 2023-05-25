@@ -1,7 +1,7 @@
 use std::ops::RangeInclusive;
 
 use crate::zui::{
-    self, primitives::Rectangle, text::TextAlignment, widget::EventResponse, Axis, Colour, Context,
+    self, primitives::Rectangle, text::{TextAlignmentHorizontal, TextAlignmentVertical}, widget::EventResponse, Axis, Colour, Context,
     LineWrapping, MouseEvent, ScreenSpacePosition, Span, Text, TextConfiguration, TextSegment,
     TextSize, Widget,
 };
@@ -76,7 +76,8 @@ where
             .with_configuration(TextConfiguration {
                 size: TextSize::ParentHeight(1f32),
                 line_wrapping: LineWrapping::None,
-                alignment: TextAlignment::Right,
+                horizontal_alignment: TextAlignmentHorizontal::Right,
+                vertical_alignment: TextAlignmentVertical::Centre,
             })
     }
 

@@ -7,7 +7,7 @@ mod renderer;
 mod scene;
 mod scene_handle;
 mod scene_store;
-mod text;
+pub mod text;
 mod text_renderer;
 mod texture_atlas;
 pub mod util;
@@ -21,7 +21,7 @@ use renderer::Renderer;
 pub use scene::Scene;
 pub use scene_handle::SceneHandle;
 pub use scene_store::SceneStore;
-pub use text::{LineWrapping, Text, TextConfiguration, TextSegment, TextSize, TextAlignment};
+pub use text::{LineWrapping, Text, TextConfiguration, TextSegment, TextSize, TextAlignmentHorizontal};
 use text_renderer::TextRenderer;
 pub use widget::{Axis, Event, MouseEvent, Span, Widget};
 

@@ -1,7 +1,8 @@
 use crate::{
     zui::{
         premade_widgets::{Button, Container},
-        Axis, Colour, Scene, Span, Text, TextAlignment, TextConfiguration, TextSegment, TextSize,
+        text::TextAlignmentVertical,
+        Axis, Colour, Scene, Span, Text, TextAlignmentHorizontal, TextConfiguration, TextSegment, TextSize,
         Widget,
     },
     SceneIdentifier, UiMessage,
@@ -29,6 +30,13 @@ impl Scene for MainScene {
     fn view(&self, aspect_ratio: f32) -> Box<dyn Widget<Self::Message>> {
         let button_off_colour = Colour::rgb(0.2f32, 0.3f32, 0.4f32);
         let button_on_colour = Colour::rgb(0.3f32, 0.4f32, 0.6f32);
+        
+        let button_text_configuration = TextConfiguration {
+            size: TextSize::ParentHeight(0.7f32),
+            horizontal_alignment: TextAlignmentHorizontal::Centre,
+            vertical_alignment: TextAlignmentVertical::Centre,
+            ..Default::default()
+        };
 
         let central_content = Container::new()
             .with_axis(Axis::Vertical)
@@ -41,6 +49,7 @@ impl Scene for MainScene {
                         Text::new()
                             .with_configuration(TextConfiguration {
                                 size: TextSize::ParentHeight(0.8f32),
+                                vertical_alignment: TextAlignmentVertical::Bottom,
                                 ..Default::default()
                             })
                             .push_segment(TextSegment::new("Welcome! :^)", Colour::WHITE)),
@@ -56,11 +65,7 @@ impl Scene for MainScene {
                 .with_span(Span::ParentWeight(2f32))
                 .with_text(
                     Text::new()
-                        .with_configuration(TextConfiguration {
-                            size: TextSize::ParentHeight(0.5f32),
-                            alignment: TextAlignment::Centre,
-                            ..Default::default()
-                        })
+                        .with_configuration(button_text_configuration.clone())
                         .push_segment(TextSegment::new("Start", Colour::WHITE)),
                 ),
             )
@@ -74,11 +79,7 @@ impl Scene for MainScene {
                 .with_span(Span::ParentWeight(2f32))
                 .with_text(
                     Text::new()
-                        .with_configuration(TextConfiguration {
-                            size: TextSize::ParentHeight(0.5f32),
-                            alignment: TextAlignment::Centre,
-                            ..Default::default()
-                        })
+                        .with_configuration(button_text_configuration.clone())
                         .push_segment(TextSegment::new("Tests/Options", Colour::WHITE)),
                 ),
             )
@@ -88,11 +89,7 @@ impl Scene for MainScene {
                     .with_span(Span::ParentWeight(2f32))
                     .with_text(
                         Text::new()
-                            .with_configuration(TextConfiguration {
-                                size: TextSize::ParentHeight(0.5f32),
-                                alignment: TextAlignment::Centre,
-                                ..Default::default()
-                            })
+                            .with_configuration(button_text_configuration.clone())
                             .push_segment(TextSegment::new("Exit", Colour::WHITE)),
                     ),
             )

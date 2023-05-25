@@ -40,17 +40,25 @@ impl TextSize {
 }
 
 #[derive(Copy, Clone)]
-pub enum TextAlignment {
+pub enum TextAlignmentHorizontal {
     Left,
     Centre,
     Right,
+}
+
+#[derive(Copy, Clone)]
+pub enum TextAlignmentVertical {
+    Top,
+    Centre,
+    Bottom,
 }
 
 #[derive(Clone)]
 pub struct TextConfiguration {
     pub line_wrapping: LineWrapping,
     pub size: TextSize,
-    pub alignment: TextAlignment,
+    pub horizontal_alignment: TextAlignmentHorizontal,
+    pub vertical_alignment: TextAlignmentVertical,
 }
 
 impl Default for TextConfiguration {
@@ -58,7 +66,8 @@ impl Default for TextConfiguration {
         Self {
             line_wrapping: LineWrapping::Symbol,
             size: TextSize::ParentHeight(1f32),
-            alignment: TextAlignment::Left,
+            horizontal_alignment: TextAlignmentHorizontal::Left,
+            vertical_alignment: TextAlignmentVertical::Top,
         }
     }
 }
@@ -263,23 +272,27 @@ impl Text {
             &font.line_metrics,
         );
 
-        // calculating the screen space metrics of all symbols
-        // let presymbols = Self::generate_presymbols(&self, &font, &font_metrics_ss, aspect_ratio);
-
-        // getting lines
-        // let lines = Self::lines_from_presymbols(&presymbols, parent_rect, &font_metrics_ss);
-
         // placing symbols
         self.symbols.clear();
         let mut origin = GlyphOrigin::at_top_left(parent_rect, &font_metrics_ss);
+        
+        // repositioning origin for vertical alignment
+        origin.screen_space_position.y -= match self.configuration.vertical_alignment {
+            TextAlignmentVertical::Top => 0f32,
+            TextAlignmentVertical::Centre => (parent_rect.height() - layout.screen_space_dimensions.y) / 2f32,
+            TextAlignmentVertical::Bottom => parent_rect.height() - layout.screen_space_dimensions.y,
+        };
+
         for line in layout.lines.lines.iter() {
             // integrating text alignment
-            let horizontal_offset = match self.configuration.alignment {
-                TextAlignment::Left => 0f32,
-                TextAlignment::Centre => {
+            let horizontal_offset = match self.configuration.horizontal_alignment {
+                TextAlignmentHorizontal::Left => 0f32,
+                TextAlignmentHorizontal::Centre => {
                     (parent_rect.width() - line.screen_space_dimensions.x) / 2f32
                 }
-                TextAlignment::Right => parent_rect.width() - line.screen_space_dimensions.x,
+                TextAlignmentHorizontal::Right => {
+                    parent_rect.width() - line.screen_space_dimensions.x
+                }
             };
 
             origin.screen_space_position.x += horizontal_offset;
