@@ -239,6 +239,12 @@ where
             Event::FitRectangle((rectangle, context)) => {
                 self.rectangle = Some(*rectangle);
                 if let Some(text) = &mut self.text {
+                    text.update_layout(
+                        context.font,
+                        &rectangle,
+                        context.aspect_ratio,
+                        context.viewport_dimensions_px,
+                    );
                     text.place_symbols(
                         context.font,
                         &rectangle,
@@ -305,7 +311,7 @@ where
         self.screen_space_span = Some(match self.span {
             Span::FitContents => {
                 if let Some(text) = &mut self.text {
-                    text.update_screen_space_dimensions(
+                    text.update_layout(
                         context.font,
                         clip_rectangle,
                         context.aspect_ratio,

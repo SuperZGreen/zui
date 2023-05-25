@@ -101,6 +101,12 @@ where
                 self.clip_rectangle = Some(*clip_rectangle);
 
                 if let Some(text) = &mut self.text {
+                    text.update_layout(
+                        context.font,
+                        clip_rectangle,
+                        context.aspect_ratio,
+                        context.viewport_dimensions_px,
+                    );
                     text.place_symbols(
                         context.font,
                         &clip_rectangle,
@@ -124,7 +130,7 @@ where
     fn clip_rectangle(&self) -> Option<crate::zui::primitives::Rectangle> {
         self.clip_rectangle
     }
-    
+
     fn span(&self) -> Span {
         self.span
     }
@@ -146,7 +152,7 @@ where
             Span::FitContents => {
                 if let Some(text) = &mut self.text {
                     if let Some(clip_rectangle) = &self.clip_rectangle {
-                        text.update_screen_space_dimensions(
+                        text.update_layout(
                             context.font,
                             clip_rectangle,
                             context.aspect_ratio,
@@ -160,16 +166,14 @@ where
                     0f32
                 }
             }
-            span => {
-                span.to_screen_space_span(
-                    parent_rectangle,
-                    parent_axis,
-                    sum_of_parent_weights,
-                    screen_space_span_available,
-                    context,
-                    0f32,
-                )
-            }
+            span => span.to_screen_space_span(
+                parent_rectangle,
+                parent_axis,
+                sum_of_parent_weights,
+                screen_space_span_available,
+                context,
+                0f32,
+            ),
         })
     }
 

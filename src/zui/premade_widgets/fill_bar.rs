@@ -100,6 +100,12 @@ where
         } else {
             self.text = Self::format_text(&value, self.range.end());
             if let Some(background_rectangle) = self.bar_background_rectangle {
+                self.text.update_layout(
+                    context.font,
+                    &background_rectangle,
+                    context.aspect_ratio,
+                    context.viewport_dimensions_px,
+                );
                 self.text.place_symbols(
                     context.font,
                     &background_rectangle,
@@ -218,6 +224,12 @@ where
                 self.bar_foreground_rectangle = Some(bar_foreground_rectangle);
 
                 // regenerating text symbols
+                self.text.update_layout(
+                    context.font,
+                    &clip_rectangle,
+                    context.aspect_ratio,
+                    context.viewport_dimensions_px,
+                );
                 self.text.place_symbols(
                     context.font,
                     &clip_rectangle,
@@ -252,7 +264,7 @@ where
         self.screen_space_span = Some(match self.span {
             Span::FitContents => {
                 if let Some(clip_rectangle) = &self.clip_rectangle {
-                    self.text.update_screen_space_dimensions(
+                    self.text.update_layout(
                         context.font,
                         clip_rectangle,
                         context.aspect_ratio,

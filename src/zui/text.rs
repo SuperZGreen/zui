@@ -2,7 +2,7 @@ use std::ops::RangeInclusive;
 
 use winit::dpi::PhysicalSize;
 
-use super::{font, primitives::Rectangle, text_renderer::TextVertex, Axis, Colour, Font};
+use super::{primitives::Rectangle, text_renderer::TextVertex, Axis, Colour, Font};
 
 #[derive(Clone)]
 #[allow(dead_code)]
@@ -79,6 +79,105 @@ impl TextSegment {
 }
 
 #[derive(Clone)]
+struct TextLines {
+    pub lines: Vec<TextLine>,
+}
+
+impl TextLines {
+    pub fn from_presymbols(
+        presymbols: &[Presymbol],
+        clip_rectangle: &Rectangle,
+        font_metrics_ss: &ScreenSpaceFontMetrics,
+    ) -> Self {
+        let mut lines = Vec::new();
+
+        if presymbols.len() > 0 {
+            let mut origin = GlyphOrigin::at_top_left(clip_rectangle, font_metrics_ss);
+            let mut line_start_index = 0usize;
+            let mut line_min_x = origin.screen_space_position.x;
+            let mut line_max_x = origin.screen_space_position.x;
+
+            for (index, presymbol) in presymbols.iter().enumerate() {
+                if origin.presymbol_fits_in_rect(clip_rectangle, presymbol) {
+                    // tracking the new max width of the line
+                    line_max_x = origin.screen_space_position.x
+                        + presymbol.symbol_metrics.x_shift
+                        + presymbol.symbol_metrics.width;
+                } else {
+                    // resetting the origin to the start of the line
+                    origin = GlyphOrigin::at_top_left(clip_rectangle, font_metrics_ss);
+
+                    // calculating the new line x min
+                    line_min_x = origin.screen_space_position.x;
+
+                    // pushing the line
+                    let line_end_index = index.checked_sub(1).unwrap_or(0);
+                    lines.push(TextLine::new(
+                        line_start_index..=line_end_index,
+                        glam::Vec2::new(line_max_x - line_min_x, font_metrics_ss.height),
+                    ));
+                    line_start_index = index;
+                }
+
+                origin.increment_by_presymbol(presymbol);
+            }
+
+            // pushing final line
+            lines.push(TextLine::new(
+                line_start_index..=presymbols.len() - 1,
+                glam::Vec2::new(line_max_x - line_min_x, font_metrics_ss.height),
+            ));
+        }
+
+        Self { lines }
+    }
+
+    pub fn screen_space_dimensions(&self, font_metrics_ss: &ScreenSpaceFontMetrics) -> glam::Vec2 {
+        // lines max width
+        let mut width = 0f32;
+        for line in self.lines.iter() {
+            if line.screen_space_dimensions.x > width {
+                width = line.screen_space_dimensions.x;
+            }
+        }
+
+        // lines height
+        let mut height = 0f32;
+        if let Some(first_line) = self.lines.first() {
+            height += first_line.screen_space_dimensions.y;
+
+            for line in &self.lines[1..self.lines.len()] {
+                height += line.screen_space_dimensions.y + font_metrics_ss.line_gap;
+            }
+        }
+
+        glam::Vec2::new(width, height)
+    }
+}
+
+#[derive(Clone)]
+/// Data that is calculated before symbols are placed onto the screen
+struct TextLayout {
+    pub presymbols: Vec<Presymbol>,
+    pub lines: TextLines,
+    pub screen_space_dimensions: glam::Vec2,
+}
+
+impl TextLayout {
+    pub fn new(
+        presymbols: Vec<Presymbol>,
+        lines: TextLines,
+        screen_space_dimensions: glam::Vec2,
+    ) -> Self {
+        Self {
+            presymbols,
+            lines,
+            screen_space_dimensions,
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct Text {
     /// The actual content of the string
     pub segments: Vec<TextSegment>,
@@ -86,11 +185,10 @@ pub struct Text {
     /// The per-character rendering information of the text
     pub symbols: Vec<Symbol>,
 
-    /// The screen space dimensions of the text
-    pub dimensions_ss: Option<glam::Vec2>,
-
     /// Includes layout and styling information for the text
     pub configuration: TextConfiguration,
+
+    layout: Option<TextLayout>,
 }
 
 impl Text {
@@ -99,8 +197,8 @@ impl Text {
         Self {
             segments: Vec::new(),
             symbols: Vec::new(),
-            dimensions_ss: None,
             configuration: TextConfiguration::default(),
+            layout: None,
         }
     }
 
@@ -116,7 +214,7 @@ impl Text {
     }
 
     /// Calculates the screen space dimensions of the text for a given clip rectangle
-    pub fn update_screen_space_dimensions(
+    pub fn update_layout(
         &mut self,
         font: &Font,
         clip_rectangle: &Rectangle,
@@ -135,27 +233,12 @@ impl Text {
         let presymbols = Self::generate_presymbols(&self, font, &font_metrics_ss, aspect_ratio);
 
         // getting lines
-        let lines = Self::lines_from_presymbols(&presymbols, clip_rectangle, &font_metrics_ss);
+        let lines = TextLines::from_presymbols(&presymbols, clip_rectangle, &font_metrics_ss);
 
-        // lines max width
-        let mut width = 0f32;
-        for line in lines.iter() {
-            if line.screen_space_dimensions.x > width {
-                width = line.screen_space_dimensions.x;
-            }
-        }
+        // getting the dimensions of the lines
+        let screen_space_dimensions = lines.screen_space_dimensions(&font_metrics_ss);
 
-        // lines height
-        let mut height = 0f32;
-        if let Some(first_line) = lines.first() {
-            height += first_line.screen_space_dimensions.y;
-
-            for line in &lines[1..lines.len()] {
-                height += line.screen_space_dimensions.y + font_metrics_ss.line_gap;
-            }
-        }
-        
-        self.dimensions_ss = Some(glam::Vec2::new(width, height));
+        self.layout = Some(TextLayout::new(presymbols, lines, screen_space_dimensions));
     }
 
     /// Updates/places/caluclates the symbol dimensions and locations from the Text's TextSegments,
@@ -167,6 +250,11 @@ impl Text {
         aspect_ratio: f32,
         viewport_dimensions_px: PhysicalSize<u32>,
     ) {
+        let layout = match &mut self.layout {
+            Some(layout) => layout,
+            None => return,
+        };
+
         // converting the line metrics of Fontdue to screen space
         let font_metrics_ss = ScreenSpaceFontMetrics::new(
             self.configuration
@@ -176,20 +264,15 @@ impl Text {
         );
 
         // calculating the screen space metrics of all symbols
-        let presymbols = Self::generate_presymbols(
-            &self,
-            &font,
-            &font_metrics_ss,
-            aspect_ratio,
-        );
+        // let presymbols = Self::generate_presymbols(&self, &font, &font_metrics_ss, aspect_ratio);
 
         // getting lines
-        let lines = Self::lines_from_presymbols(&presymbols, parent_rect, &font_metrics_ss);
+        // let lines = Self::lines_from_presymbols(&presymbols, parent_rect, &font_metrics_ss);
 
         // placing symbols
         self.symbols.clear();
         let mut origin = GlyphOrigin::at_top_left(parent_rect, &font_metrics_ss);
-        for line in lines.iter() {
+        for line in layout.lines.lines.iter() {
             // integrating text alignment
             let horizontal_offset = match self.configuration.alignment {
                 TextAlignment::Left => 0f32,
@@ -200,7 +283,7 @@ impl Text {
             };
 
             origin.screen_space_position.x += horizontal_offset;
-            for presymbol in &presymbols[*line.range.start()..=*line.range.end()] {
+            for presymbol in &layout.presymbols[*line.range.start()..=*line.range.end()] {
                 self.symbols.push(origin.symbol_from_presymbol(presymbol));
                 origin.increment_by_presymbol(presymbol);
             }
@@ -211,8 +294,8 @@ impl Text {
     /// Gives the screen space span of the text along a given axis
     pub fn screen_space_span(&self, axis: Axis) -> Option<f32> {
         let axis_index = axis.to_index();
-        if let Some(dimensions_ss) = self.dimensions_ss {
-            Some(dimensions_ss[axis_index])
+        if let Some(layout) = &self.layout {
+            Some(layout.screen_space_dimensions[axis_index])
         } else {
             None
         }
@@ -282,55 +365,6 @@ impl Text {
         vertices
     }
 
-    /// Generates the vector of lines from presymbols
-    fn lines_from_presymbols(
-        presymbols: &[Presymbol],
-        clip_rectangle: &Rectangle,
-        font_metrics_ss: &ScreenSpaceFontMetrics,
-    ) -> Vec<TextLine> {
-        let mut lines = Vec::new();
-
-        if presymbols.len() > 0 {
-            let mut origin = GlyphOrigin::at_top_left(clip_rectangle, font_metrics_ss);
-            let mut line_start_index = 0usize;
-            let mut line_min_x = origin.screen_space_position.x;
-            let mut line_max_x = origin.screen_space_position.x;
-
-            for (index, presymbol) in presymbols.iter().enumerate() {
-                if origin.presymbol_fits_in_rect(clip_rectangle, presymbol) {
-                    // tracking the new max width of the line
-                    line_max_x = origin.screen_space_position.x
-                        + presymbol.symbol_metrics.x_shift
-                        + presymbol.symbol_metrics.width;
-                } else {
-                    // resetting the origin to the start of the line
-                    origin = GlyphOrigin::at_top_left(clip_rectangle, font_metrics_ss);
-
-                    // calculating the new line x min
-                    line_min_x = origin.screen_space_position.x;
-
-                    // pushing the line
-                    let line_end_index = index.checked_sub(1).unwrap_or(0);
-                    lines.push(TextLine::new(
-                        line_start_index..=line_end_index,
-                        glam::Vec2::new(line_max_x - line_min_x, font_metrics_ss.height),
-                    ));
-                    line_start_index = index;
-                }
-
-                origin.increment_by_presymbol(presymbol);
-            }
-
-            // pushing final line
-            lines.push(TextLine::new(
-                line_start_index..=presymbols.len() - 1,
-                glam::Vec2::new(line_max_x - line_min_x, font_metrics_ss.height),
-            ));
-        }
-
-        lines
-    }
-
     fn generate_presymbols(
         &self,
         font: &Font,
@@ -381,6 +415,7 @@ pub struct Symbol {
     pub uv_region: Rectangle,
 }
 
+#[derive(Clone)]
 /// Holds the information required for placing a [`Symbol`], ie most things without the final position,
 /// this makes it easier for text to be placed into lines, formatted etc.
 struct Presymbol {
@@ -395,6 +430,7 @@ struct Presymbol {
     pub symbol_metrics: ScreenSpaceSymbolMetrics,
 }
 
+#[derive(Clone)]
 /// The screen space metrics of a symbol
 struct ScreenSpaceSymbolMetrics {
     pub width: f32,
@@ -464,6 +500,7 @@ impl ScreenSpaceFontMetrics {
     }
 }
 
+#[derive(Clone)]
 /// Represents a line of text as it appears on screen, can contain either Presymbols or Symbols
 struct TextLine {
     /// The symbols that are part of the line
