@@ -1,6 +1,6 @@
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 
-use super::{simple_renderer::SimpleVertex, Axis, Colour};
+use super::{simple_renderer::SimpleVertex, util, Axis, Colour};
 
 #[derive(Debug, Copy, Clone)]
 pub struct ScreenSpacePosition {
@@ -44,8 +44,11 @@ pub struct Rectangle<T> {
     pub y_max: T,
 }
 
-impl Rectangle<f32> {
-    pub fn new(x_min: f32, x_max: f32, y_min: f32, y_max: f32) -> Self {
+impl<T> Rectangle<T>
+where
+    T: std::ops::Sub<Output = T> + Copy,
+{
+    pub fn new(x_min: T, x_max: T, y_min: T, y_max: T) -> Self {
         Self {
             x_min,
             x_max,
@@ -54,6 +57,18 @@ impl Rectangle<f32> {
         }
     }
 
+    /// Returns the space width of the rectangle
+    pub fn width(&self) -> T {
+        self.x_max - self.x_min
+    }
+
+    /// Returns the space width of the rectangle
+    pub fn height(&self) -> T {
+        self.y_max - self.y_min
+    }
+}
+
+impl Rectangle<f32> {
     /// Returns true if the point is over this rectangle
     pub fn is_in(&self, position: ScreenSpacePosition) -> bool {
         position.x >= self.x_min
@@ -96,18 +111,8 @@ impl Rectangle<f32> {
         simple_vertices.push(b);
         simple_vertices.push(c);
         simple_vertices.push(d);
-        
+
         simple_vertices
-    }
-
-    /// Returns the space width of the rectangle
-    pub fn width(&self) -> f32 {
-        self.x_max - self.x_min
-    }
-
-    /// Returns the space width of the rectangle
-    pub fn height(&self) -> f32 {
-        self.y_max - self.y_min
     }
 
     /// Gives the span of the Rectangle by its axis
@@ -115,6 +120,32 @@ impl Rectangle<f32> {
         match axis {
             Axis::Vertical => self.height(),
             Axis::Horizontal => self.width(),
+        }
+    }
+
+    /// Converts the rectangle from screen space to framebuffer coordinates
+    pub fn screen_space_to_framebuffer(
+        &self,
+        viewport_dimensions_px: glam::Vec2,
+    ) -> Rectangle<f32> {
+        Rectangle {
+            x_min: util::normalised_device_space_to_frame_buffer_space_x(
+                self.x_min,
+                viewport_dimensions_px.x,
+            ),
+            x_max: util::normalised_device_space_to_frame_buffer_space_x(
+                self.x_max,
+                viewport_dimensions_px.x,
+            ),
+            // the swapping of y_min and y_max is intended, as it will swap as frambuffers are y-down
+            y_min: util::normalised_device_space_to_frame_buffer_space_y(
+                self.y_max,
+                viewport_dimensions_px.y,
+            ),
+            y_max: util::normalised_device_space_to_frame_buffer_space_y(
+                self.y_min,
+                viewport_dimensions_px.y,
+            ),
         }
     }
 }

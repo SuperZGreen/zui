@@ -190,7 +190,7 @@ impl RenderState {
     }
 
     /// Gives the RenderPass that does the initial clear of the screen
-    pub fn render_with_clip_rectangle(&mut self, clip_rectangle: Option<Rectangle<f32>>) -> Option<RenderPass> {
+    pub fn render_with_clip_rectangle(&mut self, clip_rectangle: Option<Rectangle<u32>>) -> Option<RenderPass> {
         if self.skip_rendering {
             return None;
         }
@@ -234,12 +234,12 @@ impl RenderState {
             );
 
             if let Some(clip_rectangle) = clip_rectangle {
-                // render_pass.set_scissor_rect(
-                //     clip_rectangle.x_min,
-                //     clip_rectangle.y_min,
-                //     clip_rectangle.width(),
-                //     clip_rectangle.height(),
-                // );
+                render_pass.set_scissor_rect(
+                    clip_rectangle.x_min,
+                    clip_rectangle.y_min,
+                    clip_rectangle.width(),
+                    clip_rectangle.height(),
+                );
             }
 
             // Do rendering

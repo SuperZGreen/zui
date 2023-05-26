@@ -80,24 +80,45 @@ impl Zui {
     ) where
         Message: Copy + Clone,
     {
-        let render_layers = scene_handle.to_render_layers(glam::Vec2::new(
+        let viewport_dimensions_px = glam::Vec2::new(
             self.viewport_dimensions_px.width as f32,
             self.viewport_dimensions_px.height as f32,
-        ));
+        );
+
+        let render_layers = scene_handle.to_render_layers(viewport_dimensions_px);
 
         // clearing the screen, this is where the world render pass would go
         _ = render_state.render_clear();
         // render_state.submit_command_encoder();
 
         // for each layer in render_layers
-
         for render_layer in render_layers {
             self.renderer
                 .upload(render_state.device(), &render_layer.simple_vertices);
             self.text_renderer
                 .upload(render_state.device(), &render_layer.text_vertices);
 
-            let render_pass_opt = render_state.render_with_clip_rectangle(None);
+            let clip_rectangle = match render_layer.clip_rectangle {
+                Some(cr) => {
+                    let framebuffer_rect = cr.screen_space_to_framebuffer(viewport_dimensions_px);
+                    let scissor_rect = Rectangle::new(
+                        framebuffer_rect.x_min as u32,
+                        framebuffer_rect.x_max as u32,
+                        framebuffer_rect.y_min as u32,
+                        framebuffer_rect.y_max as u32,
+                    );
+
+                    // wgpu will panic if the scissor rectangle has a width or height of 0
+                    if scissor_rect.width() == 0 || scissor_rect.height() == 0 {
+                        None
+                    } else {
+                        Some(scissor_rect)
+                    }
+                }
+                None => None,
+            };
+
+            let render_pass_opt = render_state.render_with_clip_rectangle(clip_rectangle);
             match render_pass_opt {
                 Some(mut rp) => {
                     self.renderer.render(&mut rp);
