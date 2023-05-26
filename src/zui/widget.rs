@@ -1,4 +1,8 @@
-use super::{renderer::SimpleVertex, text_renderer::TextVertex, Rectangle, ScreenSpacePosition};
+use super::{
+    render_layer::RenderLayer, simple_renderer::SimpleVertex, text_renderer::TextVertex, Rectangle,
+    ScreenSpacePosition,
+};
+use std::collections::VecDeque;
 
 use crate::zui::Context;
 
@@ -89,7 +93,7 @@ impl Span {
     /// context and parent widget region and axis
     pub fn to_screen_space_span(
         &self,
-        parent_rectangle: &Rectangle,
+        parent_rectangle: &Rectangle<f32>,
         parent_axis: Axis,
         sum_of_parent_weights: Option<f32>,
         // the amount of screen space not taken up by non-weighted widgets
@@ -146,7 +150,7 @@ pub enum Event<'a> {
 
     /// The widget is commanded to fit the provided rectangle
     // TODO: remove Context from this
-    FitRectangle((Rectangle, &'a Context<'a>)),
+    FitRectangle((Rectangle<f32>, &'a Context<'a>)),
 }
 
 pub enum EventResponse<Message> {
@@ -174,7 +178,7 @@ pub trait Widget<Message> {
     }
 
     /// Returns the clipping rectangle of the widget
-    fn clip_rectangle(&self) -> Option<Rectangle> {
+    fn clip_rectangle(&self) -> Option<Rectangle<f32>> {
         None
     }
 
@@ -191,7 +195,7 @@ pub trait Widget<Message> {
     /// calculate the span
     fn update_screen_space_span(
         &mut self,
-        clip_rectangle: &Rectangle,
+        clip_rectangle: &Rectangle<f32>,
         parent_axis: Axis,
         sum_of_parent_weights: Option<f32>,
         // the amount of screen space not taken up by non-weighted widgets
@@ -204,10 +208,14 @@ pub trait Widget<Message> {
         Axis::Vertical
     }
 
-    /// Returns the vertices necessary to render a widget
+    /// Returns the vertices necessary to render a widget, will append a new RenderLayer to
+    /// render_layers to allow for a new clipping region when overflowing. This is not normally
+    /// required by widgets that do not have nested children/do not have grand-children that may
+    /// overflow
     fn to_vertices(
         &self,
         viewport_dimensions_px: glam::Vec2,
+        render_layers: &mut VecDeque<RenderLayer>,
     ) -> (Vec<SimpleVertex>, Vec<TextVertex>) {
         (Vec::new(), Vec::new())
     }

@@ -1,9 +1,9 @@
-use std::ops::RangeInclusive;
+use std::{ops::RangeInclusive, collections::VecDeque};
 
 use crate::zui::{
     self, primitives::Rectangle, text::{TextAlignmentHorizontal, TextAlignmentVertical}, widget::EventResponse, Axis, Colour, Context,
     LineWrapping, MouseEvent, ScreenSpacePosition, Span, Text, TextConfiguration, TextSegment,
-    TextSize, Widget,
+    TextSize, Widget, render_layer::RenderLayer,
 };
 
 pub struct FillBar<'a, T, Message> {
@@ -24,9 +24,9 @@ pub struct FillBar<'a, T, Message> {
     cursor_is_over: bool,
     is_grabbed: bool,
 
-    clip_rectangle: Option<Rectangle>,
-    bar_background_rectangle: Option<Rectangle>,
-    bar_foreground_rectangle: Option<Rectangle>,
+    clip_rectangle: Option<Rectangle<f32>>,
+    bar_background_rectangle: Option<Rectangle<f32>>,
+    bar_foreground_rectangle: Option<Rectangle<f32>>,
 
     span: Span,
     screen_space_span: Option<f32>,
@@ -81,7 +81,7 @@ where
             })
     }
 
-    fn determine_value(bar_rectangle: Rectangle, cursor_position: ScreenSpacePosition) -> T {
+    fn determine_value(bar_rectangle: Rectangle<f32>, cursor_position: ScreenSpacePosition) -> T {
         let bar_screen_space_length = bar_rectangle.x_max - bar_rectangle.x_min;
         let mut bar_normalised_value =
             (cursor_position.x - bar_rectangle.x_min) / bar_screen_space_length;
@@ -131,7 +131,7 @@ where
     /// Gets the screen space position of
     fn screen_space_position_from_value(
         range: &RangeInclusive<T>,
-        bar_rectangle: Rectangle,
+        bar_rectangle: Rectangle<f32>,
         value: &T,
     ) -> f32 {
         let value: f32 = (*value).into();
@@ -255,7 +255,7 @@ where
 
     fn update_screen_space_span(
         &mut self,
-        parent_rectangle: &Rectangle,
+        parent_rectangle: &Rectangle<f32>,
         parent_axis: zui::Axis,
         sum_of_parent_weights: Option<f32>,
         // the amount of screen space not taken up by non-weighted widgets
@@ -290,8 +290,9 @@ where
     fn to_vertices(
         &self,
         viewport_dimensions_px: glam::Vec2,
+        render_layers: &mut VecDeque<RenderLayer>,
     ) -> (
-        Vec<crate::zui::renderer::SimpleVertex>,
+        Vec<crate::zui::simple_renderer::SimpleVertex>,
         Vec<crate::zui::text_renderer::TextVertex>,
     ) {
         let mut simple_vertices = Vec::new();

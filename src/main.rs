@@ -213,21 +213,23 @@ fn main() {
                 if !render_state.skip_rendering() {
                     // uploading
                     let current_scene = scene_store.current_scene().unwrap();
-                    zui.upload_vertices(render_state.device(), current_scene);
+                    zui.render_scene_handle(current_scene, &mut render_state);
+                    // zui.render_scene_handle(&current_scene);
+                    // zui.upload_vertices(render_state.device(), current_scene);
 
-                    // rendering
-                    match render_state.render(&zui) {
-                        Ok(_) => {}
-                        Err(wgpu::SurfaceError::Lost) => {
-                            warn!("wgpu::SurfaceError::Lost");
+                    // // rendering
+                    // match render_state.render(&zui) {
+                    //     Ok(_) => {}
+                    //     Err(wgpu::SurfaceError::Lost) => {
+                    //         warn!("wgpu::SurfaceError::Lost");
 
-                            let size = render_state.window_size();
-                            render_state.resize(&size);
-                        }
-                        Err(e) => {
-                            warn!("encountered error: {:?}", e);
-                        }
-                    }
+                    //         let size = render_state.window_size();
+                    //         render_state.resize(&size);
+                    //     }
+                    //     Err(e) => {
+                    //         warn!("encountered error: {:?}", e);
+                    //     }
+                    // }
                 }
             }
             Event::RedrawEventsCleared => {}

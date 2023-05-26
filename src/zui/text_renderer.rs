@@ -35,7 +35,7 @@ impl TextVertex {
         position: glam::Vec2,
         uv: glam::Vec2,
         colour: glam::Vec4,
-        parent_rectangle: &Rectangle,
+        parent_rectangle: &Rectangle<f32>,
         viewport_dimensions_px: glam::Vec2,
     ) -> TextVertex {
         // clip bounds are frame buffer coordinates

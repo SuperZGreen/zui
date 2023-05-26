@@ -20,7 +20,7 @@ pub struct PackedSprite {
     pub name: String,
 
     /// The UV region of the packed sprite
-    pub uv_region: Rectangle,
+    pub uv_region: Rectangle<f32>,
 
     /// The dimensions of the final packed region, not including padding
     dimensions_px: glam::UVec2,
@@ -106,6 +106,7 @@ impl TextureAtlasBuilder {
                 format: wgpu::TextureFormat::R8Unorm,
                 usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
                 label: Some("texture_curses"),
+                view_formats: &[],
             });
 
             // writing the texture to GPU memory via created handle
@@ -119,8 +120,8 @@ impl TextureAtlasBuilder {
                 &atlas_image,
                 wgpu::ImageDataLayout {
                     offset: 0,
-                    bytes_per_row: std::num::NonZeroU32::new(1 * atlas_width),
-                    rows_per_image: std::num::NonZeroU32::new(atlas_height),
+                    bytes_per_row: Some(1 * atlas_width),
+                    rows_per_image: Some(atlas_height),
                 },
                 texture_size,
             );

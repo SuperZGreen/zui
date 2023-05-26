@@ -1,8 +1,10 @@
+use std::collections::VecDeque;
+
 use crate::zui::{
     self,
     primitives::Rectangle,
     widget::{Event, MouseEvent, Widget},
-    Colour, Context, Span, Text,
+    Colour, Context, Span, Text, render_layer::RenderLayer,
 };
 
 pub struct Button<Message> {
@@ -18,7 +20,7 @@ pub struct Button<Message> {
     text: Option<Text>,
     span: Span,
     screen_space_span: Option<f32>,
-    clip_rectangle: Option<Rectangle>,
+    clip_rectangle: Option<Rectangle<f32>>,
 }
 
 impl<Message> Button<Message> {
@@ -127,7 +129,7 @@ where
         None
     }
 
-    fn clip_rectangle(&self) -> Option<crate::zui::primitives::Rectangle> {
+    fn clip_rectangle(&self) -> Option<crate::zui::primitives::Rectangle<f32>> {
         self.clip_rectangle
     }
 
@@ -141,7 +143,7 @@ where
 
     fn update_screen_space_span(
         &mut self,
-        parent_rectangle: &Rectangle,
+        parent_rectangle: &Rectangle<f32>,
         parent_axis: zui::Axis,
         sum_of_parent_weights: Option<f32>,
         // the amount of screen space not taken up by non-weighted widgets
@@ -180,8 +182,9 @@ where
     fn to_vertices(
         &self,
         viewport_dimensions_px: glam::Vec2,
+        render_layers: &mut VecDeque<RenderLayer>,
     ) -> (
-        Vec<crate::zui::renderer::SimpleVertex>,
+        Vec<crate::zui::simple_renderer::SimpleVertex>,
         Vec<crate::zui::text_renderer::TextVertex>,
     ) {
         let mut simple_vertices = Vec::new();

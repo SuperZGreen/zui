@@ -2,11 +2,12 @@ mod colour;
 mod font;
 pub mod premade_widgets;
 mod primitives;
+mod render_layer;
 mod renderable;
-mod renderer;
 mod scene;
 mod scene_handle;
 mod scene_store;
+mod simple_renderer;
 pub mod text;
 mod text_renderer;
 mod texture_atlas;
@@ -15,24 +16,26 @@ mod widget;
 
 pub use colour::Colour;
 pub use font::Font;
-pub use primitives::ScreenSpacePosition;
+pub use primitives::{Rectangle, ScreenSpacePosition};
 pub use renderable::Renderable;
-use renderer::Renderer;
 pub use scene::Scene;
 pub use scene_handle::SceneHandle;
 pub use scene_store::SceneStore;
-pub use text::{LineWrapping, Text, TextConfiguration, TextSegment, TextSize, TextAlignmentHorizontal};
+use simple_renderer::SimpleRenderer;
+pub use text::{
+    LineWrapping, Text, TextAlignmentHorizontal, TextConfiguration, TextSegment, TextSize,
+};
 use text_renderer::TextRenderer;
 pub use widget::{Axis, Event, MouseEvent, Span, Widget};
 
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 
-use self::primitives::Rectangle;
+use crate::render_state::RenderState;
 
 pub struct Zui {
     font: Font,
 
-    renderer: Renderer,
+    renderer: SimpleRenderer,
     text_renderer: TextRenderer,
 
     viewport_dimensions_px: PhysicalSize<u32>,
@@ -61,7 +64,7 @@ impl Zui {
 
         Ok(Self {
             font: font_default,
-            renderer: Renderer::new(device, surface_configuration),
+            renderer: SimpleRenderer::new(device, surface_configuration),
             text_renderer,
             viewport_dimensions_px,
             aspect_ratio: viewport_dimensions_px.width as f32
@@ -70,23 +73,72 @@ impl Zui {
         })
     }
 
-    /// Turns the Widget's rectangles into vertices, uploads them to the GPU
-    pub fn upload_vertices(&mut self, device: &wgpu::Device, renderable: &dyn Renderable) {
-        let (simple_vertices, text_vertices) = renderable.to_vertices(glam::Vec2::new(
+    pub fn render_scene_handle<Message>(
+        &mut self,
+        scene_handle: &SceneHandle<Message>,
+        render_state: &mut RenderState,
+    ) where
+        Message: Copy + Clone,
+    {
+        let render_layers = scene_handle.to_render_layers(glam::Vec2::new(
             self.viewport_dimensions_px.width as f32,
             self.viewport_dimensions_px.height as f32,
         ));
 
-        self.renderer.upload(device, &simple_vertices);
-        self.text_renderer.upload(device, &text_vertices);
+        // clearing the screen, this is where the world render pass would go
+        _ = render_state.render_clear();
+        // render_state.submit_command_encoder();
+
+        // for each layer in render_layers
+
+        for render_layer in render_layers {
+            self.renderer
+                .upload(render_state.device(), &render_layer.simple_vertices);
+            self.text_renderer
+                .upload(render_state.device(), &render_layer.text_vertices);
+
+            let render_pass_opt = render_state.render_with_clip_rectangle(None);
+            match render_pass_opt {
+                Some(mut rp) => {
+                    self.renderer.render(&mut rp);
+                    self.text_renderer.render(&mut rp, &self.font.texture_atlas);
+                }
+                None => {}
+            };
+        }
+        // render_state.submit_command_encoder();
+
+        // for render_layer in render_layers {
+        //     self.renderer
+        //         .upload(render_state.device(), &render_layer.simple_vertices);
+        //     self.text_renderer
+        //         .upload(render_state.device(), &render_layer.text_vertices);
+        // }
+        // for (index, render_layer) in render_layers.iter().enumerate() {
+        //     println!("layer: {}", index);
+        // }
+
+        render_state.submit_command_encoder();
+        _ = render_state.present();
     }
 
-    /// Tells the Zui Renderer to draw the UI
-    pub fn render<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) {
-        self.renderer.render(render_pass);
-        self.text_renderer
-            .render(render_pass, &self.font.texture_atlas);
-    }
+    // /// Turns the Widget's rectangles into vertices, uploads them to the GPU
+    // pub fn upload_vertices(&mut self, device: &wgpu::Device, renderable: &dyn Renderable) {
+    //     let (simple_vertices, text_vertices) = renderable.to_vertices(glam::Vec2::new(
+    //         self.viewport_dimensions_px.width as f32,
+    //         self.viewport_dimensions_px.height as f32,
+    //     ));
+
+    //     self.renderer.upload(device, &simple_vertices);
+    //     self.text_renderer.upload(device, &text_vertices);
+    // }
+
+    // /// Tells the Zui Renderer to draw the UI
+    // pub fn render<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) {
+    //     self.renderer.render(render_pass);
+    //     self.text_renderer
+    //         .render(render_pass, &self.font.texture_atlas);
+    // }
 
     /// Resizes the zui context
     pub fn resize(&mut self, viewport_dimensions_px: PhysicalSize<u32>) {

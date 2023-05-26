@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 winit = "0.27"
-wgpu = "0.14"
+wgpu = "0.16.1"
 pollster = "0.2.4"
 log = "0.4.17"
 env_logger = "0.9.0"

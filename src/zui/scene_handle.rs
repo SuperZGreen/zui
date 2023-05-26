@@ -2,7 +2,8 @@ use std::collections::VecDeque;
 
 use super::{
     primitives::Rectangle,
-    renderer::SimpleVertex,
+    render_layer::RenderLayer,
+    simple_renderer::SimpleVertex,
     text_renderer::TextVertex,
     widget::{Event, EventResponse, Widget},
     Context, Renderable, Scene,
@@ -152,20 +153,24 @@ impl<Message> Renderable for SceneHandle<Message>
 where
     Message: Clone + Copy,
 {
-    fn to_vertices(
+    fn to_render_layers(
         &self,
         viewport_dimensions_px: glam::Vec2,
-    ) -> (Vec<SimpleVertex>, Vec<TextVertex>) {
+    ) -> VecDeque<RenderLayer> {
         let root_widget = match &self.root_widget {
             Some(rw) => rw,
             None => {
                 warn!("attempting to render SceneHandle with empty root widget");
-                return (Vec::new(), Vec::new());
+                return VecDeque::new();
             }
         };
 
-        let (simple_vertices, text_vertices) = root_widget.to_vertices(viewport_dimensions_px);
+        let mut render_layers = VecDeque::new();
+        let (simple_vertices, text_vertices) =
+            root_widget.to_vertices(viewport_dimensions_px, &mut render_layers);
 
-        (simple_vertices, text_vertices)
+        render_layers.push_front(RenderLayer::new(simple_vertices, text_vertices, None));
+
+        render_layers
     }
 }

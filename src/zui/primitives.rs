@@ -1,6 +1,6 @@
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 
-use super::{renderer::SimpleVertex, Axis, Colour};
+use super::{simple_renderer::SimpleVertex, Axis, Colour};
 
 #[derive(Debug, Copy, Clone)]
 pub struct ScreenSpacePosition {
@@ -33,18 +33,18 @@ impl ScreenSpacePosition {
 /// A rectangular region, often representing screen-space using WGPU coordinates, where top left:
 /// (-1, 1), and bottom right: (1, -1)
 #[derive(Debug, Clone, Copy)]
-pub struct Rectangle {
+pub struct Rectangle<T> {
     /// The minimum bounding x value of the rectangle
-    pub x_min: f32,
+    pub x_min: T,
     /// The maximum bounding x value of the rectangle
-    pub x_max: f32,
+    pub x_max: T,
     /// The minimum bounding y value of the rectangle
-    pub y_min: f32,
+    pub y_min: T,
     /// The maximum bounding y value of the rectangle
-    pub y_max: f32,
+    pub y_max: T,
 }
 
-impl Rectangle {
+impl Rectangle<f32> {
     pub fn new(x_min: f32, x_max: f32, y_min: f32, y_max: f32) -> Self {
         Self {
             x_min,

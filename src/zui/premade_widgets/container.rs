@@ -1,6 +1,9 @@
+use std::collections::VecDeque;
+
 use crate::zui::{
-    primitives::Rectangle, renderer::SimpleVertex, text_renderer::TextVertex,
-    widget::EventResponse, Axis, Colour, Context, Event, Span, Text, Widget,
+    primitives::Rectangle, render_layer::RenderLayer, simple_renderer::SimpleVertex,
+    text_renderer::TextVertex, widget::EventResponse, Axis, Colour, Context, Event, Span, Text,
+    Widget,
 };
 
 pub struct Container<Message>
@@ -23,16 +26,19 @@ where
     pub message_cursor_on: Option<Message>,
     pub message_cursor_off: Option<Message>,
 
-    // style
+    /// style
     pub background: Option<Colour>,
 
-    // calculated screen space area
-    pub rectangle: Option<Rectangle>,
+    /// calculated screen space area
+    pub rectangle: Option<Rectangle<f32>>,
 
-    // calculated screen space span
+    /// calculated screen space span
     pub screen_space_span: Option<f32>,
 
-    // Text contained within a widget's area
+    /// Flag that describes whether the container is overflowing or not
+    pub overflowing: bool,
+
+    /// Text contained within a widget's area
     pub text: Option<Text>,
 }
 
@@ -55,6 +61,7 @@ where
             background: None,
             rectangle: None,
             screen_space_span: None,
+            overflowing: false,
             text: None,
         }
     }
@@ -151,7 +158,10 @@ where
         let screen_space_available = self_rectangle.span_by_axis(self.axis) - screen_space_used;
 
         if screen_space_available < 0.0f32 {
+            self.overflowing = true;
             warn!("overflowing: screen space span: {}", screen_space_available);
+        } else {
+            self.overflowing = false;
         }
 
         let sum_of_child_span_weights = Self::get_sum_of_child_span_weights(&self.children);
@@ -198,25 +208,6 @@ where
         }
     }
 
-    // /// Goes through the containers child widgets to determine the amount of screen space available
-    // /// in the container
-    // fn get_screen_space_available(
-    //     children: &[Box<dyn Widget<Message>>],
-    //     parent_rectangle: &Rectangle,
-    //     parent_axis: Axis,
-    //     context: &Context,
-    // ) -> f32 {
-    //     let mut screen_space_span_available = parent_rectangle.span_by_axis(parent_axis);
-    //     for child in children.iter() {
-    //         let child_space_used = match child.span() {
-    //             Span::ParentWeight(_) => 0f32,
-    //             _ => child.screen_space_span(),
-    //         };
-    //         screen_space_span_available -= child_space_used;
-    //     }
-    //     screen_space_span_available
-    // }
-
     fn get_sum_of_child_span_weights(children: &[Box<dyn Widget<Message>>]) -> f32 {
         let mut sum = 0f32;
         for child in children.iter() {
@@ -259,7 +250,7 @@ where
         }
     }
 
-    fn clip_rectangle(&self) -> Option<Rectangle> {
+    fn clip_rectangle(&self) -> Option<Rectangle<f32>> {
         self.rectangle
     }
 
@@ -272,6 +263,7 @@ where
     fn to_vertices(
         &self,
         viewport_dimensions_px: glam::Vec2,
+        render_layers: &mut VecDeque<RenderLayer>,
     ) -> (Vec<SimpleVertex>, Vec<TextVertex>) {
         // adding own text vertices
         let mut text_vertices = Vec::new();
@@ -291,17 +283,24 @@ where
 
         // adding children's vertices
         for child in self.children.iter() {
-            let (mut sv, mut tv) = child.to_vertices(viewport_dimensions_px);
+            let (mut sv, mut tv) = child.to_vertices(viewport_dimensions_px, render_layers);
             simple_vertices.append(&mut sv);
             text_vertices.append(&mut tv);
         }
 
-        (simple_vertices, text_vertices)
+        // creating new layer if overflowing
+        if self.overflowing {
+            let render_layer = RenderLayer::new(simple_vertices, text_vertices, self.rectangle);
+            render_layers.push_back(render_layer);
+            (Vec::new(), Vec::new())
+        } else {
+            (simple_vertices, text_vertices)
+        }
     }
 
     fn update_screen_space_span(
         &mut self,
-        clip_rectangle: &Rectangle,
+        clip_rectangle: &Rectangle<f32>,
         parent_axis: Axis,
         sum_of_parent_weights: Option<f32>,
         // the amount of screen space not taken up by non-weighted widgets

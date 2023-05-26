@@ -95,7 +95,7 @@ struct TextLines {
 impl TextLines {
     pub fn from_presymbols(
         presymbols: &[Presymbol],
-        clip_rectangle: &Rectangle,
+        clip_rectangle: &Rectangle<f32>,
         font_metrics_ss: &ScreenSpaceFontMetrics,
     ) -> Self {
         let mut lines = Vec::new();
@@ -226,7 +226,7 @@ impl Text {
     pub fn update_layout(
         &mut self,
         font: &Font,
-        clip_rectangle: &Rectangle,
+        clip_rectangle: &Rectangle<f32>,
         aspect_ratio: f32,
         viewport_dimensions_px: PhysicalSize<u32>,
     ) {
@@ -255,7 +255,7 @@ impl Text {
     pub fn place_symbols(
         &mut self,
         font: &Font,
-        parent_rect: &Rectangle,
+        parent_rect: &Rectangle<f32>,
         aspect_ratio: f32,
         viewport_dimensions_px: PhysicalSize<u32>,
     ) {
@@ -319,7 +319,7 @@ impl Text {
         &self,
         // The clipping region of the parent widget, can not render fragments outside of this rect.
         // Given in NDC/screen space
-        parent_clip_region: Rectangle,
+        parent_clip_region: Rectangle<f32>,
         // The viewport dimensions in pixels, used to calculate the clip bounds for the text
         // fragment shader
         viewport_dimensions_px: glam::Vec2,
@@ -422,10 +422,10 @@ pub struct Symbol {
     /// The colour of a character
     pub colour: Colour,
     /// The screen space region of a symbol
-    pub region: Rectangle,
+    pub region: Rectangle<f32>,
     /// The UV region of the symbol, using UV coordinates where (0, 0) is top left, (1, 1) is bottom
     /// right
-    pub uv_region: Rectangle,
+    pub uv_region: Rectangle<f32>,
 }
 
 #[derive(Clone)]
@@ -438,7 +438,7 @@ struct Presymbol {
     pub colour: Colour,
     /// The UV region of the symbol, using UV coordinates where (0, 0) is top left, (1, 1) is bottom
     /// right
-    pub uv_region: Rectangle,
+    pub uv_region: Rectangle<f32>,
     /// The screen space dimension/attributes of the symbol
     pub symbol_metrics: ScreenSpaceSymbolMetrics,
 }
@@ -539,7 +539,7 @@ struct GlyphOrigin {
 
 impl GlyphOrigin {
     /// Places the origin at the top left of the rectangle
-    pub fn at_top_left(clip_region: &Rectangle, font_metrics_ss: &ScreenSpaceFontMetrics) -> Self {
+    pub fn at_top_left(clip_region: &Rectangle<f32>, font_metrics_ss: &ScreenSpaceFontMetrics) -> Self {
         let screen_space_position = glam::Vec2::new(
             clip_region.x_min,
             clip_region.y_max - font_metrics_ss.ascent,
@@ -558,7 +558,7 @@ impl GlyphOrigin {
     }
 
     /// Returns true iff the Presymbol will fit in the provided clipping Rectangle
-    fn presymbol_fits_in_rect(&self, clip_rectangle: &Rectangle, presymbol: &Presymbol) -> bool {
+    fn presymbol_fits_in_rect(&self, clip_rectangle: &Rectangle<f32>, presymbol: &Presymbol) -> bool {
         self.screen_space_position.x
             + presymbol.symbol_metrics.width
             + presymbol.symbol_metrics.x_shift
@@ -591,7 +591,7 @@ impl GlyphOrigin {
 
     /// Resets the glyph origin to the left of the parent rectangle and moves downward for a new
     /// line
-    fn new_line(&mut self, clip_rectangle: &Rectangle, font_metrics_ss: &ScreenSpaceFontMetrics) {
+    fn new_line(&mut self, clip_rectangle: &Rectangle<f32>, font_metrics_ss: &ScreenSpaceFontMetrics) {
         self.screen_space_position.x = clip_rectangle.x_min;
         self.screen_space_position.y -= font_metrics_ss.new_line_size;
     }

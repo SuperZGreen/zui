@@ -74,7 +74,7 @@ impl Font {
     }
 
     /// Gets the SymbolInfo and top-left, bottom-right UVs for a symbol
-    pub fn get_symbol(&self, character: char) -> Option<(&SymbolInfo, Rectangle)> {
+    pub fn get_symbol(&self, character: char) -> Option<(&SymbolInfo, Rectangle<f32>)> {
         let symbol_info = self.symbols.get(&character)?;
         let packed_sprite = self.texture_atlas.get(symbol_info.atlas_index)?;
 

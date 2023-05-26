@@ -1,17 +1,17 @@
-mod vertex;
+mod simple_vertex;
 
-pub use vertex::SimpleVertex;
+pub use simple_vertex::SimpleVertex;
 use wgpu::util::DeviceExt;
 
 use super::util;
 
-pub struct Renderer {
+pub struct SimpleRenderer {
     render_pipeline: wgpu::RenderPipeline,
     vertices_buffer: wgpu::Buffer,
     vertices_used: u32,
 }
 
-impl Renderer {
+impl SimpleRenderer {
     pub fn new(
         device: &wgpu::Device,
         surface_configuration: &wgpu::SurfaceConfiguration,
