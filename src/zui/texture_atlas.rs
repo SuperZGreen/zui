@@ -194,16 +194,27 @@ impl TextureAtlasBuilder {
                 .find(|item| item.data == index)
                 .expect(&format!("could not find pack result with id = {}", index));
 
-            // uvs
-            let x_min = rect.rect.x as f32 / atlas_width as f32;
-            let x_max = x_min + rect.rect.w as f32 / atlas_width as f32;
-            let y_min = rect.rect.y as f32 / atlas_height as f32;
-            let y_max = y_min + rect.rect.h as f32 / atlas_height as f32;
+            // The uv region in rust-image pixel coordinates
+            let uv_region_px = Rectangle::new(
+                rect.rect.x as u32 + Self::PADDING,
+                rect.rect.x as u32 + rect.rect.w as u32 - Self::PADDING,
+                rect.rect.y as u32 + Self::PADDING,
+                rect.rect.y as u32 + rect.rect.h as u32 - Self::PADDING,
+            );
+
+            // The uv region in wgpu UV coordinates
+            let uv_region = Rectangle::new(
+                uv_region_px.x_min as f32 / atlas_width as f32,
+                uv_region_px.x_max as f32 / atlas_width as f32,
+                uv_region_px.y_min as f32 / atlas_height as f32,
+                uv_region_px.y_max as f32 / atlas_height as f32,
+            );
 
             packed_sprites.push(PackedSprite {
                 name: String::from("TODO"),
                 dimensions_px: glam::UVec2::new(rect.rect.w as u32, rect.rect.h as u32),
-                uv_region: Rectangle::new(x_min, x_max, y_min, y_max),
+                // uv_region: Rectangle::new(x_min, x_max, y_min, y_max),
+                uv_region,
             });
         }
 

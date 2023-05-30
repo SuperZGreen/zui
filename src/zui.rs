@@ -51,7 +51,7 @@ impl Zui {
         surface_configuration: &wgpu::SurfaceConfiguration,
         viewport_dimensions_px: PhysicalSize<u32>,
     ) -> Result<Self, ()> {
-        let font_default = match Font::new(file, 128, device, queue) {
+        let font_default = match Font::new(file, 32, device, queue) {
             Ok(f) => f,
             Err(_) => return Err(()),
         };

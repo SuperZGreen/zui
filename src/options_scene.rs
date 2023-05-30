@@ -15,7 +15,7 @@ pub struct OptionsScene {
 }
 
 impl OptionsScene {
-    const NORMAL_FONT_SIZE_PX: f32 = 25f32;
+    const NORMAL_FONT_SIZE_PX: f32 = 32f32;
 
     pub fn new() -> Self {
         Self {
