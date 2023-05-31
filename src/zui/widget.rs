@@ -89,7 +89,7 @@ impl Span {
         match parent_widget_axis {
             // TODOPX: This is still in NDC
             Axis::Vertical => view_height * viewport_dimensions_px.height as f32,
-            Axis::Horizontal => view_height / aspect_ratio * viewport_dimensions_px.height as f32,
+            Axis::Horizontal => view_height / aspect_ratio * viewport_dimensions_px.width as f32,
         }
     }
 
@@ -101,7 +101,7 @@ impl Span {
     ) -> f32 {
         match parent_widget_axis {
             // TODOPX: This is still in NDC
-            Axis::Vertical => view_width * viewport_dimensions_px.width as f32 * aspect_ratio,
+            Axis::Vertical => view_width * viewport_dimensions_px.height as f32 * aspect_ratio,
             Axis::Horizontal => view_width * viewport_dimensions_px.width as f32,
         }
     }

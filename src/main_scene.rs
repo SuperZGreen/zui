@@ -40,6 +40,7 @@ impl Scene for MainScene {
 
         let central_content = Container::new()
             .with_axis(Axis::Vertical)
+            .with_background(Some(Colour::rgb(1f32, 0f32, 0.5f32)))
             .push(Container::new())
             .push(
                 Container::new()

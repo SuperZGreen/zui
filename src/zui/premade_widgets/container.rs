@@ -149,13 +149,17 @@ where
                 children_cumulative_span += child_pixel_span;
             }
         }
-        let mut unused_pixels_in_parent_span = self_clip_rectangle.span_by_axis(self.axis) as i64 - children_cumulative_span as i64;
+        let mut unused_pixels_in_parent_span =
+            self_clip_rectangle.span_by_axis(self.axis) - children_cumulative_span;
 
         // setting overflowing flag
-        if unused_pixels_in_parent_span < 0 {
+        if unused_pixels_in_parent_span < 0f32 {
             self.overflowing = true;
-            warn!("container overflowing by: {} pixels!", unused_pixels_in_parent_span.abs());
-            unused_pixels_in_parent_span = 0;
+            warn!(
+                "container overflowing by: {} pixels!",
+                unused_pixels_in_parent_span.abs()
+            );
+            unused_pixels_in_parent_span = 0f32;
         } else {
             self.overflowing = false;
         }
@@ -276,9 +280,11 @@ where
         if let Some(rectangle) = self.clip_rectangle {
             if let Some(colour) = self.background {
                 // simple_vertices.append(&mut rectangle.to_simple_vertices(colour));
-                simple_vertices.extend_from_slice(
-                    &SimpleVertex::from_rectangle(rectangle, colour, viewport_dimensions_px)
-                );
+                simple_vertices.extend_from_slice(&SimpleVertex::from_rectangle(
+                    rectangle,
+                    colour,
+                    viewport_dimensions_px,
+                ));
             }
         }
 
@@ -291,7 +297,8 @@ where
 
         // creating new layer if overflowing
         if self.overflowing {
-            let render_layer = RenderLayer::new(simple_vertices, text_vertices, self.clip_rectangle);
+            let render_layer =
+                RenderLayer::new(simple_vertices, text_vertices, self.clip_rectangle);
             render_layers.push_back(render_layer);
             (Vec::new(), Vec::new())
         } else {
