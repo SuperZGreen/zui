@@ -74,10 +74,10 @@ where
         self.root_widget.as_mut().unwrap().handle_event(
             &Event::FitRectangle((
                 Rectangle::new(
-                    0,
-                    context.viewport_dimensions_px.width as i32,
-                    0,
-                    context.viewport_dimensions_px.height as i32,
+                    0f32,
+                    context.viewport_dimensions_px.width as f32,
+                    0f32,
+                    context.viewport_dimensions_px.height as f32,
                 ),
                 &context,
             )),
@@ -93,10 +93,10 @@ where
             root_widget.handle_event(
                 &Event::FitRectangle((
                     Rectangle::new(
-                        0,
-                        context.viewport_dimensions_px.width as i32,
-                        0,
-                        context.viewport_dimensions_px.height as i32,
+                        0f32,
+                        context.viewport_dimensions_px.width as f32,
+                        0f32,
+                        context.viewport_dimensions_px.height as f32,
                     ),
                     &context,
                 )),

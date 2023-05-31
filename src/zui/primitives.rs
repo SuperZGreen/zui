@@ -77,6 +77,23 @@ where
 }
 
 impl Rectangle<i32> {
+    pub fn is_in(&self, position: glam::IVec2) -> bool {
+        position.x >= self.x_min
+            && position.x <= self.x_max
+            && position.y >= self.y_min
+            && position.y <= self.y_max
+    }
+}
+
+impl Rectangle<f32> {
+    /// Returns true if the point is over this rectangle
+    pub fn is_in(&self, position: &PhysicalPosition<f64>) -> bool {
+        position.x as f32 >= self.x_min
+            && position.x as f32 <= self.x_max
+            && position.y as f32 >= self.y_min
+            && position.y as f32 <= self.y_max
+    }
+
     /// Returns the viewport pixel (y up, (0,0) in bottom left) position vertices that make up the
     /// rectangle in the following order:
     ///
@@ -130,60 +147,29 @@ impl Rectangle<i32> {
 
         [top_left, top_right, bottom_left, bottom_right]
     }
-    
-    pub fn is_in(&self, position: glam::IVec2) -> bool {
-        position.x >= self.x_min
-            && position.x <= self.x_max
-            && position.y >= self.y_min
-            && position.y <= self.y_max
-    }
-}
 
-impl Rectangle<f32> {
-    /// Returns true if the point is over this rectangle
-    pub fn is_in(&self, position: ScreenSpacePosition) -> bool {
-        position.x >= self.x_min
-            && position.x <= self.x_max
-            && position.y >= self.y_min
-            && position.y <= self.y_max
-    }
-
-    /// Returns the screen space position vertices that make up the rectangle in the following order:
-    ///
-    ///   0 -----> 1
-    ///          /
-    ///        /
-    ///      /
-    ///    /
-    ///   2 -----> 3
-    pub fn vertices(&self) -> [glam::Vec2; 4] {
-        let top_left = glam::Vec2::new(self.x_min, self.y_max);
-        let top_right = glam::Vec2::new(self.x_max, self.y_max);
-        let bottom_left = glam::Vec2::new(self.x_min, self.y_min);
-        let bottom_right = glam::Vec2::new(self.x_max, self.y_min);
-
-        [top_left, top_right, bottom_left, bottom_right]
-    }
-
+    // TODO remove
     /// Converts the Rectangle into a Vec of SimpleVertexs, that can be easily rendererd
     pub fn to_simple_vertices(&self, colour: Colour) -> Vec<SimpleVertex> {
-        let mut simple_vertices = Vec::with_capacity(6);
-        let rectangle_vertices = self.vertices();
+        // TODOPX
+        // let mut simple_vertices = Vec::with_capacity(6);
+        // let rectangle_vertices = self.vertices();
 
-        let a = SimpleVertex::new(rectangle_vertices[0], colour.into());
-        let b = SimpleVertex::new(rectangle_vertices[1], colour.into());
-        let c = SimpleVertex::new(rectangle_vertices[2], colour.into());
-        let d = SimpleVertex::new(rectangle_vertices[3], colour.into());
+        // let a = SimpleVertex::new(rectangle_vertices[0], colour.into());
+        // let b = SimpleVertex::new(rectangle_vertices[1], colour.into());
+        // let c = SimpleVertex::new(rectangle_vertices[2], colour.into());
+        // let d = SimpleVertex::new(rectangle_vertices[3], colour.into());
 
-        simple_vertices.push(a);
-        simple_vertices.push(c);
-        simple_vertices.push(b);
+        // simple_vertices.push(a);
+        // simple_vertices.push(c);
+        // simple_vertices.push(b);
 
-        simple_vertices.push(b);
-        simple_vertices.push(c);
-        simple_vertices.push(d);
+        // simple_vertices.push(b);
+        // simple_vertices.push(c);
+        // simple_vertices.push(d);
 
-        simple_vertices
+        // simple_vertices
+        todo!()
     }
 
     /// Converts the rectangle from screen space to framebuffer coordinates

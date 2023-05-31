@@ -32,10 +32,10 @@ where
     pub background: Option<Colour>,
 
     /// calculated screen space area
-    pub clip_rectangle: Option<Rectangle<i32>>,
+    pub clip_rectangle: Option<Rectangle<f32>>,
 
     /// calculated screen space span
-    pub span_px: Option<u32>,
+    pub span_px: Option<f32>,
 
     /// Flag that describes whether the container is overflowing or not
     pub overflowing: bool,
@@ -143,7 +143,7 @@ where
         }
 
         // calculating the number of unused pixels in the parent span
-        let mut children_cumulative_span = 0u32;
+        let mut children_cumulative_span = 0f32;
         for child in &self.children {
             if let Some(child_pixel_span) = child.span_px() {
                 children_cumulative_span += child_pixel_span;
@@ -162,7 +162,7 @@ where
 
         // getting the sum of the child Span::ParentWeights
         let sum_of_child_span_weights = Self::get_sum_of_child_span_weights(&self.children);
-        let mut used_span_pixels_accumulator = 0i32;
+        let mut used_span_pixels_accumulator = 0f32;
 
         // setting the child rectangles
         for child in self.children.iter_mut() {
@@ -180,25 +180,25 @@ where
                 _ => {}
             }
 
-            let child_span_px = child.span_px().unwrap_or(0u32);
+            let child_span_px = child.span_px().unwrap_or(0f32);
 
             let child_rectangle = match self.axis {
                 Axis::Vertical => Rectangle::new(
                     self_clip_rectangle.x_min,
                     self_clip_rectangle.x_max,
-                    self_clip_rectangle.y_max - used_span_pixels_accumulator - child_span_px as i32,
+                    self_clip_rectangle.y_max - used_span_pixels_accumulator - child_span_px,
                     self_clip_rectangle.y_max - used_span_pixels_accumulator,
                 ),
                 Axis::Horizontal => Rectangle::new(
                     self_clip_rectangle.x_min + used_span_pixels_accumulator,
-                    self_clip_rectangle.x_min + used_span_pixels_accumulator + child_span_px as i32,
+                    self_clip_rectangle.x_min + used_span_pixels_accumulator + child_span_px,
                     self_clip_rectangle.y_min,
                     self_clip_rectangle.y_max,
                 ),
             };
 
             // updating accumulator
-            used_span_pixels_accumulator += child_span_px as i32;
+            used_span_pixels_accumulator += child_span_px;
 
             child.handle_event(&Event::FitRectangle((child_rectangle, context)), context);
         }
@@ -247,7 +247,7 @@ where
         }
     }
 
-    fn clip_rectangle(&self) -> Option<Rectangle<i32>> {
+    fn clip_rectangle(&self) -> Option<Rectangle<f32>> {
         self.clip_rectangle
     }
 
@@ -301,7 +301,7 @@ where
 
     fn update_viewport_span_px(
         &mut self,
-        clip_rectangle: &Rectangle<i32>,
+        clip_rectangle: &Rectangle<f32>,
         parent_axis: Axis,
         sum_of_parent_weights: Option<f32>,
         // the amount of screen space not taken up by non-weighted widgets
@@ -319,9 +319,9 @@ where
                     //     context.viewport_dimensions_px,
                     // );
                     // text.screen_space_span(parent_axis).unwrap_or(0f32)
-                    32u32 // TODOPX
+                    32f32 // TODOPX
                 } else {
-                    0u32
+                    0f32
                 }
             }
             span => span.to_viewport_px(
@@ -330,12 +330,12 @@ where
                 sum_of_parent_weights,
                 parent_span_px_available,
                 context,
-                0,
+                0f32,
             ),
         })
     }
 
-    fn span_px(&self) -> Option<u32> {
+    fn span_px(&self) -> Option<f32> {
         self.span_px
     }
 

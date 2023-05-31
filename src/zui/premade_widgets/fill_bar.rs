@@ -1,6 +1,6 @@
 use std::{collections::VecDeque, ops::RangeInclusive};
 
-use winit::dpi::{PhysicalSize, PhysicalPosition};
+use winit::dpi::{PhysicalPosition, PhysicalSize};
 
 use crate::zui::{
     self,
@@ -31,12 +31,12 @@ pub struct FillBar<'a, T, Message> {
     cursor_is_over: bool,
     is_grabbed: bool,
 
-    clip_rectangle: Option<Rectangle<i32>>,
-    bar_background_rectangle: Option<Rectangle<i32>>,
-    bar_foreground_rectangle: Option<Rectangle<i32>>,
+    clip_rectangle: Option<Rectangle<f32>>,
+    bar_background_rectangle: Option<Rectangle<f32>>,
+    bar_foreground_rectangle: Option<Rectangle<f32>>,
 
     span: Span,
-    span_px: Option<u32>,
+    span_px: Option<f32>,
 
     text: Text,
 }
@@ -88,7 +88,7 @@ where
             })
     }
 
-    fn determine_value(bar_rectangle: Rectangle<i32>, cursor_position: PhysicalPosition<f64>) -> T {
+    fn determine_value(bar_rectangle: Rectangle<f32>, cursor_position: PhysicalPosition<f64>) -> T {
         // TODOPX
         // let bar_pixel_length = bar_rectangle.x_max - bar_rectangle.x_min;
         // let mut bar_normalised_value =
@@ -142,15 +142,15 @@ where
     /// Gets the screen space position of
     fn viewport_px_position_from_value(
         range: &RangeInclusive<T>,
-        bar_rectangle: Rectangle<i32>,
+        bar_rectangle: Rectangle<f32>,
         value: &T,
-    ) -> i32 {
+    ) -> f32 {
         let value: f32 = (*value).into();
         let max: f32 = (*range.end()).into();
         // let min: f32 = (*range.start()).into();
         let bar_normalised_value = value / max;
 
-        (bar_normalised_value * bar_rectangle.width() as f32) as i32 + bar_rectangle.x_min
+        bar_normalised_value * bar_rectangle.width() as f32 + bar_rectangle.x_min
     }
 }
 
@@ -262,13 +262,13 @@ where
         self.span
     }
 
-    fn span_px(&self) -> Option<u32> {
+    fn span_px(&self) -> Option<f32> {
         self.span_px
     }
 
     fn update_viewport_span_px(
         &mut self,
-        parent_rectangle: &Rectangle<i32>,
+        parent_rectangle: &Rectangle<f32>,
         parent_axis: zui::Axis,
         sum_of_parent_weights: Option<f32>,
         // the amount of screen space not taken up by non-weighted widgets
@@ -286,9 +286,9 @@ where
                     //     context.viewport_dimensions_px,
                     // );
                     // self.text.screen_space_span(parent_axis).unwrap_or(0f32)
-                    0
+                    0f32
                 } else {
-                    0
+                    0f32
                 }
             }
             span => span.to_viewport_px(
@@ -297,7 +297,7 @@ where
                 sum_of_parent_weights,
                 parent_span_px_available,
                 context,
-                0,
+                0f32,
             ),
         })
     }

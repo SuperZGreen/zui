@@ -23,8 +23,8 @@ pub struct Button<Message> {
     // standard widget state
     text: Option<Text>,
     span: Span,
-    span_px: Option<u32>,
-    clip_rectangle: Option<Rectangle<i32>>,
+    span_px: Option<f32>,
+    clip_rectangle: Option<Rectangle<f32>>,
 }
 
 impl<Message> Button<Message> {
@@ -84,9 +84,6 @@ where
             }
             Event::MouseEvent(MouseEvent::CursorMoved(cursor_position)) => {
                 if let Some(clip_rectangle) = self.clip_rectangle {
-                    let cursor_position =
-                        glam::IVec2::new(cursor_position.x as i32, cursor_position.y as i32);
-
                     self.cursor_is_over = clip_rectangle.is_in(cursor_position);
                 }
                 crate::zui::widget::EventResponse::Consumed
@@ -131,7 +128,7 @@ where
         None
     }
 
-    fn clip_rectangle(&self) -> Option<Rectangle<i32>> {
+    fn clip_rectangle(&self) -> Option<Rectangle<f32>> {
         self.clip_rectangle
     }
 
@@ -139,13 +136,13 @@ where
         self.span
     }
 
-    fn span_px(&self) -> Option<u32> {
+    fn span_px(&self) -> Option<f32> {
         self.span_px
     }
 
     fn update_viewport_span_px(
         &mut self,
-        parent_rectangle: &Rectangle<i32>,
+        parent_rectangle: &Rectangle<f32>,
         parent_axis: zui::Axis,
         sum_of_parent_weights: Option<f32>,
         // the amount of screen space not taken up by non-weighted widgets
@@ -164,12 +161,12 @@ where
                         //     context.viewport_dimensions_px,
                         // );
                         // text.screen_space_span(parent_axis).unwrap_or(0f32)
-                        0u32
+                        0f32
                     } else {
-                        0u32
+                        0f32
                     }
                 } else {
-                    0u32
+                    0f32
                 }
             }
             span => span.to_viewport_px(
@@ -178,7 +175,7 @@ where
                 sum_of_parent_weights,
                 parent_span_px_available,
                 context,
-                0,
+                0f32,
             ),
         })
     }

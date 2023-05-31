@@ -1,4 +1,4 @@
-use winit::dpi::{PhysicalSize, PhysicalPosition};
+use winit::dpi::{PhysicalPosition, PhysicalSize};
 
 use super::{
     render_layer::RenderLayer, simple_renderer::SimpleVertex, text_renderer::TextVertex, Rectangle,
@@ -62,7 +62,7 @@ impl Span {
         aspect_ratio: f32,
         parent_widget_axis: Axis,
         viewport_dimensions_px: PhysicalSize<u32>,
-    ) -> u32 {
+    ) -> f32 {
         if aspect_ratio < 1f32 {
             Self::view_width_to_viewport_px(
                 view_min,
@@ -85,13 +85,11 @@ impl Span {
         aspect_ratio: f32,
         parent_widget_axis: Axis,
         viewport_dimensions_px: PhysicalSize<u32>,
-    ) -> u32 {
+    ) -> f32 {
         match parent_widget_axis {
             // TODOPX: This is still in NDC
-            Axis::Vertical => (view_height * viewport_dimensions_px.height as f32) as u32,
-            Axis::Horizontal => {
-                (view_height / aspect_ratio * viewport_dimensions_px.height as f32) as u32
-            }
+            Axis::Vertical => view_height * viewport_dimensions_px.height as f32,
+            Axis::Horizontal => view_height / aspect_ratio * viewport_dimensions_px.height as f32,
         }
     }
 
@@ -100,27 +98,25 @@ impl Span {
         aspect_ratio: f32,
         parent_widget_axis: Axis,
         viewport_dimensions_px: PhysicalSize<u32>,
-    ) -> u32 {
+    ) -> f32 {
         match parent_widget_axis {
             // TODOPX: This is still in NDC
-            Axis::Vertical => {
-                (view_width * viewport_dimensions_px.width as f32 * aspect_ratio) as u32
-            }
-            Axis::Horizontal => (view_width * viewport_dimensions_px.width as f32) as u32,
+            Axis::Vertical => view_width * viewport_dimensions_px.width as f32 * aspect_ratio,
+            Axis::Horizontal => view_width * viewport_dimensions_px.width as f32,
         }
     }
 
     /// Converts the span into a pixel span value given context and parent widget region and axis
     pub fn to_viewport_px(
         &self,
-        parent_rectangle: &Rectangle<i32>,
+        parent_rectangle: &Rectangle<f32>,
         parent_axis: Axis,
         sum_of_parent_weights: Option<f32>,
         // the amount of screen space not taken up by non-weighted widgets
         parent_span_px_available: Option<u32>,
         context: &Context,
-        fit_contents_span_px: u32,
-    ) -> u32 {
+        fit_contents_span_px: f32,
+    ) -> f32 {
         match self {
             Span::ViewWidth(vw) => Self::view_width_to_viewport_px(
                 *vw,
@@ -142,13 +138,14 @@ impl Span {
             ),
             Span::ParentWeight(pw) => {
                 if sum_of_parent_weights.is_none() || parent_span_px_available.is_none() {
-                    0u32
+                    0f32
                 } else {
-                    (*pw / sum_of_parent_weights.unwrap()
-                        * parent_span_px_available.unwrap() as f32) as u32
+                    *pw / sum_of_parent_weights.unwrap() * parent_span_px_available.unwrap() as f32
                 }
             }
-            Span::ParentRatio(ratio) => (*ratio * parent_rectangle.span_by_axis(parent_axis) as f32) as u32,
+            Span::ParentRatio(ratio) => {
+                *ratio * parent_rectangle.span_by_axis(parent_axis) as f32
+            }
             Span::FitContents => fit_contents_span_px,
         }
     }
@@ -180,7 +177,7 @@ pub enum Event<'a> {
 
     /// The widget is commanded to fit the provided rectangle
     // TODO: remove Context from this
-    FitRectangle((Rectangle<i32>, &'a Context<'a>)),
+    FitRectangle((Rectangle<f32>, &'a Context<'a>)),
 }
 
 pub enum EventResponse<Message> {
@@ -208,13 +205,13 @@ pub trait Widget<Message> {
     }
 
     /// Returns the clipping rectangle of the widget
-    fn clip_rectangle(&self) -> Option<Rectangle<i32>> {
+    fn clip_rectangle(&self) -> Option<Rectangle<f32>> {
         None
     }
 
     /// The [`Span`] of the widget in viewport pixels, returns None if is a weighted value and must be
     /// set by the parent
-    fn span_px(&self) -> Option<u32> {
+    fn span_px(&self) -> Option<f32> {
         None
     }
 
@@ -225,7 +222,7 @@ pub trait Widget<Message> {
     /// calculate the span
     fn update_viewport_span_px(
         &mut self,
-        clip_rectangle: &Rectangle<i32>,
+        clip_rectangle: &Rectangle<f32>,
         parent_axis: Axis,
         sum_of_parent_weights: Option<f32>,
         // the amount of screen space not taken up by non-weighted widgets

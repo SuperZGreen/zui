@@ -324,58 +324,60 @@ impl Text {
         // fragment shader
         viewport_dimensions_px: glam::Vec2,
     ) -> Vec<TextVertex> {
-        // the number of vertices produced by a symbol
-        let vertices_per_symbol = 6usize;
-        let mut vertices = Vec::with_capacity(self.symbols.len() * vertices_per_symbol);
-        for symbol in self.symbols.iter() {
-            let region_vertices = symbol.region.vertices();
+        // TODOPX
+        // // the number of vertices produced by a symbol
+        // let vertices_per_symbol = 6usize;
+        // let mut vertices = Vec::with_capacity(self.symbols.len() * vertices_per_symbol);
+        // for symbol in self.symbols.iter() {
+        //     // let region_vertices = symbol.region.vertices();
 
-            // println!("rect: {:?}", symbol.region);
+        //     // println!("rect: {:?}", symbol.region);
 
-            let uv_top_left = glam::Vec2::new(symbol.uv_region.x_min, symbol.uv_region.y_min);
-            let uv_top_right = glam::Vec2::new(symbol.uv_region.x_max, symbol.uv_region.y_min);
-            let uv_bottom_left = glam::Vec2::new(symbol.uv_region.x_min, symbol.uv_region.y_max);
-            let uv_bottom_right = glam::Vec2::new(symbol.uv_region.x_max, symbol.uv_region.y_max);
+        //     let uv_top_left = glam::Vec2::new(symbol.uv_region.x_min, symbol.uv_region.y_min);
+        //     let uv_top_right = glam::Vec2::new(symbol.uv_region.x_max, symbol.uv_region.y_min);
+        //     let uv_bottom_left = glam::Vec2::new(symbol.uv_region.x_min, symbol.uv_region.y_max);
+        //     let uv_bottom_right = glam::Vec2::new(symbol.uv_region.x_max, symbol.uv_region.y_max);
 
-            let a = TextVertex::new(
-                region_vertices[0],
-                uv_top_left,
-                symbol.colour.into(),
-                &parent_clip_region,
-                viewport_dimensions_px,
-            );
-            let b = TextVertex::new(
-                region_vertices[1],
-                uv_top_right,
-                symbol.colour.into(),
-                &parent_clip_region,
-                viewport_dimensions_px,
-            );
-            let c = TextVertex::new(
-                region_vertices[2],
-                uv_bottom_left,
-                symbol.colour.into(),
-                &parent_clip_region,
-                viewport_dimensions_px,
-            );
-            let d = TextVertex::new(
-                region_vertices[3],
-                uv_bottom_right,
-                symbol.colour.into(),
-                &parent_clip_region,
-                viewport_dimensions_px,
-            );
+        //     let a = TextVertex::new(
+        //         region_vertices[0],
+        //         uv_top_left,
+        //         symbol.colour.into(),
+        //         &parent_clip_region,
+        //         viewport_dimensions_px,
+        //     );
+        //     let b = TextVertex::new(
+        //         region_vertices[1],
+        //         uv_top_right,
+        //         symbol.colour.into(),
+        //         &parent_clip_region,
+        //         viewport_dimensions_px,
+        //     );
+        //     let c = TextVertex::new(
+        //         region_vertices[2],
+        //         uv_bottom_left,
+        //         symbol.colour.into(),
+        //         &parent_clip_region,
+        //         viewport_dimensions_px,
+        //     );
+        //     let d = TextVertex::new(
+        //         region_vertices[3],
+        //         uv_bottom_right,
+        //         symbol.colour.into(),
+        //         &parent_clip_region,
+        //         viewport_dimensions_px,
+        //     );
 
-            vertices.push(a);
-            vertices.push(c);
-            vertices.push(b);
+        //     vertices.push(a);
+        //     vertices.push(c);
+        //     vertices.push(b);
 
-            vertices.push(b);
-            vertices.push(c);
-            vertices.push(d);
-        }
+        //     vertices.push(b);
+        //     vertices.push(c);
+        //     vertices.push(d);
+        // }
 
-        vertices
+        // vertices
+        todo!()
     }
 
     fn generate_presymbols(

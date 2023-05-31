@@ -27,7 +27,7 @@ impl SimpleVertex {
     }
 
     pub fn from_rectangle(
-        rectangle: Rectangle<i32>,
+        rectangle: Rectangle<f32>,
         colour: Colour,
         viewport_dimensions_px: PhysicalSize<u32>,
     ) -> [Self; 6] {

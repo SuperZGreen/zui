@@ -42,7 +42,7 @@ pub fn normalised_device_space_to_frame_buffer_space_y(screen_space_y: f32, view
 
 
 /// Converts from viewport pixels (y-up (0,0) in bottom left corner) to NDC/screen space
-pub fn viewport_px_to_normalised_device_coordinates(viewport_px_position: i32, viewport_px_span: u32) -> f32 {
+pub fn viewport_px_to_normalised_device_coordinates(viewport_px_position: f32, viewport_px_span: u32) -> f32 {
     let normalised_position = viewport_px_position as f32 / viewport_px_span as f32;
     (normalised_position - 0.5f32) * 2f32
 }
