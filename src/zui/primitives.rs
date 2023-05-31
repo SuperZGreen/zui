@@ -66,6 +66,77 @@ where
     pub fn height(&self) -> T {
         self.y_max - self.y_min
     }
+
+    /// Gives the span of the Rectangle by its axis
+    pub fn span_by_axis(&self, axis: Axis) -> T {
+        match axis {
+            Axis::Vertical => self.height(),
+            Axis::Horizontal => self.width(),
+        }
+    }
+}
+
+impl Rectangle<i32> {
+    /// Returns the viewport pixel (y up, (0,0) in bottom left) position vertices that make up the
+    /// rectangle in the following order:
+    ///
+    ///   0 -----> 1
+    ///          /
+    ///        /
+    ///      /
+    ///    /
+    ///   2 -----> 3
+    pub fn vertices(&self, viewport_dimensions_px: PhysicalSize<u32>) -> [glam::Vec2; 4] {
+        let top_left = glam::Vec2::new(
+            util::viewport_px_to_normalised_device_coordinates(
+                self.x_min,
+                viewport_dimensions_px.width,
+            ),
+            util::viewport_px_to_normalised_device_coordinates(
+                self.y_max,
+                viewport_dimensions_px.height,
+            ),
+        );
+        let top_right = glam::Vec2::new(
+            util::viewport_px_to_normalised_device_coordinates(
+                self.x_max,
+                viewport_dimensions_px.width,
+            ),
+            util::viewport_px_to_normalised_device_coordinates(
+                self.y_max,
+                viewport_dimensions_px.height,
+            ),
+        );
+        let bottom_left = glam::Vec2::new(
+            util::viewport_px_to_normalised_device_coordinates(
+                self.x_min,
+                viewport_dimensions_px.width,
+            ),
+            util::viewport_px_to_normalised_device_coordinates(
+                self.y_min,
+                viewport_dimensions_px.height,
+            ),
+        );
+        let bottom_right = glam::Vec2::new(
+            util::viewport_px_to_normalised_device_coordinates(
+                self.x_max,
+                viewport_dimensions_px.width,
+            ),
+            util::viewport_px_to_normalised_device_coordinates(
+                self.y_min,
+                viewport_dimensions_px.height,
+            ),
+        );
+
+        [top_left, top_right, bottom_left, bottom_right]
+    }
+    
+    pub fn is_in(&self, position: glam::IVec2) -> bool {
+        position.x >= self.x_min
+            && position.x <= self.x_max
+            && position.y >= self.y_min
+            && position.y <= self.y_max
+    }
 }
 
 impl Rectangle<f32> {
@@ -113,14 +184,6 @@ impl Rectangle<f32> {
         simple_vertices.push(d);
 
         simple_vertices
-    }
-
-    /// Gives the span of the Rectangle by its axis
-    pub fn span_by_axis(&self, axis: Axis) -> f32 {
-        match axis {
-            Axis::Vertical => self.height(),
-            Axis::Horizontal => self.width(),
-        }
     }
 
     /// Converts the rectangle from screen space to framebuffer coordinates

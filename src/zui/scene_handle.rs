@@ -1,5 +1,7 @@
 use std::collections::VecDeque;
 
+use winit::dpi::PhysicalSize;
+
 use super::{
     primitives::Rectangle,
     render_layer::RenderLayer,
@@ -70,7 +72,15 @@ where
         // updating widget rectangles
         // self.resize_widgets(context);
         self.root_widget.as_mut().unwrap().handle_event(
-            &Event::FitRectangle((Rectangle::new(-1f32, 1f32, -1f32, 1f32), &context)),
+            &Event::FitRectangle((
+                Rectangle::new(
+                    0,
+                    context.viewport_dimensions_px.width as i32,
+                    0,
+                    context.viewport_dimensions_px.height as i32,
+                ),
+                &context,
+            )),
             &context,
         );
 
@@ -81,7 +91,15 @@ where
     pub fn resize_scene(&mut self, context: &Context) {
         if let Some(root_widget) = &mut self.root_widget {
             root_widget.handle_event(
-                &Event::FitRectangle((Rectangle::new(-1f32, 1f32, -1f32, 1f32), &context)),
+                &Event::FitRectangle((
+                    Rectangle::new(
+                        0,
+                        context.viewport_dimensions_px.width as i32,
+                        0,
+                        context.viewport_dimensions_px.height as i32,
+                    ),
+                    &context,
+                )),
                 &context,
             );
         } else {
@@ -153,10 +171,7 @@ impl<Message> Renderable for SceneHandle<Message>
 where
     Message: Clone + Copy,
 {
-    fn to_render_layers(
-        &self,
-        viewport_dimensions_px: glam::Vec2,
-    ) -> VecDeque<RenderLayer> {
+    fn to_render_layers(&self, viewport_dimensions_px: PhysicalSize<u32>) -> VecDeque<RenderLayer> {
         let root_widget = match &self.root_widget {
             Some(rw) => rw,
             None => {

@@ -1,5 +1,7 @@
 use std::collections::VecDeque;
 
+use winit::dpi::PhysicalSize;
+
 use crate::zui::{
     primitives::Rectangle, render_layer::RenderLayer, simple_renderer::SimpleVertex,
     text_renderer::TextVertex, widget::EventResponse, Axis, Colour, Context, Event, Span, Text,
@@ -30,10 +32,10 @@ where
     pub background: Option<Colour>,
 
     /// calculated screen space area
-    pub rectangle: Option<Rectangle<f32>>,
+    pub clip_rectangle: Option<Rectangle<i32>>,
 
     /// calculated screen space span
-    pub screen_space_span: Option<f32>,
+    pub span_px: Option<u32>,
 
     /// Flag that describes whether the container is overflowing or not
     pub overflowing: bool,
@@ -59,8 +61,8 @@ where
             message_cursor_on: None,
             message_cursor_off: None,
             background: None,
-            rectangle: None,
-            screen_space_span: None,
+            clip_rectangle: None,
+            span_px: None,
             overflowing: false,
             text: None,
         }
@@ -133,76 +135,70 @@ where
     }
 
     pub fn update_child_rectangles(&mut self, context: &Context) {
-        let self_rectangle = self.rectangle.unwrap();
+        let self_clip_rectangle = self.clip_rectangle.unwrap();
 
         // updating the child screen spaces
         for child in &mut self.children {
-            child.update_screen_space_span(&self_rectangle, self.axis, None, None, context);
-            // println!(
-            //     "child screen space span: {}",
-            //     child.screen_space_span().unwrap_or(0f32)
-            // );
+            child.update_viewport_span_px(&self_clip_rectangle, self.axis, None, None, context);
         }
-        // println!("");
 
-        // getting the amount of free space within the self span for child widgets
-        // let screen_space_available =
-        //     Self::get_screen_space_available(&self.children, &self_rectangle, self.axis, context);
-
-        let mut screen_space_used = 0f32;
+        // calculating the number of unused pixels in the parent span
+        let mut children_cumulative_span = 0u32;
         for child in &self.children {
-            if let Some(screen_space_span) = child.screen_space_span() {
-                screen_space_used += screen_space_span;
+            if let Some(child_pixel_span) = child.span_px() {
+                children_cumulative_span += child_pixel_span;
             }
         }
-        let screen_space_available = self_rectangle.span_by_axis(self.axis) - screen_space_used;
+        let mut unused_pixels_in_parent_span = self_clip_rectangle.span_by_axis(self.axis) as i64 - children_cumulative_span as i64;
 
-        if screen_space_available < 0.0f32 {
+        // setting overflowing flag
+        if unused_pixels_in_parent_span < 0 {
             self.overflowing = true;
-            warn!("overflowing: screen space span: {}", screen_space_available);
+            warn!("container overflowing by: {} pixels!", unused_pixels_in_parent_span.abs());
+            unused_pixels_in_parent_span = 0;
         } else {
             self.overflowing = false;
         }
 
+        // getting the sum of the child Span::ParentWeights
         let sum_of_child_span_weights = Self::get_sum_of_child_span_weights(&self.children);
-        // let mut top_left_accumulator = glam::Vec2::new(self_rectangle.x_min, self_rectangle.y_max);
-        let mut used_screen_space_accumulator = 0f32;
+        let mut used_span_pixels_accumulator = 0i32;
 
         // setting the child rectangles
         for child in self.children.iter_mut() {
             // updating the child weight if not previously updated, ie for weighted spans
             match child.span() {
                 Span::ParentWeight(_) => {
-                    child.update_screen_space_span(
-                        &self_rectangle,
+                    child.update_viewport_span_px(
+                        &self_clip_rectangle,
                         self.axis,
                         Some(sum_of_child_span_weights),
-                        Some(screen_space_available),
+                        Some(unused_pixels_in_parent_span as u32),
                         context,
                     );
                 }
                 _ => {}
             }
 
-            let child_screen_space_span = child.screen_space_span().unwrap_or(0f32);
+            let child_span_px = child.span_px().unwrap_or(0u32);
 
             let child_rectangle = match self.axis {
                 Axis::Vertical => Rectangle::new(
-                    self_rectangle.x_min,
-                    self_rectangle.x_max,
-                    self_rectangle.y_max - used_screen_space_accumulator - child_screen_space_span,
-                    self_rectangle.y_max - used_screen_space_accumulator,
+                    self_clip_rectangle.x_min,
+                    self_clip_rectangle.x_max,
+                    self_clip_rectangle.y_max - used_span_pixels_accumulator - child_span_px as i32,
+                    self_clip_rectangle.y_max - used_span_pixels_accumulator,
                 ),
                 Axis::Horizontal => Rectangle::new(
-                    self_rectangle.x_min + used_screen_space_accumulator,
-                    self_rectangle.x_min + used_screen_space_accumulator + child_screen_space_span,
-                    self_rectangle.y_min,
-                    self_rectangle.y_max,
+                    self_clip_rectangle.x_min + used_span_pixels_accumulator,
+                    self_clip_rectangle.x_min + used_span_pixels_accumulator + child_span_px as i32,
+                    self_clip_rectangle.y_min,
+                    self_clip_rectangle.y_max,
                 ),
             };
 
             // updating accumulator
-            used_screen_space_accumulator += child_screen_space_span;
+            used_span_pixels_accumulator += child_span_px as i32;
 
             child.handle_event(&Event::FitRectangle((child_rectangle, context)), context);
         }
@@ -228,20 +224,21 @@ where
         match event {
             Event::MouseEvent(_) => EventResponse::Propagate,
             Event::FitRectangle((rectangle, context)) => {
-                self.rectangle = Some(*rectangle);
+                self.clip_rectangle = Some(*rectangle);
                 if let Some(text) = &mut self.text {
-                    text.update_layout(
-                        context.font,
-                        &rectangle,
-                        context.aspect_ratio,
-                        context.viewport_dimensions_px,
-                    );
-                    text.place_symbols(
-                        context.font,
-                        &rectangle,
-                        context.aspect_ratio,
-                        context.viewport_dimensions_px,
-                    );
+                    // TODOPX
+                    // text.update_layout(
+                    //     context.font,
+                    //     &rectangle,
+                    //     context.aspect_ratio,
+                    //     context.viewport_dimensions_px,
+                    // );
+                    // text.place_symbols(
+                    //     context.font,
+                    //     &rectangle,
+                    //     context.aspect_ratio,
+                    //     context.viewport_dimensions_px,
+                    // );
                 }
                 self.update_child_rectangles(context);
 
@@ -250,8 +247,8 @@ where
         }
     }
 
-    fn clip_rectangle(&self) -> Option<Rectangle<f32>> {
-        self.rectangle
+    fn clip_rectangle(&self) -> Option<Rectangle<i32>> {
+        self.clip_rectangle
     }
 
     fn children_iter_mut(
@@ -262,22 +259,26 @@ where
 
     fn to_vertices(
         &self,
-        viewport_dimensions_px: glam::Vec2,
+        viewport_dimensions_px: PhysicalSize<u32>,
         render_layers: &mut VecDeque<RenderLayer>,
     ) -> (Vec<SimpleVertex>, Vec<TextVertex>) {
         // adding own text vertices
         let mut text_vertices = Vec::new();
         if let Some(text) = &self.text {
-            if let Some(clip_rectangle) = self.rectangle {
-                text_vertices.append(&mut text.to_vertices(clip_rectangle, viewport_dimensions_px));
+            if let Some(clip_rectangle) = self.clip_rectangle {
+                // TODOPX
+                // text_vertices.append(&mut text.to_vertices(clip_rectangle, viewport_dimensions_px));
             }
         }
 
         // adding own rectangle/simple vertices
         let mut simple_vertices = Vec::new();
-        if let Some(rectangle) = self.rectangle {
+        if let Some(rectangle) = self.clip_rectangle {
             if let Some(colour) = self.background {
-                simple_vertices.append(&mut rectangle.to_simple_vertices(colour));
+                // simple_vertices.append(&mut rectangle.to_simple_vertices(colour));
+                simple_vertices.extend_from_slice(
+                    &SimpleVertex::from_rectangle(rectangle, colour, viewport_dimensions_px)
+                );
             }
         }
 
@@ -290,7 +291,7 @@ where
 
         // creating new layer if overflowing
         if self.overflowing {
-            let render_layer = RenderLayer::new(simple_vertices, text_vertices, self.rectangle);
+            let render_layer = RenderLayer::new(simple_vertices, text_vertices, self.clip_rectangle);
             render_layers.push_back(render_layer);
             (Vec::new(), Vec::new())
         } else {
@@ -298,42 +299,44 @@ where
         }
     }
 
-    fn update_screen_space_span(
+    fn update_viewport_span_px(
         &mut self,
-        clip_rectangle: &Rectangle<f32>,
+        clip_rectangle: &Rectangle<i32>,
         parent_axis: Axis,
         sum_of_parent_weights: Option<f32>,
         // the amount of screen space not taken up by non-weighted widgets
-        screen_space_span_available: Option<f32>,
+        parent_span_px_available: Option<u32>,
         context: &Context,
     ) {
-        self.screen_space_span = Some(match self.span {
+        self.span_px = Some(match self.span {
             Span::FitContents => {
                 if let Some(text) = &mut self.text {
-                    text.update_layout(
-                        context.font,
-                        clip_rectangle,
-                        context.aspect_ratio,
-                        context.viewport_dimensions_px,
-                    );
-                    text.screen_space_span(parent_axis).unwrap_or(0f32)
+                    // TODOPX
+                    // text.update_layout(
+                    //     context.font,
+                    //     clip_rectangle,
+                    //     context.aspect_ratio,
+                    //     context.viewport_dimensions_px,
+                    // );
+                    // text.screen_space_span(parent_axis).unwrap_or(0f32)
+                    32u32 // TODOPX
                 } else {
-                    0f32
+                    0u32
                 }
             }
-            span => span.to_screen_space_span(
+            span => span.to_viewport_px(
                 clip_rectangle,
                 parent_axis,
                 sum_of_parent_weights,
-                screen_space_span_available,
+                parent_span_px_available,
                 context,
-                0f32,
+                0,
             ),
         })
     }
 
-    fn screen_space_span(&self) -> Option<f32> {
-        self.screen_space_span
+    fn span_px(&self) -> Option<u32> {
+        self.span_px
     }
 
     fn span(&self) -> Span {

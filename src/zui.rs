@@ -40,7 +40,7 @@ pub struct Zui {
 
     viewport_dimensions_px: PhysicalSize<u32>,
     aspect_ratio: f32,
-    cursor_position: Option<ScreenSpacePosition>,
+    cursor_position: Option<PhysicalPosition<f64>>,
 }
 
 impl Zui {
@@ -80,12 +80,7 @@ impl Zui {
     ) where
         Message: Copy + Clone,
     {
-        let viewport_dimensions_px = glam::Vec2::new(
-            self.viewport_dimensions_px.width as f32,
-            self.viewport_dimensions_px.height as f32,
-        );
-
-        let render_layers = scene_handle.to_render_layers(viewport_dimensions_px);
+        let render_layers = scene_handle.to_render_layers(self.viewport_dimensions_px);
 
         // clearing the screen, this is where the world render pass would go
         _ = render_state.render_clear();
@@ -99,13 +94,12 @@ impl Zui {
                 .upload(render_state.device(), &render_layer.text_vertices);
 
             let clip_rectangle = match render_layer.clip_rectangle {
-                Some(cr) => {
-                    let framebuffer_rect = cr.screen_space_to_framebuffer(viewport_dimensions_px);
+                Some(clip_rect) => {
                     let scissor_rect = Rectangle::new(
-                        framebuffer_rect.x_min as u32,
-                        framebuffer_rect.x_max as u32,
-                        framebuffer_rect.y_min as u32,
-                        framebuffer_rect.y_max as u32,
+                        clip_rect.x_min as u32,
+                        clip_rect.x_max as u32,
+                        clip_rect.y_min as u32,
+                        clip_rect.y_max as u32,
                     );
 
                     // wgpu will panic if the scissor rectangle has a width or height of 0
@@ -170,13 +164,13 @@ impl Zui {
 
     /// Updates the cursor state tracked by zui, will only ever be called when cursor is over viewport
     pub fn update_cursor_position(&mut self, cursor_physical_position: PhysicalPosition<f64>) {
-        let screen_space_position = ScreenSpacePosition::from_cursor_physical_position(
-            cursor_physical_position,
-            self.viewport_dimensions_px,
+        // NOTE: the cursor can be out of the window if clicked, held and dragged out of the window
+        let position = PhysicalPosition::new(
+            cursor_physical_position.x,
+            self.viewport_dimensions_px.height as f64 - cursor_physical_position.y,
         );
 
-        // NOTE: the cursor can be out of the window if clicked, held and dragged out of the window
-        self.cursor_position = Some(screen_space_position)
+        self.cursor_position = Some(position)
     }
 
     /// Called when the cursor leaves the screen
@@ -184,7 +178,7 @@ impl Zui {
         self.cursor_position = None;
     }
 
-    pub fn cursor_position(&self) -> Option<ScreenSpacePosition> {
+    pub fn cursor_position(&self) -> Option<PhysicalPosition<f64>> {
         self.cursor_position
     }
 
@@ -204,7 +198,7 @@ impl Zui {
 pub struct Context<'a> {
     pub font: &'a Font,
     pub aspect_ratio: f32,
-    pub cursor_position: Option<ScreenSpacePosition>,
+    pub cursor_position: Option<PhysicalPosition<f64>>,
     pub viewport_dimensions_px: PhysicalSize<u32>,
 }
 

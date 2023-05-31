@@ -1,10 +1,14 @@
 use std::collections::VecDeque;
 
+use winit::dpi::PhysicalSize;
+
 use crate::zui::{
     self,
     primitives::Rectangle,
+    render_layer::RenderLayer,
+    simple_renderer::SimpleVertex,
     widget::{Event, MouseEvent, Widget},
-    Colour, Context, Span, Text, render_layer::RenderLayer,
+    Colour, Context, Span, Text,
 };
 
 pub struct Button<Message> {
@@ -19,8 +23,8 @@ pub struct Button<Message> {
     // standard widget state
     text: Option<Text>,
     span: Span,
-    screen_space_span: Option<f32>,
-    clip_rectangle: Option<Rectangle<f32>>,
+    span_px: Option<u32>,
+    clip_rectangle: Option<Rectangle<i32>>,
 }
 
 impl<Message> Button<Message> {
@@ -39,7 +43,7 @@ impl<Message> Button<Message> {
             cursor_is_over: false,
             text: None,
             span: Span::ParentWeight(1f32),
-            screen_space_span: None,
+            span_px: None,
             clip_rectangle: None,
         }
     }
@@ -78,17 +82,14 @@ where
                 self.cursor_is_over = false;
                 crate::zui::widget::EventResponse::Propagate
             }
-            Event::MouseEvent(MouseEvent::CursorMoved(screen_space_position)) => {
+            Event::MouseEvent(MouseEvent::CursorMoved(cursor_position)) => {
                 if let Some(clip_rectangle) = self.clip_rectangle {
-                    self.cursor_is_over = clip_rectangle.is_in(*screen_space_position);
-                    if self.cursor_is_over {
-                        crate::zui::widget::EventResponse::Consumed
-                    } else {
-                        crate::zui::widget::EventResponse::Consumed
-                    }
-                } else {
-                    crate::zui::widget::EventResponse::Consumed
+                    let cursor_position =
+                        glam::IVec2::new(cursor_position.x as i32, cursor_position.y as i32);
+
+                    self.cursor_is_over = clip_rectangle.is_in(cursor_position);
                 }
+                crate::zui::widget::EventResponse::Consumed
             }
 
             Event::MouseEvent(MouseEvent::ButtonReleased) => {
@@ -103,18 +104,19 @@ where
                 self.clip_rectangle = Some(*clip_rectangle);
 
                 if let Some(text) = &mut self.text {
-                    text.update_layout(
-                        context.font,
-                        clip_rectangle,
-                        context.aspect_ratio,
-                        context.viewport_dimensions_px,
-                    );
-                    text.place_symbols(
-                        context.font,
-                        &clip_rectangle,
-                        context.aspect_ratio,
-                        context.viewport_dimensions_px,
-                    );
+                    // TODOPX
+                    // text.update_layout(
+                    //     context.font,
+                    //     clip_rectangle,
+                    //     context.aspect_ratio,
+                    //     context.viewport_dimensions_px,
+                    // );
+                    // text.place_symbols(
+                    //     context.font,
+                    //     &clip_rectangle,
+                    //     context.aspect_ratio,
+                    //     context.viewport_dimensions_px,
+                    // );
                 }
 
                 crate::zui::widget::EventResponse::Propagate
@@ -129,7 +131,7 @@ where
         None
     }
 
-    fn clip_rectangle(&self) -> Option<crate::zui::primitives::Rectangle<f32>> {
+    fn clip_rectangle(&self) -> Option<Rectangle<i32>> {
         self.clip_rectangle
     }
 
@@ -137,51 +139,53 @@ where
         self.span
     }
 
-    fn screen_space_span(&self) -> Option<f32> {
-        self.screen_space_span
+    fn span_px(&self) -> Option<u32> {
+        self.span_px
     }
 
-    fn update_screen_space_span(
+    fn update_viewport_span_px(
         &mut self,
-        parent_rectangle: &Rectangle<f32>,
+        parent_rectangle: &Rectangle<i32>,
         parent_axis: zui::Axis,
         sum_of_parent_weights: Option<f32>,
         // the amount of screen space not taken up by non-weighted widgets
-        screen_space_span_available: Option<f32>,
+        parent_span_px_available: Option<u32>,
         context: &Context,
     ) {
-        self.screen_space_span = Some(match self.span {
+        self.span_px = Some(match self.span {
             Span::FitContents => {
                 if let Some(text) = &mut self.text {
                     if let Some(clip_rectangle) = &self.clip_rectangle {
-                        text.update_layout(
-                            context.font,
-                            clip_rectangle,
-                            context.aspect_ratio,
-                            context.viewport_dimensions_px,
-                        );
-                        text.screen_space_span(parent_axis).unwrap_or(0f32)
+                        // TODOPX
+                        // text.update_layout(
+                        //     context.font,
+                        //     clip_rectangle,
+                        //     context.aspect_ratio,
+                        //     context.viewport_dimensions_px,
+                        // );
+                        // text.screen_space_span(parent_axis).unwrap_or(0f32)
+                        0u32
                     } else {
-                        0f32
+                        0u32
                     }
                 } else {
-                    0f32
+                    0u32
                 }
             }
-            span => span.to_screen_space_span(
+            span => span.to_viewport_px(
                 parent_rectangle,
                 parent_axis,
                 sum_of_parent_weights,
-                screen_space_span_available,
+                parent_span_px_available,
                 context,
-                0f32,
+                0,
             ),
         })
     }
 
     fn to_vertices(
         &self,
-        viewport_dimensions_px: glam::Vec2,
+        viewport_dimensions_px: PhysicalSize<u32>,
         render_layers: &mut VecDeque<RenderLayer>,
     ) -> (
         Vec<crate::zui::simple_renderer::SimpleVertex>,
@@ -195,10 +199,15 @@ where
                 false => self.cursor_off_colour,
             };
 
-            simple_vertices.append(&mut clip_rectangle.to_simple_vertices(button_colour));
+            simple_vertices.extend_from_slice(&SimpleVertex::from_rectangle(
+                clip_rectangle,
+                button_colour,
+                viewport_dimensions_px,
+            ));
 
             if let Some(text) = &self.text {
-                text_vertices.append(&mut text.to_vertices(clip_rectangle, viewport_dimensions_px))
+                // TODOPX
+                // text_vertices.append(&mut text.to_vertices(clip_rectangle, viewport_dimensions_px))
             }
         }
 

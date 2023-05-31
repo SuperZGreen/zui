@@ -1,3 +1,7 @@
+use winit::dpi::PhysicalSize;
+
+use crate::zui::{Colour, Rectangle};
+
 #[allow(dead_code)]
 #[repr(C, align(16))]
 #[derive(Copy, Clone, Debug)]
@@ -20,5 +24,23 @@ impl SimpleVertex {
             attributes: &VERTEX_ATTRIBUTES,
         };
         vertex_buffer_layout
+    }
+
+    pub fn from_rectangle(
+        rectangle: Rectangle<i32>,
+        colour: Colour,
+        viewport_dimensions_px: PhysicalSize<u32>,
+    ) -> [Self; 6] {
+        let rectangle_vertices = rectangle.vertices(viewport_dimensions_px);
+
+        let a = SimpleVertex::new(rectangle_vertices[0], colour.into());
+        let b = SimpleVertex::new(rectangle_vertices[1], colour.into());
+        let c = SimpleVertex::new(rectangle_vertices[2], colour.into());
+        let d = SimpleVertex::new(rectangle_vertices[3], colour.into());
+
+        [
+            a, c, b, //
+            b, c, d, //
+        ]
     }
 }
