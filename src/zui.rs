@@ -95,18 +95,18 @@ impl Zui {
 
             let clip_rectangle = match render_layer.clip_rectangle {
                 Some(clip_rect) => {
-                    let scissor_rect = Rectangle::new(
+                    let scissor_rect_framebuffer_coordinates = Rectangle::new(
                         clip_rect.x_min as u32,
                         clip_rect.x_max as u32,
-                        clip_rect.y_min as u32,
-                        clip_rect.y_max as u32,
+                        self.viewport_dimensions_px.height - clip_rect.y_max as u32,
+                        self.viewport_dimensions_px.height - clip_rect.y_min as u32,
                     );
 
                     // wgpu will panic if the scissor rectangle has a width or height of 0
-                    if scissor_rect.width() == 0 || scissor_rect.height() == 0 {
+                    if scissor_rect_framebuffer_coordinates.width() == 0 || scissor_rect_framebuffer_coordinates.height() == 0 {
                         None
                     } else {
-                        Some(scissor_rect)
+                        Some(scissor_rect_framebuffer_coordinates)
                     }
                 }
                 None => None,

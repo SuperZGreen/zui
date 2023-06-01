@@ -7,7 +7,7 @@ pub struct RenderLayer {
     /// The TextVertices that will be rendered on this layer
     pub text_vertices: Vec<TextVertex>,
 
-    /// The clipping rectangle, contents outside of this will not be rendered
+    /// The clipping rectangle in viewport pixels, contents outside of this will not be rendered
     pub clip_rectangle: Option<Rectangle<f32>>,
 }
 

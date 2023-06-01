@@ -1,6 +1,7 @@
 use wgpu::util::DeviceExt;
+use winit::dpi::PhysicalSize;
 
-use super::{primitives::Rectangle, texture_atlas::TextureAtlas, util};
+use super::{primitives::Rectangle, texture_atlas::TextureAtlas, util, Colour};
 
 #[allow(dead_code)]
 #[repr(C, align(16))]
@@ -26,26 +27,26 @@ impl TextVertex {
         uv: glam::Vec2,
         colour: glam::Vec4,
         parent_rectangle: &Rectangle<f32>,
-        viewport_dimensions_px: glam::Vec2,
+        viewport_dimensions_px: PhysicalSize<u32>
     ) -> TextVertex {
         // clip bounds are frame buffer coordinates
         let clip_bound_x_min = util::normalised_device_space_to_frame_buffer_space_x(
             parent_rectangle.x_min,
-            viewport_dimensions_px.x,
+            viewport_dimensions_px.width as f32,
         );
         let clip_bound_x_max = util::normalised_device_space_to_frame_buffer_space_x(
             parent_rectangle.x_max,
-            viewport_dimensions_px.x,
+            viewport_dimensions_px.width as f32,
         );
-        
+
         // Note: the max and min will swap due to the y-down nature of wgpu's frame buffer coordinates
         let clip_bound_y_max = util::normalised_device_space_to_frame_buffer_space_y(
             parent_rectangle.y_min,
-            viewport_dimensions_px.y,
+            viewport_dimensions_px.height as f32,
         );
         let clip_bound_y_min = util::normalised_device_space_to_frame_buffer_space_y(
             parent_rectangle.y_max,
-            viewport_dimensions_px.y,
+            viewport_dimensions_px.height as f32,
         );
 
         TextVertex {
@@ -53,11 +54,17 @@ impl TextVertex {
             uv,
             colour,
             // Converting from normalised device coordinates to frame buffer coordinates
+            // clip_bounds: glam::Vec4::new(
+            //     clip_bound_x_min,
+            //     clip_bound_x_max,
+            //     clip_bound_y_min,
+            //     clip_bound_y_max,
+            // ),
             clip_bounds: glam::Vec4::new(
-                clip_bound_x_min,
-                clip_bound_x_max,
-                clip_bound_y_min,
-                clip_bound_y_max,
+                -1f32,
+                1f32,
+                -1f32,
+                1f32,
             ),
         }
     }

@@ -43,18 +43,18 @@ var texture_sampler: sampler;
 fn fs_main(in: VertexShaderOutput) -> @location(0) vec4<f32> {
     let coverage = textureSample(texture, texture_sampler, in.uv).r;
 
-    let clip_x_min = in.clip_bounds[0];
-    let clip_x_max = in.clip_bounds[1];
-    let clip_y_min = in.clip_bounds[2];
-    let clip_y_max = in.clip_bounds[3];
+    // let clip_x_min = in.clip_bounds[0];
+    // let clip_x_max = in.clip_bounds[1];
+    // let clip_y_min = in.clip_bounds[2];
+    // let clip_y_max = in.clip_bounds[3];
 
-    if in.clip_position.x < clip_x_min
-        || in.clip_position.x > clip_x_max
-        || in.clip_position.y < clip_y_min
-        || in.clip_position.y > clip_y_max
-    {
-        discard;
-    }
+    // if in.clip_position.x < clip_x_min
+    //     || in.clip_position.x > clip_x_max
+    //     || in.clip_position.y < clip_y_min
+    //     || in.clip_position.y > clip_y_max
+    // {
+    //     discard;
+    // }
 
     let colour = vec4<f32>(in.colour.rgb, coverage);
 

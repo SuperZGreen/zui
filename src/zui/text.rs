@@ -19,22 +19,15 @@ pub enum TextSize {
     ParentHeight(f32),
 
     /// Height of the text in pixels
-    Pixels(f32),
-    /// Height of the text in screen space units
-    ScreenSpace(f32),
+    Pixels(i32),
 }
 
 impl TextSize {
     /// Gives the text height in terms of screen space
-    pub fn to_screen_space_span(
-        &self,
-        parent_rectangle_height: f32,
-        viewport_height_px: u32,
-    ) -> f32 {
+    pub fn to_viewport_pixels(&self, parent_rectangle_height: f32) -> i32 {
         match self {
-            TextSize::ParentHeight(proportion) => proportion * parent_rectangle_height,
-            TextSize::Pixels(pixels) => pixels / viewport_height_px as f32 * 2f32,
-            TextSize::ScreenSpace(ss) => *ss,
+            TextSize::ParentHeight(proportion) => (proportion * parent_rectangle_height) as i32,
+            TextSize::Pixels(pixels) => *pixels as i32,
         }
     }
 }
@@ -96,34 +89,39 @@ impl TextLines {
     pub fn from_presymbols(
         presymbols: &[Presymbol],
         clip_rectangle: &Rectangle<f32>,
-        font_metrics_ss: &ScreenSpaceFontMetrics,
+        font_metrics_px: &PixelFontMetrics,
     ) -> Self {
+
+        // flooring the max of the clip rect seems to help against jitter
+        let mut clip_rect = clip_rectangle.clone();
+        // clip_rect.x_max = clip_rect.x_max.floor();
+
         let mut lines = Vec::new();
 
         if presymbols.len() > 0 {
-            let mut origin = GlyphOrigin::at_top_left(clip_rectangle, font_metrics_ss);
+            let mut origin = GlyphOrigin::at_top_left(&clip_rect, font_metrics_px);
             let mut line_start_index = 0usize;
-            let mut line_min_x = origin.screen_space_position.x;
-            let mut line_max_x = origin.screen_space_position.x;
+            let mut line_min_x = origin.viewport_px_position.x;
+            let mut line_max_x = origin.viewport_px_position.x;
 
             for (index, presymbol) in presymbols.iter().enumerate() {
-                if origin.presymbol_fits_in_rect(clip_rectangle, presymbol) {
+                if origin.presymbol_fits_in_rect(&clip_rect, presymbol) {
                     // tracking the new max width of the line
-                    line_max_x = origin.screen_space_position.x
+                    line_max_x = origin.viewport_px_position.x
                         + presymbol.symbol_metrics.x_shift
                         + presymbol.symbol_metrics.width;
                 } else {
                     // resetting the origin to the start of the line
-                    origin = GlyphOrigin::at_top_left(clip_rectangle, font_metrics_ss);
+                    origin = GlyphOrigin::at_top_left(&clip_rect, font_metrics_px);
 
                     // calculating the new line x min
-                    line_min_x = origin.screen_space_position.x;
+                    line_min_x = origin.viewport_px_position.x;
 
                     // pushing the line
                     let line_end_index = index.checked_sub(1).unwrap_or(0);
                     lines.push(TextLine::new(
                         line_start_index..=line_end_index,
-                        glam::Vec2::new(line_max_x - line_min_x, font_metrics_ss.height),
+                        glam::IVec2::new(line_max_x - line_min_x, font_metrics_px.height),
                     ));
                     line_start_index = index;
                 }
@@ -134,33 +132,33 @@ impl TextLines {
             // pushing final line
             lines.push(TextLine::new(
                 line_start_index..=presymbols.len() - 1,
-                glam::Vec2::new(line_max_x - line_min_x, font_metrics_ss.height),
+                glam::IVec2::new(line_max_x - line_min_x, font_metrics_px.height),
             ));
         }
 
         Self { lines }
     }
 
-    pub fn screen_space_dimensions(&self, font_metrics_ss: &ScreenSpaceFontMetrics) -> glam::Vec2 {
+    pub fn viewport_px_dimensions(&self, font_metrics_ss: &PixelFontMetrics) -> glam::IVec2 {
         // lines max width
-        let mut width = 0f32;
+        let mut width = 0i32;
         for line in self.lines.iter() {
-            if line.screen_space_dimensions.x > width {
-                width = line.screen_space_dimensions.x;
+            if line.viewport_px_dimensions.x > width {
+                width = line.viewport_px_dimensions.x;
             }
         }
 
         // lines height
-        let mut height = 0f32;
+        let mut height = 0i32;
         if let Some(first_line) = self.lines.first() {
-            height += first_line.screen_space_dimensions.y;
+            height += first_line.viewport_px_dimensions.y;
 
             for line in &self.lines[1..self.lines.len()] {
-                height += line.screen_space_dimensions.y + font_metrics_ss.line_gap;
+                height += line.viewport_px_dimensions.y + font_metrics_ss.line_gap;
             }
         }
 
-        glam::Vec2::new(width, height)
+        glam::IVec2::new(width, height)
     }
 }
 
@@ -169,19 +167,19 @@ impl TextLines {
 struct TextLayout {
     pub presymbols: Vec<Presymbol>,
     pub lines: TextLines,
-    pub screen_space_dimensions: glam::Vec2,
+    pub viewport_dimensions_px: glam::IVec2,
 }
 
 impl TextLayout {
     pub fn new(
         presymbols: Vec<Presymbol>,
         lines: TextLines,
-        screen_space_dimensions: glam::Vec2,
+        viewport_dimensions_px: glam::IVec2,
     ) -> Self {
         Self {
             presymbols,
             lines,
-            screen_space_dimensions,
+            viewport_dimensions_px,
         }
     }
 }
@@ -228,24 +226,24 @@ impl Text {
         font: &Font,
         clip_rectangle: &Rectangle<f32>,
         aspect_ratio: f32,
-        viewport_dimensions_px: PhysicalSize<u32>,
+        _viewport_dimensions_px: PhysicalSize<u32>,
     ) {
         // converting the line metrics of Fontdue to screen space
-        let font_metrics_ss = ScreenSpaceFontMetrics::new(
+        let font_metrics_px = PixelFontMetrics::new(
             self.configuration
                 .size
-                .to_screen_space_span(clip_rectangle.height(), viewport_dimensions_px.height),
+                .to_viewport_pixels(clip_rectangle.height()),
             &font.line_metrics,
         );
 
         // calculating the screen space metrics of all symbols
-        let presymbols = Self::generate_presymbols(&self, font, &font_metrics_ss, aspect_ratio);
+        let presymbols = Self::generate_presymbols(&self, font, &font_metrics_px, aspect_ratio);
 
         // getting lines
-        let lines = TextLines::from_presymbols(&presymbols, clip_rectangle, &font_metrics_ss);
+        let lines = TextLines::from_presymbols(&presymbols, clip_rectangle, &font_metrics_px);
 
         // getting the dimensions of the lines
-        let screen_space_dimensions = lines.screen_space_dimensions(&font_metrics_ss);
+        let screen_space_dimensions = lines.viewport_px_dimensions(&font_metrics_px);
 
         self.layout = Some(TextLayout::new(presymbols, lines, screen_space_dimensions));
     }
@@ -265,37 +263,41 @@ impl Text {
         };
 
         // converting the line metrics of Fontdue to screen space
-        let font_metrics_ss = ScreenSpaceFontMetrics::new(
+        let font_metrics_ss = PixelFontMetrics::new(
             self.configuration
                 .size
-                .to_screen_space_span(parent_rect.height(), viewport_dimensions_px.height),
+                .to_viewport_pixels(parent_rect.height()),
             &font.line_metrics,
         );
 
         // placing symbols
         self.symbols.clear();
         let mut origin = GlyphOrigin::at_top_left(parent_rect, &font_metrics_ss);
-        
+
         // repositioning origin for vertical alignment
-        origin.screen_space_position.y -= match self.configuration.vertical_alignment {
-            TextAlignmentVertical::Top => 0f32,
-            TextAlignmentVertical::Centre => (parent_rect.height() - layout.screen_space_dimensions.y) / 2f32,
-            TextAlignmentVertical::Bottom => parent_rect.height() - layout.screen_space_dimensions.y,
+        origin.viewport_px_position.y -= match self.configuration.vertical_alignment {
+            TextAlignmentVertical::Top => 0i32,
+            TextAlignmentVertical::Centre => {
+                ((parent_rect.height() - layout.viewport_dimensions_px.y as f32) / 2f32) as i32
+            }
+            TextAlignmentVertical::Bottom => {
+                parent_rect.height() as i32 - layout.viewport_dimensions_px.y
+            }
         };
 
         for line in layout.lines.lines.iter() {
             // integrating text alignment
             let horizontal_offset = match self.configuration.horizontal_alignment {
-                TextAlignmentHorizontal::Left => 0f32,
+                TextAlignmentHorizontal::Left => 0i32,
                 TextAlignmentHorizontal::Centre => {
-                    (parent_rect.width() - line.screen_space_dimensions.x) / 2f32
+                    ((parent_rect.width() - line.viewport_px_dimensions.x as f32) / 2f32) as i32
                 }
                 TextAlignmentHorizontal::Right => {
-                    parent_rect.width() - line.screen_space_dimensions.x
+                    parent_rect.width() as i32 - line.viewport_px_dimensions.x
                 }
             };
 
-            origin.screen_space_position.x += horizontal_offset;
+            origin.viewport_px_position.x += horizontal_offset;
             for presymbol in &layout.presymbols[*line.range.start()..=*line.range.end()] {
                 self.symbols.push(origin.symbol_from_presymbol(presymbol));
                 origin.increment_by_presymbol(presymbol);
@@ -305,10 +307,10 @@ impl Text {
     }
 
     /// Gives the screen space span of the text along a given axis
-    pub fn screen_space_span(&self, axis: Axis) -> Option<f32> {
+    pub fn span_px(&self, axis: Axis) -> Option<f32> {
         let axis_index = axis.to_index();
         if let Some(layout) = &self.layout {
-            Some(layout.screen_space_dimensions[axis_index])
+            Some(layout.viewport_dimensions_px[axis_index] as f32)
         } else {
             None
         }
@@ -318,72 +320,28 @@ impl Text {
     pub fn to_vertices(
         &self,
         // The clipping region of the parent widget, can not render fragments outside of this rect.
-        // Given in NDC/screen space
+        // Given in viewport pixels
         parent_clip_region: Rectangle<f32>,
         // The viewport dimensions in pixels, used to calculate the clip bounds for the text
         // fragment shader
-        viewport_dimensions_px: glam::Vec2,
+        viewport_dimensions_px: PhysicalSize<u32>,
     ) -> Vec<TextVertex> {
-        // TODOPX
-        // // the number of vertices produced by a symbol
-        // let vertices_per_symbol = 6usize;
-        // let mut vertices = Vec::with_capacity(self.symbols.len() * vertices_per_symbol);
-        // for symbol in self.symbols.iter() {
-        //     // let region_vertices = symbol.region.vertices();
+        // the number of vertices produced by a symbol
+        let vertices_per_symbol = 6usize;
+        let mut vertices = Vec::with_capacity(self.symbols.len() * vertices_per_symbol);
+        for symbol in self.symbols.iter() {
+            vertices.extend_from_slice(
+                &symbol.to_text_vertices(parent_clip_region, viewport_dimensions_px),
+            )
+        }
 
-        //     // println!("rect: {:?}", symbol.region);
-
-        //     let uv_top_left = glam::Vec2::new(symbol.uv_region.x_min, symbol.uv_region.y_min);
-        //     let uv_top_right = glam::Vec2::new(symbol.uv_region.x_max, symbol.uv_region.y_min);
-        //     let uv_bottom_left = glam::Vec2::new(symbol.uv_region.x_min, symbol.uv_region.y_max);
-        //     let uv_bottom_right = glam::Vec2::new(symbol.uv_region.x_max, symbol.uv_region.y_max);
-
-        //     let a = TextVertex::new(
-        //         region_vertices[0],
-        //         uv_top_left,
-        //         symbol.colour.into(),
-        //         &parent_clip_region,
-        //         viewport_dimensions_px,
-        //     );
-        //     let b = TextVertex::new(
-        //         region_vertices[1],
-        //         uv_top_right,
-        //         symbol.colour.into(),
-        //         &parent_clip_region,
-        //         viewport_dimensions_px,
-        //     );
-        //     let c = TextVertex::new(
-        //         region_vertices[2],
-        //         uv_bottom_left,
-        //         symbol.colour.into(),
-        //         &parent_clip_region,
-        //         viewport_dimensions_px,
-        //     );
-        //     let d = TextVertex::new(
-        //         region_vertices[3],
-        //         uv_bottom_right,
-        //         symbol.colour.into(),
-        //         &parent_clip_region,
-        //         viewport_dimensions_px,
-        //     );
-
-        //     vertices.push(a);
-        //     vertices.push(c);
-        //     vertices.push(b);
-
-        //     vertices.push(b);
-        //     vertices.push(c);
-        //     vertices.push(d);
-        // }
-
-        // vertices
-        todo!()
+        vertices
     }
 
     fn generate_presymbols(
         &self,
         font: &Font,
-        font_metrics_ss: &ScreenSpaceFontMetrics,
+        font_metrics_ss: &PixelFontMetrics,
         aspect_ratio: f32,
     ) -> Vec<Presymbol> {
         let mut ps = Vec::new();
@@ -397,18 +355,18 @@ impl Text {
                     }
                 };
 
-                let symbol_metrics = ScreenSpaceSymbolMetrics::new(
-                    &info.metrics,
-                    &font.line_metrics,
-                    &font_metrics_ss,
-                    aspect_ratio,
-                );
+                // let symbol_metrics = ScreenSpaceSymbolMetrics::new(
+                //     &info.metrics,
+                //     &font.line_metrics,
+                //     &font_metrics_ss,
+                //     aspect_ratio,
+                // );
 
                 ps.push(Presymbol {
                     character,
                     colour: segment.colour,
                     uv_region,
-                    symbol_metrics,
+                    symbol_metrics: PixelSymbolMetrics::new(&info.metrics),
                 })
             }
         }
@@ -423,11 +381,72 @@ pub struct Symbol {
     pub character: char,
     /// The colour of a character
     pub colour: Colour,
-    /// The screen space region of a symbol
+    /// The viewport pixel region of a symbol
     pub region: Rectangle<f32>,
     /// The UV region of the symbol, using UV coordinates where (0, 0) is top left, (1, 1) is bottom
     /// right
     pub uv_region: Rectangle<f32>,
+}
+
+impl Symbol {
+    /// Produces text vertices from the [`Symbol`]
+    pub fn to_text_vertices(
+        &self,
+        parent_clip_region: Rectangle<f32>,
+        viewport_dimensions_px: PhysicalSize<u32>,
+    ) -> [TextVertex; 6] {
+        let symbol_rectangle = Rectangle::new(
+            self.region.x_min as f32,
+            self.region.x_max as f32,
+            self.region.y_min as f32,
+            self.region.y_max as f32,
+        );
+
+        let uv_top_left = glam::Vec2::new(self.uv_region.x_min, self.uv_region.y_min);
+        let uv_top_right = glam::Vec2::new(self.uv_region.x_max, self.uv_region.y_min);
+        let uv_bottom_left = glam::Vec2::new(self.uv_region.x_min, self.uv_region.y_max);
+        let uv_bottom_right = glam::Vec2::new(self.uv_region.x_max, self.uv_region.y_max);
+
+        let region_vertices = symbol_rectangle.vertices(viewport_dimensions_px);
+
+        // for (index, vert) in region_vertices.iter().enumerate() {
+        //     println!("{}: {}", index, vert);
+        // }
+
+        let a = TextVertex::new(
+            region_vertices[0],
+            uv_top_left,
+            self.colour.into(),
+            &parent_clip_region,
+            viewport_dimensions_px,
+        );
+        let b = TextVertex::new(
+            region_vertices[1],
+            uv_top_right,
+            self.colour.into(),
+            &parent_clip_region,
+            viewport_dimensions_px,
+        );
+        let c = TextVertex::new(
+            region_vertices[2],
+            uv_bottom_left,
+            self.colour.into(),
+            &parent_clip_region,
+            viewport_dimensions_px,
+        );
+        let d = TextVertex::new(
+            region_vertices[3],
+            uv_bottom_right,
+            self.colour.into(),
+            &parent_clip_region,
+            viewport_dimensions_px,
+        );
+
+        [
+            a, c, b, //
+            b, c, d, //
+        ]
+    }
 }
 
 #[derive(Clone)]
@@ -442,75 +461,63 @@ struct Presymbol {
     /// right
     pub uv_region: Rectangle<f32>,
     /// The screen space dimension/attributes of the symbol
-    pub symbol_metrics: ScreenSpaceSymbolMetrics,
+    pub symbol_metrics: PixelSymbolMetrics,
 }
 
 #[derive(Clone)]
 /// The screen space metrics of a symbol
-struct ScreenSpaceSymbolMetrics {
-    pub width: f32,
-    pub height: f32,
-    pub x_shift: f32,
-    pub y_shift: f32,
-    pub advance_width: f32,
+struct PixelSymbolMetrics {
+    pub width: i32,
+    pub height: i32,
+    pub x_shift: i32,
+    pub y_shift: i32,
+    pub advance_width: i32,
 }
 
-impl ScreenSpaceSymbolMetrics {
+impl PixelSymbolMetrics {
     /// Generates the screen space metrics for a symbol given its pixel metrics generated from
     /// fontdue.
-    pub fn new(
-        metrics_px: &fontdue::Metrics,
-        line_metrics_px: &fontdue::LineMetrics,
-        font_metrics_ss: &ScreenSpaceFontMetrics,
-        aspect_ratio: f32,
-    ) -> Self {
-        let text_height_px = line_metrics_px.ascent - line_metrics_px.descent;
-        let equivalent_horizontal_height_px = text_height_px * aspect_ratio;
-
+    pub fn new(metrics: &fontdue::Metrics) -> Self {
         Self {
-            width: metrics_px.width as f32 / equivalent_horizontal_height_px
-                * font_metrics_ss.height,
-            height: metrics_px.height as f32 / text_height_px * font_metrics_ss.height,
-            x_shift: metrics_px.xmin as f32 / equivalent_horizontal_height_px
-                * font_metrics_ss.height,
-            y_shift: metrics_px.ymin as f32 / text_height_px * font_metrics_ss.height,
-            advance_width: metrics_px.advance_width as f32 / equivalent_horizontal_height_px
-                * font_metrics_ss.height,
+            width: metrics.width as i32,
+            height: metrics.height as i32,
+            x_shift: metrics.xmin as i32,
+            y_shift: metrics.ymin as i32,
+            advance_width: metrics.advance_width as i32,
         }
     }
 }
 
 /// The screen space line metrics of a font at a certain size
-struct ScreenSpaceFontMetrics {
+struct PixelFontMetrics {
     /// The screen space span from ascent to descent
-    pub height: f32,
+    pub height: i32,
 
     /// The ascent of the text in screen space
-    pub ascent: f32,
+    pub ascent: i32,
 
     /// The descent of the text in screen space
-    pub descent: f32,
+    pub descent: i32,
 
     /// The gap between the descent of one line, and the ascent of the next, in screen space
-    pub line_gap: f32,
+    pub line_gap: i32,
 
     /// The distance between the baseline of one line, and the baseline of the next line, can be
     /// calculated as ascent - descent + line_gap
-    pub new_line_size: f32,
+    pub new_line_size: i32,
 }
 
-impl ScreenSpaceFontMetrics {
-    pub fn new(text_height_screen_space: f32, pixel_metrics: &fontdue::LineMetrics) -> Self {
+impl PixelFontMetrics {
+    pub fn new(text_height_px: i32, pixel_metrics: &fontdue::LineMetrics) -> Self {
         let rasterised_font_height_px = pixel_metrics.ascent - pixel_metrics.descent;
         // let rasterised_font_width_px = rasterised_font_height_px * aspect_ratio;
 
         Self {
-            height: text_height_screen_space,
-            ascent: pixel_metrics.ascent / rasterised_font_height_px * text_height_screen_space,
-            descent: pixel_metrics.descent / rasterised_font_height_px * text_height_screen_space,
-            line_gap: pixel_metrics.line_gap / rasterised_font_height_px * text_height_screen_space,
-            new_line_size: pixel_metrics.new_line_size / rasterised_font_height_px
-                * text_height_screen_space,
+            height: text_height_px,
+            ascent: pixel_metrics.ascent as i32,
+            descent: pixel_metrics.descent as i32,
+            line_gap: pixel_metrics.line_gap as i32,
+            new_line_size: pixel_metrics.new_line_size as i32,
         }
     }
 }
@@ -522,54 +529,58 @@ struct TextLine {
     pub range: RangeInclusive<usize>,
 
     /// The width of the line
-    pub screen_space_dimensions: glam::Vec2,
+    pub viewport_px_dimensions: glam::IVec2,
 }
 
 impl TextLine {
-    fn new(range: RangeInclusive<usize>, screen_space_dimensions: glam::Vec2) -> Self {
+    fn new(range: RangeInclusive<usize>, pixel_dimensions: glam::IVec2) -> Self {
         Self {
             range,
-            screen_space_dimensions,
+            viewport_px_dimensions: pixel_dimensions,
         }
     }
 }
 
 /// The origin accumulator that tracks where to place the next [`Symbol`]
 struct GlyphOrigin {
-    screen_space_position: glam::Vec2,
+    viewport_px_position: glam::IVec2,
 }
 
 impl GlyphOrigin {
     /// Places the origin at the top left of the rectangle
-    pub fn at_top_left(clip_region: &Rectangle<f32>, font_metrics_ss: &ScreenSpaceFontMetrics) -> Self {
-        let screen_space_position = glam::Vec2::new(
-            clip_region.x_min,
-            clip_region.y_max - font_metrics_ss.ascent,
+    pub fn at_top_left(clip_region: &Rectangle<f32>, font_metrics_px: &PixelFontMetrics) -> Self {
+        let screen_space_position = glam::IVec2::new(
+            clip_region.x_min as i32,
+            clip_region.y_max as i32 - font_metrics_px.ascent,
         );
 
         Self {
-            screen_space_position,
+            viewport_px_position: screen_space_position,
         }
     }
 
-    /// Places at any location
-    pub fn at(screen_space_position: glam::Vec2) -> Self {
-        Self {
-            screen_space_position,
-        }
-    }
+    // /// Places at any location
+    // pub fn at(screen_space_position: glam::Vec2) -> Self {
+    //     Self {
+    //         viewport_px_position: screen_space_position,
+    //     }
+    // }
 
     /// Returns true iff the Presymbol will fit in the provided clipping Rectangle
-    fn presymbol_fits_in_rect(&self, clip_rectangle: &Rectangle<f32>, presymbol: &Presymbol) -> bool {
-        self.screen_space_position.x
+    fn presymbol_fits_in_rect(
+        &self,
+        clip_rectangle: &Rectangle<f32>,
+        presymbol: &Presymbol,
+    ) -> bool {
+        ((self.viewport_px_position.x
             + presymbol.symbol_metrics.width
-            + presymbol.symbol_metrics.x_shift
+            + presymbol.symbol_metrics.x_shift) as f32)
             < clip_rectangle.x_max
     }
 
     /// Moves the GlyphOrigin by the Presymbol, as though placing the symbol
     fn increment_by_presymbol(&mut self, presymbol: &Presymbol) {
-        self.screen_space_position.x += presymbol.symbol_metrics.advance_width;
+        self.viewport_px_position.x += presymbol.symbol_metrics.advance_width;
     }
 
     /// Gives the symbol for a presymbol at the GlyphOrigin's location
@@ -578,14 +589,14 @@ impl GlyphOrigin {
             character: presymbol.character,
             colour: presymbol.colour,
             region: Rectangle::new(
-                self.screen_space_position.x + presymbol.symbol_metrics.x_shift,
-                self.screen_space_position.x
+                (self.viewport_px_position.x + presymbol.symbol_metrics.x_shift) as f32,
+                (self.viewport_px_position.x
                     + presymbol.symbol_metrics.x_shift
-                    + presymbol.symbol_metrics.width,
-                self.screen_space_position.y + presymbol.symbol_metrics.y_shift,
-                self.screen_space_position.y
+                    + presymbol.symbol_metrics.width) as f32,
+                (self.viewport_px_position.y + presymbol.symbol_metrics.y_shift) as f32,
+                (self.viewport_px_position.y
                     + presymbol.symbol_metrics.y_shift
-                    + presymbol.symbol_metrics.height,
+                    + presymbol.symbol_metrics.height) as f32,
             ),
             uv_region: presymbol.uv_region,
         }
@@ -593,8 +604,8 @@ impl GlyphOrigin {
 
     /// Resets the glyph origin to the left of the parent rectangle and moves downward for a new
     /// line
-    fn new_line(&mut self, clip_rectangle: &Rectangle<f32>, font_metrics_ss: &ScreenSpaceFontMetrics) {
-        self.screen_space_position.x = clip_rectangle.x_min;
-        self.screen_space_position.y -= font_metrics_ss.new_line_size;
+    fn new_line(&mut self, clip_rectangle: &Rectangle<f32>, font_metrics_px: &PixelFontMetrics) {
+        self.viewport_px_position.x = clip_rectangle.x_min as i32;
+        self.viewport_px_position.y -= font_metrics_px.new_line_size;
     }
 }

@@ -230,19 +230,18 @@ where
             Event::FitRectangle((rectangle, context)) => {
                 self.clip_rectangle = Some(*rectangle);
                 if let Some(text) = &mut self.text {
-                    // TODOPX
-                    // text.update_layout(
-                    //     context.font,
-                    //     &rectangle,
-                    //     context.aspect_ratio,
-                    //     context.viewport_dimensions_px,
-                    // );
-                    // text.place_symbols(
-                    //     context.font,
-                    //     &rectangle,
-                    //     context.aspect_ratio,
-                    //     context.viewport_dimensions_px,
-                    // );
+                    text.update_layout(
+                        context.font,
+                        &rectangle,
+                        context.aspect_ratio,
+                        context.viewport_dimensions_px,
+                    );
+                    text.place_symbols(
+                        context.font,
+                        &rectangle,
+                        context.aspect_ratio,
+                        context.viewport_dimensions_px,
+                    );
                 }
                 self.update_child_rectangles(context);
 
@@ -270,8 +269,7 @@ where
         let mut text_vertices = Vec::new();
         if let Some(text) = &self.text {
             if let Some(clip_rectangle) = self.clip_rectangle {
-                // TODOPX
-                // text_vertices.append(&mut text.to_vertices(clip_rectangle, viewport_dimensions_px));
+                text_vertices.append(&mut text.to_vertices(clip_rectangle, viewport_dimensions_px));
             }
         }
 
@@ -318,15 +316,13 @@ where
         self.span_px = Some(match self.span {
             Span::FitContents => {
                 if let Some(text) = &mut self.text {
-                    // TODOPX
-                    // text.update_layout(
-                    //     context.font,
-                    //     clip_rectangle,
-                    //     context.aspect_ratio,
-                    //     context.viewport_dimensions_px,
-                    // );
-                    // text.screen_space_span(parent_axis).unwrap_or(0f32)
-                    32f32 // TODOPX
+                    text.update_layout(
+                        context.font,
+                        clip_rectangle,
+                        context.aspect_ratio,
+                        context.viewport_dimensions_px,
+                    );
+                    text.span_px(parent_axis).unwrap_or(0f32)
                 } else {
                     0f32
                 }

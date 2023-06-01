@@ -15,7 +15,7 @@ pub struct OptionsScene {
 }
 
 impl OptionsScene {
-    const NORMAL_FONT_SIZE_PX: f32 = 32f32;
+    const NORMAL_FONT_SIZE_PX: i32 = 32i32;
 
     pub fn new() -> Self {
         Self {
@@ -87,7 +87,7 @@ impl Scene for OptionsScene {
     fn view(&self, aspect_ratio: f32) -> Box<dyn Widget<Self::Message>> {
         let button_off_colour = Colour::rgb(0.2f32, 0.3f32, 0.4f32);
         let button_on_colour = Colour::rgb(0.3f32, 0.4f32, 0.6f32);
-        
+
         let mut dummy_string = String::new();
         for _ in 0..1000 {
             dummy_string.push('a');
@@ -107,7 +107,7 @@ impl Scene for OptionsScene {
                             Text::new()
                                 .push_segment(TextSegment::new("Options Menu", Colour::WHITE))
                                 .with_configuration(TextConfiguration {
-                                    size: TextSize::Pixels(Self::NORMAL_FONT_SIZE_PX * 2f32),
+                                    size: TextSize::Pixels(Self::NORMAL_FONT_SIZE_PX * 2),
                                     ..Default::default()
                                 }),
                         ),
@@ -130,10 +130,7 @@ impl Scene for OptionsScene {
                                     Colour::rgb(0.7f32, 1f32, 0.7f32),
                                 ))
                                 .push_segment(TextSegment::new("text!", Colour::WHITE))
-                                .push_segment(TextSegment::new(
-                                    &dummy_string,
-                                    Colour::WHITE,
-                                ))
+                                .push_segment(TextSegment::new(&dummy_string, Colour::WHITE))
                                 .with_configuration(TextConfiguration {
                                     size: TextSize::Pixels(Self::NORMAL_FONT_SIZE_PX),
                                     ..Default::default()
@@ -169,25 +166,31 @@ impl Scene for OptionsScene {
                                 OptionsMenuMessage::SoundEffectsVolumeChanged(*val),
                             )
                         },
-                    )),
-                // .push(
-                //     FillBar::new(0f32..=100f32, 20f32, false, |val| {
-                //         UiMessage::OptionsMenuMessage(OptionsMenuMessage::BarChanged(*val))
-                //     })
-                //     .with_span(Span::ViewHeight(0.05f32)),
-                // )
-                // .push(
-                //     FillBar::new(0f32..=100f32, 20f32, false, |val| {
-                //         UiMessage::OptionsMenuMessage(OptionsMenuMessage::BarChanged(*val))
-                //     })
-                //     .with_span(Span::ViewHeight(0.05f32)),
-                // )
-                // .push(
-                //     FillBar::new(0f32..=100f32, 20f32, false, |val| {
-                //         UiMessage::OptionsMenuMessage(OptionsMenuMessage::BarChanged(*val))
-                //     })
-                //     .with_span(Span::ViewHeight(0.05f32)),
-                // ),
+                    ))
+                    .push(
+                        FillBar::new(0f32..=100f32, self.sound_effects_volume, true, |val| {
+                            UiMessage::OptionsMenuMessage(
+                                OptionsMenuMessage::SoundEffectsVolumeChanged(*val),
+                            )
+                        })
+                        .with_span(Span::ViewHeight(0.025f32)),
+                    )
+                    .push(
+                        FillBar::new(0f32..=100f32, self.sound_effects_volume, true, |val| {
+                            UiMessage::OptionsMenuMessage(
+                                OptionsMenuMessage::SoundEffectsVolumeChanged(*val),
+                            )
+                        })
+                        .with_span(Span::ViewHeight(0.025f32)),
+                    )
+                    .push(
+                        FillBar::new(0f32..=100f32, self.sound_effects_volume, true, |val| {
+                            UiMessage::OptionsMenuMessage(
+                                OptionsMenuMessage::SoundEffectsVolumeChanged(*val),
+                            )
+                        })
+                        .with_span(Span::ViewHeight(0.025f32)),
+                    ),
             )
             .push(Container::new())
             .push(
