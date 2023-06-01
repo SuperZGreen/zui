@@ -89,10 +89,8 @@ impl Scene for OptionsScene {
         let button_on_colour = Colour::rgb(0.3f32, 0.4f32, 0.6f32);
 
         let mut dummy_string = String::new();
-        for _ in 0..1000 {
-            dummy_string.push('a');
-            dummy_string.push('b');
-            dummy_string.push('c');
+        for _ in 0..10 {
+            dummy_string.push_str(" the quick brown fox jumped over the lazy dog.")
         }
 
         let central_content = Container::new()

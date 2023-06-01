@@ -2,7 +2,12 @@ use std::ops::RangeInclusive;
 
 use winit::dpi::PhysicalSize;
 
-use super::{primitives::Rectangle, text_renderer::TextVertex, Axis, Colour, Font};
+use super::{
+    font::{FontStyle, SymbolInfo, SymbolKey, SymbolMetrics},
+    primitives::Rectangle,
+    text_renderer::TextVertex,
+    Axis, Colour, Typeface,
+};
 
 #[derive(Clone)]
 #[allow(dead_code)]
@@ -91,7 +96,6 @@ impl TextLines {
         clip_rectangle: &Rectangle<f32>,
         font_metrics_px: &PixelFontMetrics,
     ) -> Self {
-
         // flooring the max of the clip rect seems to help against jitter
         let mut clip_rect = clip_rectangle.clone();
         // clip_rect.x_max = clip_rect.x_max.floor();
@@ -108,8 +112,8 @@ impl TextLines {
                 if origin.presymbol_fits_in_rect(&clip_rect, presymbol) {
                     // tracking the new max width of the line
                     line_max_x = origin.viewport_px_position.x
-                        + presymbol.symbol_metrics.x_shift
-                        + presymbol.symbol_metrics.width;
+                        + presymbol.symbol_info.symbol_metrics.x_shift
+                        + presymbol.symbol_info.symbol_metrics.width;
                 } else {
                     // resetting the origin to the start of the line
                     origin = GlyphOrigin::at_top_left(&clip_rect, font_metrics_px);
@@ -223,7 +227,7 @@ impl Text {
     /// Calculates the screen space dimensions of the text for a given clip rectangle
     pub fn update_layout(
         &mut self,
-        font: &Font,
+        font: &Typeface,
         clip_rectangle: &Rectangle<f32>,
         aspect_ratio: f32,
         _viewport_dimensions_px: PhysicalSize<u32>,
@@ -252,7 +256,7 @@ impl Text {
     /// performing line wrapping, alignment etc
     pub fn place_symbols(
         &mut self,
-        font: &Font,
+        font: &Typeface,
         parent_rect: &Rectangle<f32>,
         aspect_ratio: f32,
         viewport_dimensions_px: PhysicalSize<u32>,
@@ -340,14 +344,16 @@ impl Text {
 
     fn generate_presymbols(
         &self,
-        font: &Font,
+        font: &Typeface,
         font_metrics_ss: &PixelFontMetrics,
         aspect_ratio: f32,
     ) -> Vec<Presymbol> {
         let mut ps = Vec::new();
         for segment in self.segments.iter() {
             for character in segment.string.chars() {
-                let (info, uv_region) = match font.get_symbol(character) {
+                let symbol_key = SymbolKey::new(character, FontStyle::Regular, 32);
+
+                let symbol_info = match font.get_symbol(symbol_key) {
                     Some(res) => res,
                     None => {
                         error!("could not find glyph for character: {}!", character);
@@ -355,18 +361,10 @@ impl Text {
                     }
                 };
 
-                // let symbol_metrics = ScreenSpaceSymbolMetrics::new(
-                //     &info.metrics,
-                //     &font.line_metrics,
-                //     &font_metrics_ss,
-                //     aspect_ratio,
-                // );
-
                 ps.push(Presymbol {
                     character,
                     colour: segment.colour,
-                    uv_region,
-                    symbol_metrics: PixelSymbolMetrics::new(&info.metrics),
+                    symbol_info,
                 })
             }
         }
@@ -457,38 +455,11 @@ struct Presymbol {
     pub character: char,
     /// The colour of a character
     pub colour: Colour,
-    /// The UV region of the symbol, using UV coordinates where (0, 0) is top left, (1, 1) is bottom
-    /// right
-    pub uv_region: Rectangle<f32>,
-    /// The screen space dimension/attributes of the symbol
-    pub symbol_metrics: PixelSymbolMetrics,
+    /// The symbol info of the presymbol, giving its metrics and uv region
+    pub symbol_info: SymbolInfo,
 }
 
-#[derive(Clone)]
-/// The screen space metrics of a symbol
-struct PixelSymbolMetrics {
-    pub width: i32,
-    pub height: i32,
-    pub x_shift: i32,
-    pub y_shift: i32,
-    pub advance_width: i32,
-}
-
-impl PixelSymbolMetrics {
-    /// Generates the screen space metrics for a symbol given its pixel metrics generated from
-    /// fontdue.
-    pub fn new(metrics: &fontdue::Metrics) -> Self {
-        Self {
-            width: metrics.width as i32,
-            height: metrics.height as i32,
-            x_shift: metrics.xmin as i32,
-            y_shift: metrics.ymin as i32,
-            advance_width: metrics.advance_width as i32,
-        }
-    }
-}
-
-/// The screen space line metrics of a font at a certain size
+/// The viewport pixel font/line metrics of a font at a certain size
 struct PixelFontMetrics {
     /// The screen space span from ascent to descent
     pub height: i32,
@@ -573,14 +544,14 @@ impl GlyphOrigin {
         presymbol: &Presymbol,
     ) -> bool {
         ((self.viewport_px_position.x
-            + presymbol.symbol_metrics.width
-            + presymbol.symbol_metrics.x_shift) as f32)
+            + presymbol.symbol_info.symbol_metrics.width
+            + presymbol.symbol_info.symbol_metrics.x_shift) as f32)
             < clip_rectangle.x_max
     }
 
     /// Moves the GlyphOrigin by the Presymbol, as though placing the symbol
     fn increment_by_presymbol(&mut self, presymbol: &Presymbol) {
-        self.viewport_px_position.x += presymbol.symbol_metrics.advance_width;
+        self.viewport_px_position.x += presymbol.symbol_info.symbol_metrics.advance_width;
     }
 
     /// Gives the symbol for a presymbol at the GlyphOrigin's location
@@ -589,16 +560,16 @@ impl GlyphOrigin {
             character: presymbol.character,
             colour: presymbol.colour,
             region: Rectangle::new(
-                (self.viewport_px_position.x + presymbol.symbol_metrics.x_shift) as f32,
+                (self.viewport_px_position.x + presymbol.symbol_info.symbol_metrics.x_shift) as f32,
                 (self.viewport_px_position.x
-                    + presymbol.symbol_metrics.x_shift
-                    + presymbol.symbol_metrics.width) as f32,
-                (self.viewport_px_position.y + presymbol.symbol_metrics.y_shift) as f32,
+                    + presymbol.symbol_info.symbol_metrics.x_shift
+                    + presymbol.symbol_info.symbol_metrics.width) as f32,
+                (self.viewport_px_position.y + presymbol.symbol_info.symbol_metrics.y_shift) as f32,
                 (self.viewport_px_position.y
-                    + presymbol.symbol_metrics.y_shift
-                    + presymbol.symbol_metrics.height) as f32,
+                    + presymbol.symbol_info.symbol_metrics.y_shift
+                    + presymbol.symbol_info.symbol_metrics.height) as f32,
             ),
-            uv_region: presymbol.uv_region,
+            uv_region: presymbol.symbol_info.uv_region,
         }
     }
 

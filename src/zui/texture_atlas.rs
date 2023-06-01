@@ -36,11 +36,14 @@ impl TextureAtlasBuilder {
         }
     }
 
-    pub fn add_sprite(&mut self, image: DynamicImage, width_px: u32, height_px: u32) {
+    pub fn add_sprite(&mut self, image: DynamicImage, width_px: u32, height_px: u32) -> usize {
+        let index = self.unpacked_sprites.len();
         self.unpacked_sprites.push(UnpackedSprite {
             image,
             dimensions_px: glam::UVec2::new(width_px, height_px),
         });
+        
+        index
     }
 
     pub fn build_atlas(&self, device: &wgpu::Device, queue: &wgpu::Queue) -> TextureAtlas {

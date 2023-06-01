@@ -15,7 +15,7 @@ pub mod util;
 mod widget;
 
 pub use colour::Colour;
-pub use font::Font;
+pub use font::Typeface;
 pub use primitives::{Rectangle, ScreenSpacePosition};
 pub use renderable::Renderable;
 pub use scene::Scene;
@@ -33,7 +33,7 @@ use winit::dpi::{PhysicalPosition, PhysicalSize};
 use crate::render_state::RenderState;
 
 pub struct Zui {
-    font: Font,
+    font: Typeface,
 
     renderer: SimpleRenderer,
     text_renderer: TextRenderer,
@@ -45,13 +45,19 @@ pub struct Zui {
 
 impl Zui {
     pub fn new(
-        file: &str,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         surface_configuration: &wgpu::SurfaceConfiguration,
         viewport_dimensions_px: PhysicalSize<u32>,
     ) -> Result<Self, ()> {
-        let font_default = match Font::new(file, 32, device, queue) {
+        let font_default = match Typeface::new(
+            "resources/zui/fonts/Roboto-Regular.ttf",
+            None,
+            None,
+            32,
+            device,
+            queue,
+        ) {
             Ok(f) => f,
             Err(_) => return Err(()),
         };
@@ -103,7 +109,9 @@ impl Zui {
                     );
 
                     // wgpu will panic if the scissor rectangle has a width or height of 0
-                    if scissor_rect_framebuffer_coordinates.width() == 0 || scissor_rect_framebuffer_coordinates.height() == 0 {
+                    if scissor_rect_framebuffer_coordinates.width() == 0
+                        || scissor_rect_framebuffer_coordinates.height() == 0
+                    {
                         None
                     } else {
                         Some(scissor_rect_framebuffer_coordinates)
@@ -196,7 +204,7 @@ impl Zui {
 /// The 'context' for zui. Intended to give a Widget everything it needs to know to rebuild itself
 /// correctly.
 pub struct Context<'a> {
-    pub font: &'a Font,
+    pub font: &'a Typeface,
     pub aspect_ratio: f32,
     pub cursor_position: Option<PhysicalPosition<f64>>,
     pub viewport_dimensions_px: PhysicalSize<u32>,

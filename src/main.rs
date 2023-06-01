@@ -74,7 +74,6 @@ fn main() {
     // zui
     let viewport_dimensions_px = window.inner_size();
     let mut zui = Zui::new(
-        "resources/zui/fonts/Roboto-Regular.ttf",
         render_state.device(),
         render_state.queue(),
         render_state.surface_configuration(),

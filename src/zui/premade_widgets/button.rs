@@ -101,19 +101,18 @@ where
                 self.clip_rectangle = Some(*clip_rectangle);
 
                 if let Some(text) = &mut self.text {
-                    // TODOPX
-                    // text.update_layout(
-                    //     context.font,
-                    //     clip_rectangle,
-                    //     context.aspect_ratio,
-                    //     context.viewport_dimensions_px,
-                    // );
-                    // text.place_symbols(
-                    //     context.font,
-                    //     &clip_rectangle,
-                    //     context.aspect_ratio,
-                    //     context.viewport_dimensions_px,
-                    // );
+                    text.update_layout(
+                        context.font,
+                        clip_rectangle,
+                        context.aspect_ratio,
+                        context.viewport_dimensions_px,
+                    );
+                    text.place_symbols(
+                        context.font,
+                        &clip_rectangle,
+                        context.aspect_ratio,
+                        context.viewport_dimensions_px,
+                    );
                 }
 
                 crate::zui::widget::EventResponse::Propagate
@@ -153,15 +152,13 @@ where
             Span::FitContents => {
                 if let Some(text) = &mut self.text {
                     if let Some(clip_rectangle) = &self.clip_rectangle {
-                        // TODOPX
-                        // text.update_layout(
-                        //     context.font,
-                        //     clip_rectangle,
-                        //     context.aspect_ratio,
-                        //     context.viewport_dimensions_px,
-                        // );
-                        // text.screen_space_span(parent_axis).unwrap_or(0f32)
-                        0f32
+                        text.update_layout(
+                            context.font,
+                            clip_rectangle,
+                            context.aspect_ratio,
+                            context.viewport_dimensions_px,
+                        );
+                        text.span_px(parent_axis).unwrap_or(0f32)
                     } else {
                         0f32
                     }
@@ -203,8 +200,7 @@ where
             ));
 
             if let Some(text) = &self.text {
-                // TODOPX
-                // text_vertices.append(&mut text.to_vertices(clip_rectangle, viewport_dimensions_px))
+                text_vertices.append(&mut text.to_vertices(clip_rectangle, viewport_dimensions_px))
             }
         }
 
