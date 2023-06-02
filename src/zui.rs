@@ -1,5 +1,5 @@
 mod colour;
-mod font;
+pub mod font;
 pub mod premade_widgets;
 mod primitives;
 mod render_layer;
@@ -32,8 +32,10 @@ use winit::dpi::{PhysicalPosition, PhysicalSize};
 
 use crate::render_state::RenderState;
 
+use self::font::FontStyle;
+
 pub struct Zui {
-    font: Typeface,
+    typeface: Typeface,
 
     renderer: SimpleRenderer,
     text_renderer: TextRenderer,
@@ -50,26 +52,31 @@ impl Zui {
         surface_configuration: &wgpu::SurfaceConfiguration,
         viewport_dimensions_px: PhysicalSize<u32>,
     ) -> Result<Self, ()> {
-        let font_default = match Typeface::new(
-            "resources/zui/fonts/Roboto-Regular.ttf",
-            None,
-            None,
-            32,
-            device,
-            queue,
+        let mut typeface = match Typeface::new(
+            Some("resources/zui/fonts/Roboto-Regular.ttf"),
+            Some("resources/zui/fonts/Roboto-Bold.ttf"),
+            Some("resources/zui/fonts/Roboto-Italic.ttf"),
         ) {
             Ok(f) => f,
             Err(_) => return Err(()),
         };
 
+        typeface.queue_rasterise(FontStyle::Regular, 32);
+        typeface.queue_rasterise(FontStyle::Bold, 32);
+        typeface.queue_rasterise(FontStyle::Italic, 32);
+
+        typeface.queue_rasterise(FontStyle::Regular, 64);
+
+        typeface.rasterise(device, queue);
+
         let text_renderer = TextRenderer::new(
             device,
             surface_configuration,
-            font_default.texture_atlas.bind_group_layout(),
+            typeface.texture_atlas.as_ref().unwrap().bind_group_layout(),
         );
 
         Ok(Self {
-            font: font_default,
+            typeface,
             renderer: SimpleRenderer::new(device, surface_configuration),
             text_renderer,
             viewport_dimensions_px,
@@ -124,7 +131,8 @@ impl Zui {
             match render_pass_opt {
                 Some(mut rp) => {
                     self.renderer.render(&mut rp);
-                    self.text_renderer.render(&mut rp, &self.font.texture_atlas);
+                    self.text_renderer
+                        .render(&mut rp, &self.typeface.texture_atlas.as_ref().unwrap());
                 }
                 None => {}
             };
@@ -193,7 +201,7 @@ impl Zui {
     /// Gets the context for an event
     pub fn context<'a>(&self) -> Context {
         Context {
-            font: &self.font,
+            font: &self.typeface,
             aspect_ratio: self.aspect_ratio,
             cursor_position: self.cursor_position,
             viewport_dimensions_px: self.viewport_dimensions_px,

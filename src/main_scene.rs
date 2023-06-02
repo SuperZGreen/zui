@@ -32,7 +32,7 @@ impl Scene for MainScene {
         let button_on_colour = Colour::rgb(0.3f32, 0.4f32, 0.6f32);
         
         let button_text_configuration = TextConfiguration {
-            size: TextSize::ParentHeight(0.7f32),
+            size: TextSize::Pixels(64),
             horizontal_alignment: TextAlignmentHorizontal::Centre,
             vertical_alignment: TextAlignmentVertical::Centre,
             ..Default::default()
@@ -49,8 +49,9 @@ impl Scene for MainScene {
                     .with_text(
                         Text::new()
                             .with_configuration(TextConfiguration {
-                                size: TextSize::ParentHeight(0.8f32),
+                                size: TextSize::Pixels(64),
                                 vertical_alignment: TextAlignmentVertical::Bottom,
+                                horizontal_alignment: TextAlignmentHorizontal::Right,
                                 ..Default::default()
                             })
                             .push_segment(TextSegment::new("Welcome! :^)", Colour::WHITE)),

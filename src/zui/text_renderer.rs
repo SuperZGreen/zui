@@ -1,7 +1,7 @@
 use wgpu::util::DeviceExt;
 use winit::dpi::PhysicalSize;
 
-use super::{primitives::Rectangle, texture_atlas::TextureAtlas, util, Colour};
+use super::{primitives::Rectangle, texture_atlas::TextureAtlas, util};
 
 #[allow(dead_code)]
 #[repr(C, align(16))]

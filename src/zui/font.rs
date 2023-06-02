@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 
-use fontdue::LineMetrics;
 use image::{DynamicImage, ImageBuffer, Luma};
 use rustc_hash::FxHashMap;
 
@@ -38,7 +37,7 @@ pub struct SymbolInfo {
     pub uv_region: Rectangle<f32>,
 }
 
-#[derive(Copy, Clone, Hash, Eq, PartialEq)]
+#[derive(Copy, Clone, Hash, Eq, PartialEq, Debug)]
 #[allow(dead_code)]
 /// Describes the style of a typeface
 pub enum FontStyle {
@@ -76,22 +75,31 @@ impl SymbolMetrics {
     }
 }
 
+/// A font that is available and rasterised in the TextureAtlas
+struct RasterisedFont {
+    style: FontStyle,    
+    size_px: u32,
+}
+
 /// Contains the fonts and rasterised glyphs for a typeface, useful in rendering text to the screen
 pub struct Typeface {
     symbols: FxHashMap<SymbolKey, SymbolInfo>,
-    pub line_metrics: LineMetrics,
+    
+    /// The available RasterisedFonts for the TypeFace, ie the size & style of a typeface that can
+    /// be drawn
+    rasterised_fonts: Vec<RasterisedFont>,
 
     /// The TextureAtlas that holds the rasterised glyphs for the font
-    pub texture_atlas: TextureAtlas,
+    pub texture_atlas: Option<TextureAtlas>,
 
     /// The normal font, must exist
-    pub font_regular: fontdue::Font,
+    pub font_regular: Option<fontdue::Font>,
 
     /// The bold font, optional
-    pub _font_bold: Option<fontdue::Font>,
+    pub font_bold: Option<fontdue::Font>,
 
     /// The bold font, optional
-    pub _font_italic: Option<fontdue::Font>,
+    pub font_italic: Option<fontdue::Font>,
 }
 
 impl Typeface {
@@ -131,60 +139,97 @@ impl Typeface {
 
     /// Creates a new Typeface
     pub fn new(
-        font_regular_file_path: &str,
+        font_regular_file_path: Option<&str>,
         font_bold_file_path: Option<&str>,
         font_italic_file_path: Option<&str>,
-        size_px: u32,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
     ) -> Result<Self, ()> {
         // getting all fonts from files
-        let font_regular = Self::fontdue_font_from_file(font_regular_file_path).unwrap();
+        let font_regular = font_regular_file_path.map(|fp| Self::fontdue_font_from_file(fp).unwrap());
         let font_bold = font_bold_file_path.map(|fp| Self::fontdue_font_from_file(fp).unwrap());
         let font_italic = font_italic_file_path.map(|fp| Self::fontdue_font_from_file(fp).unwrap());
 
-        let mut texture_atlas_builder = TextureAtlasBuilder::new();
-        let mut symbols = FxHashMap::default();
-
-        // rasterising all characters and putting into texture atlas
-        let mut rasterisation_info = Vec::with_capacity(font_regular.chars().len());
-        for (character, _) in font_regular.chars().iter() {
-            let (metrics, coverage) = font_regular.rasterize(*character, size_px as f32);
-            let width_px = metrics.width as u32;
-            let height_px = metrics.height as u32;
-            let image = Self::coverage_to_dynamic_image(coverage, width_px, height_px);
-
-            let texture_atlas_index = texture_atlas_builder.add_sprite(image, width_px, height_px);
-            rasterisation_info.push((
-                texture_atlas_index,
-                *character,
-                SymbolMetrics::new(&metrics),
-            ))
-        }
-
-        let texture_atlas = texture_atlas_builder.build_atlas(device, queue);
-
-        // getting uv coordinates from TextureAtlas for all characters, inserting into symbols
-        for (texture_atlas_index, character, symbol_metrics) in rasterisation_info {
-            let symbol_key = SymbolKey::new(character, FontStyle::Regular, size_px);
-            let symbol_info = SymbolInfo {
-                symbol_metrics,
-                uv_region: texture_atlas.get(texture_atlas_index).unwrap().uv_region,
-            };
-
-            symbols.insert(symbol_key, symbol_info);
-        }
+        let symbols = FxHashMap::default();
 
         Ok(Self {
             symbols,
-            line_metrics: font_regular
-                .horizontal_line_metrics(size_px as f32)
-                .unwrap(),
-            texture_atlas,
+            rasterised_fonts: Vec::new(),
+            texture_atlas: None,
             font_regular,
-            _font_bold: font_bold,
-            _font_italic: font_italic,
+            font_bold,
+            font_italic,
         })
+    }
+
+    /// Queues the rasterisation of a font at a size, fonts must be rasterised before they can be
+    /// used!
+    pub fn queue_rasterise(&mut self, style: FontStyle, size_px: u32) {
+        self.rasterised_fonts
+            .push(RasterisedFont { style, size_px })
+    }
+
+    /// Gets the font from a FontStyle enum
+    fn font_from_font_style<'a>(&'a self, style: FontStyle) -> &'a Option<fontdue::Font> {
+        match style {
+            FontStyle::Regular => &self.font_regular,
+            FontStyle::Bold => &self.font_bold,
+            FontStyle::Italic => &self.font_italic,
+        }
+    }
+
+    /// Builds the underlying texture atlas
+    pub fn rasterise(&mut self, device: &wgpu::Device, queue: &wgpu::Queue) {
+        let mut texture_atlas_builder = TextureAtlasBuilder::new();
+
+        // rasterising all characters and putting into texture atlas, contains the atlas index,
+        // SymbolKey and SymbolMetrics of a symbol, where the SymbolMetrics and atlas_index will
+        // later be combined into a public SymbolInfo struct
+        let mut rasterisation_info = Vec::new();
+
+        // Adding all characters for all fonts in rasterised_fonts
+        for rasterised_font in self.rasterised_fonts.iter() {
+            let font = match self.font_from_font_style(rasterised_font.style) {
+                Some(f) => f,
+                None => {
+                    warn!("could not find font: {:?}", rasterised_font.style);
+                    continue;
+                }
+            };
+            
+            // reserving space for the new characters
+            rasterisation_info.reserve(font.chars().len());
+
+            // adding the font's characters to rasterisation_info and the texture atlas builder
+            for (character, _) in font.chars().iter() {
+                let (metrics, coverage) =
+                    font.rasterize(*character, rasterised_font.size_px as f32);
+                let width_px = metrics.width as u32;
+                let height_px = metrics.height as u32;
+                let image = Self::coverage_to_dynamic_image(coverage, width_px, height_px);
+
+                let texture_atlas_index =
+                    texture_atlas_builder.add_sprite(image, width_px, height_px);
+
+                rasterisation_info.push((
+                    texture_atlas_index,
+                    SymbolKey::new(*character, rasterised_font.style, rasterised_font.size_px),
+                    SymbolMetrics::new(&metrics),
+                ))
+            }
+        }
+        // building the texture atlas
+        let texture_atlas = Some(texture_atlas_builder.build_atlas(device, queue));
+
+        // getting uv coordinates from TextureAtlas for all characters, inserting into symbols
+        for (texture_atlas_index, symbol_key, symbol_metrics) in rasterisation_info {
+            let symbol_info = SymbolInfo {
+                symbol_metrics,
+                uv_region: texture_atlas.as_ref().unwrap().get(texture_atlas_index).unwrap().uv_region,
+            };
+
+            self.symbols.insert(symbol_key, symbol_info);
+        }
+        
+        self.texture_atlas = texture_atlas;
     }
 
     /// Gets the SymbolInfo and top-left, bottom-right UVs for a symbol

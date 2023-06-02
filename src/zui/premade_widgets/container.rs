@@ -230,18 +230,8 @@ where
             Event::FitRectangle((rectangle, context)) => {
                 self.clip_rectangle = Some(*rectangle);
                 if let Some(text) = &mut self.text {
-                    text.update_layout(
-                        context.font,
-                        &rectangle,
-                        context.aspect_ratio,
-                        context.viewport_dimensions_px,
-                    );
-                    text.place_symbols(
-                        context.font,
-                        &rectangle,
-                        context.aspect_ratio,
-                        context.viewport_dimensions_px,
-                    );
+                    text.update_layout(context.font, &rectangle, context.viewport_dimensions_px);
+                    text.place_symbols(context.font, &rectangle);
                 }
                 self.update_child_rectangles(context);
 
@@ -319,7 +309,6 @@ where
                     text.update_layout(
                         context.font,
                         clip_rectangle,
-                        context.aspect_ratio,
                         context.viewport_dimensions_px,
                     );
                     text.span_px(parent_axis).unwrap_or(0f32)

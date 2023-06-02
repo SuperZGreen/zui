@@ -85,6 +85,7 @@ where
                 line_wrapping: LineWrapping::None,
                 horizontal_alignment: TextAlignmentHorizontal::Right,
                 vertical_alignment: TextAlignmentVertical::Centre,
+                ..Default::default()
             })
     }
 

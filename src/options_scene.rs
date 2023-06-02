@@ -2,7 +2,9 @@ use std::ops::RangeInclusive;
 
 use crate::{
     zui::{
+        font::FontStyle,
         premade_widgets::{Button, Container, FillBar},
+        text::TextAlignmentVertical,
         Axis, Colour, Scene, Span, Text, TextConfiguration, TextSegment, TextSize, Widget,
     },
     OptionsMenuMessage, SceneIdentifier, UiMessage,
@@ -15,7 +17,8 @@ pub struct OptionsScene {
 }
 
 impl OptionsScene {
-    const NORMAL_FONT_SIZE_PX: i32 = 32i32;
+    const FONT_SIZE_NORMAL: u32 = 32u32;
+    const FONT_SIZE_LARGE: u32 = 64u32;
 
     pub fn new() -> Self {
         Self {
@@ -101,39 +104,58 @@ impl Scene for OptionsScene {
                     .with_span(Span::ParentWeight(10f32))
                     .with_background(Some(Colour::rgb(0.1f32, 0.1f32, 0.1f32)))
                     .push(
-                        Container::new().with_span(Span::FitContents).with_text(
-                            Text::new()
-                                .push_segment(TextSegment::new("Options Menu", Colour::WHITE))
-                                .with_configuration(TextConfiguration {
-                                    size: TextSize::Pixels(Self::NORMAL_FONT_SIZE_PX * 2),
-                                    ..Default::default()
-                                }),
-                        ),
+                        Container::new()
+                            .with_span(Span::FitContents)
+                            .with_background(Some(Colour::DARK_RED))
+                            .with_text(
+                                Text::new()
+                                    .push_segment(TextSegment::new("Options Menu", Colour::WHITE))
+                                    .with_configuration(TextConfiguration {
+                                        size: TextSize::Pixels(Self::FONT_SIZE_LARGE),
+                                        ..Default::default()
+                                    }),
+                            ),
                     )
                     .push(
-                        Container::new().with_span(Span::FitContents).with_text(
-                            Text::new()
-                                .push_segment(TextSegment::new("This is my text! ", Colour::WHITE))
-                                .push_segment(TextSegment::new(
-                                    "This is another part of my text! ",
-                                    Colour::rgb(0f32, 1f32, 1f32),
-                                ))
-                                .push_segment(TextSegment::new(
-                                    "This is some more text ",
-                                    Colour::WHITE,
-                                ))
-                                .push_segment(TextSegment::new("This is my ", Colour::WHITE))
-                                .push_segment(TextSegment::new(
-                                    "FAVOURITE ",
-                                    Colour::rgb(0.7f32, 1f32, 0.7f32),
-                                ))
-                                .push_segment(TextSegment::new("text!", Colour::WHITE))
-                                .push_segment(TextSegment::new(&dummy_string, Colour::WHITE))
-                                .with_configuration(TextConfiguration {
-                                    size: TextSize::Pixels(Self::NORMAL_FONT_SIZE_PX),
-                                    ..Default::default()
-                                }),
-                        ),
+                        Container::new()
+                            .with_span(Span::FitContents)
+                            .with_background(Some(Colour::DARK_BLUE))
+                            .with_text(
+                                Text::new()
+                                    .push_segment(TextSegment::new(
+                                        "This is my text! ",
+                                        Colour::WHITE,
+                                    ))
+                                    .push_segment(TextSegment {
+                                        string: String::from("This is BOLD. "),
+                                        colour: Colour::LIGHT_CYAN,
+                                        style: FontStyle::Bold,
+                                    })
+                                    .push_segment(TextSegment {
+                                        string: String::from("This is ITALIC. "),
+                                        colour: Colour::WHITE,
+                                        style: FontStyle::Italic,
+                                    })
+                                    .push_segment(TextSegment::new(
+                                        "This is another part of my text! ",
+                                        Colour::rgb(0f32, 1f32, 1f32),
+                                    ))
+                                    .push_segment(TextSegment::new(
+                                        "This is some more text ",
+                                        Colour::WHITE,
+                                    ))
+                                    .push_segment(TextSegment::new("This is my ", Colour::WHITE))
+                                    .push_segment(TextSegment::new(
+                                        "FAVOURITE ",
+                                        Colour::rgb(0.7f32, 1f32, 0.7f32),
+                                    ))
+                                    .push_segment(TextSegment::new("text!", Colour::WHITE))
+                                    .push_segment(TextSegment::new(&dummy_string, Colour::WHITE))
+                                    .with_configuration(TextConfiguration {
+                                        size: TextSize::Pixels(Self::FONT_SIZE_NORMAL),
+                                        ..Default::default()
+                                    }),
+                            ),
                     )
                     .push(Self::named_slider(
                         "Master Volume",
@@ -199,7 +221,14 @@ impl Scene for OptionsScene {
                 )
                 .with_span(Span::ParentWeight(2f32))
                 .with_text(
-                    Text::new().push_segment(TextSegment::new("Back to Start", Colour::WHITE)),
+                    Text::new()
+                        .with_configuration(TextConfiguration {
+                            size: TextSize::Pixels(64),
+                            vertical_alignment: TextAlignmentVertical::Centre,
+                            horizontal_alignment: crate::zui::TextAlignmentHorizontal::Centre,
+                            ..Default::default()
+                        })
+                        .push_segment(TextSegment::new("Back to Start", Colour::WHITE)),
                 ),
             )
             .push(Container::new());

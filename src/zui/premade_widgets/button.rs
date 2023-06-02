@@ -104,14 +104,11 @@ where
                     text.update_layout(
                         context.font,
                         clip_rectangle,
-                        context.aspect_ratio,
                         context.viewport_dimensions_px,
                     );
                     text.place_symbols(
                         context.font,
                         &clip_rectangle,
-                        context.aspect_ratio,
-                        context.viewport_dimensions_px,
                     );
                 }
 
@@ -155,7 +152,6 @@ where
                         text.update_layout(
                             context.font,
                             clip_rectangle,
-                            context.aspect_ratio,
                             context.viewport_dimensions_px,
                         );
                         text.span_px(parent_axis).unwrap_or(0f32)
@@ -180,7 +176,7 @@ where
     fn to_vertices(
         &self,
         viewport_dimensions_px: PhysicalSize<u32>,
-        render_layers: &mut VecDeque<RenderLayer>,
+        _render_layers: &mut VecDeque<RenderLayer>,
     ) -> (
         Vec<crate::zui::simple_renderer::SimpleVertex>,
         Vec<crate::zui::text_renderer::TextVertex>,
