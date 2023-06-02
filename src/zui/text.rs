@@ -207,9 +207,10 @@ pub struct Text {
     /// The per-character rendering information of the text
     pub symbols: Vec<Symbol>,
 
-    /// Includes layout and styling information for the text
+    /// Includes alignment and styling information for the text
     pub configuration: TextConfiguration,
 
+    /// The layout of the text, including the lines, presymbols and viewport pixel dimensions
     layout: Option<TextLayout>,
 }
 
@@ -543,7 +544,13 @@ impl GlyphOrigin {
     pub fn at_top_left(clip_region: &Rectangle<f32>, font_metrics_px: &PixelFontMetrics) -> Self {
         let viewport_px_position = glam::IVec2::new(
             clip_region.x_min as i32,
-            clip_region.y_max as i32 - font_metrics_px.ascent,
+            // This is ceiled as a workaround, as text is pixel aligned, and clipping rectangles are
+            // not, therefore truncating downwards with 'as i32' can force the bottom pixels of
+            // characters such as 'p's, 'y's, 'g's etc off the bottom of a Container whose size is
+            // determined by the span of the TextLayout, or that is supposed to be 100% of the
+            // Container height. It is unlikely that the extra pixel that may be missing from the
+            // top of the container will cause clipping, whereas the bottom pixel is far more likely
+            clip_region.y_max.ceil() as i32 - font_metrics_px.ascent,
         );
 
         Self {
@@ -576,7 +583,10 @@ impl GlyphOrigin {
     ) -> Self {
         let viewport_px_position = glam::IVec2::new(
             clip_region.x_min as i32,
-            clip_region.y_min as i32 - font_metrics_px.descent,
+            // have to ceil y_min otherwise characters such as 'y's and 'g's can display below the
+            // bottom of the clip region. This is because clip regions are not pixel aligned, and
+            // may display a pixel above what is expected when truncating through y_min as i32
+            clip_region.y_min.ceil() as i32 - font_metrics_px.descent,
         );
 
         Self {

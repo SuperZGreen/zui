@@ -62,7 +62,7 @@ pub struct SymbolMetrics {
 }
 
 impl SymbolMetrics {
-    /// Generates the screen space metrics for a symbol given its pixel metrics generated from
+    /// Generates the viewport pixel metrics for a symbol given its pixel metrics generated from
     /// fontdue.
     pub fn new(metrics: &fontdue::Metrics) -> Self {
         Self {

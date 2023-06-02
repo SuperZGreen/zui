@@ -92,7 +92,7 @@ impl Scene for OptionsScene {
         let button_on_colour = Colour::rgb(0.3f32, 0.4f32, 0.6f32);
 
         let mut dummy_string = String::new();
-        for _ in 0..10 {
+        for _ in 0..20 {
             dummy_string.push_str(" the quick brown fox jumped over the lazy dog.")
         }
 
@@ -144,15 +144,40 @@ impl Scene for OptionsScene {
                                         "This is some more text ",
                                         Colour::WHITE,
                                     ))
-                                    .push_segment(TextSegment::new("This is my ", Colour::WHITE))
-                                    .push_segment(TextSegment::new(
-                                        "FAVOURITE ",
-                                        Colour::rgb(0.7f32, 1f32, 0.7f32),
-                                    ))
-                                    .push_segment(TextSegment::new("text!", Colour::WHITE))
-                                    .push_segment(TextSegment::new(&dummy_string, Colour::WHITE))
+                                    // .push_segment(TextSegment::new("This is my ", Colour::WHITE))
+                                    // .push_segment(TextSegment::new(
+                                    //     "FAVOURITE ",
+                                    //     Colour::rgb(0.7f32, 1f32, 0.7f32),
+                                    // ))
+                                    // .push_segment(TextSegment::new("text!", Colour::WHITE))
+                                    // .push_segment(TextSegment::new(&dummy_string, Colour::WHITE))
                                     .with_configuration(TextConfiguration {
                                         size: TextSize::Pixels(Self::FONT_SIZE_NORMAL),
+                                        ..Default::default()
+                                    }),
+                            ),
+                    )
+                    .push(
+                        Container::new()
+                            .with_span(Span::FitContents)
+                            .with_background(Some(Colour::DARK_RED))
+                            .with_text(
+                                Text::new()
+                                    .push_segment(TextSegment::new(
+                                        "Graphic Design is my ",
+                                        Colour::WHITE,
+                                    ))
+                                    .push_segment(TextSegment {
+                                        string: String::from("PASSION"),
+                                        colour: Colour::LIGHT_YELLOW,
+                                        style: FontStyle::Bold,
+                                    })
+                                    .push_segment(TextSegment::new(
+                                        "!",
+                                        Colour::WHITE,
+                                    ))
+                                    .with_configuration(TextConfiguration {
+                                        size: TextSize::Pixels(Self::FONT_SIZE_LARGE),
                                         ..Default::default()
                                     }),
                             ),
