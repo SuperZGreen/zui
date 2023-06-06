@@ -203,7 +203,7 @@ impl Text {
             };
 
             origin.viewport_px_position.x += horizontal_offset;
-            for presymbol in &layout.presymbols[*line.range.start()..=*line.range.end()] {
+            for presymbol in &layout.presymbols[line.range.start..line.range.end] {
                 self.symbols.push(origin.symbol_from_presymbol(presymbol));
                 origin.increment_by_presymbol(presymbol);
             }

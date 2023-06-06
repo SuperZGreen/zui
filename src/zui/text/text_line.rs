@@ -1,43 +1,107 @@
-use std::ops::RangeInclusive;
+use std::ops::{Range, RangeInclusive};
 
 use crate::zui::Rectangle;
 
 use super::{text_configuration::LineWrapping, GlyphOrigin, PixelFontMetrics, Presymbol};
 
-#[derive(Clone)]
-/// Represents a line of text as it appears on screen, can contain either Presymbols or Symbols
-pub struct TextLine {
-    /// The symbols that are part of the line
-    pub range: RangeInclusive<usize>,
+/// Used to build a TextLine
+pub struct TextLineBuilder {
+    /// The starting index of the text line presymbol
+    start_index: usize,
 
-    /// The width of the line
-    pub viewport_px_dimensions: glam::IVec2,
+    /// The number of symbols that have been added to the TextLineBuilder
+    num_symbols: u32,
+
+    /// The advance width NOTE: from THE EDGE of the previously pushed symbol's width
+    previous_symbol_advance_width_px: i32,
+
+    /// The current width of the symbols held in the line
+    width_px: i32,
+
+    /// The width of the parent clip rectangle container
+    clip_rectangle_width_px: i32,
 }
 
-impl TextLine {
-    fn new(range: RangeInclusive<usize>, viewport_px_dimensions: glam::IVec2) -> Self {
+/// An error from attempting to push symbols into a TextLineBuilder
+pub enum TextLineBuilderError {
+    /// The symbol will not fit on the end of the current line, and a new line should be created
+    CreateNewLine,
+
+    /// The pushed symbol(s) will never fit into the clipping rectangle, as its width is larger than
+    /// the width of the clip rectangle
+    WidthError,
+}
+
+impl TextLineBuilder {
+    /// Creates a new TextLineBuilder from the clip rectangle of the text
+    pub fn new(start_index: usize, clip_rectangle: &Rectangle<f32>) -> Self {
         Self {
-            range,
-            viewport_px_dimensions,
+            start_index,
+            num_symbols: 0,
+            previous_symbol_advance_width_px: 0,
+            width_px: 0,
+            // TODO: check if ceiling is the right thing to do here, in terms of reducing text
+            // jitter when moving/resizing a Container
+            clip_rectangle_width_px: clip_rectangle.width().ceil() as i32,
         }
     }
 
-    /// Tries to fit a word into the text line, given an x_max value. Will return the index of the
-    /// next word that should be pushed, therefore if the return value is equal to start_index, the
-    /// word could not be pushed into the line.
+    /// Tries to fit a word into the text line, given an x_max value. Will return the number of
+    /// characters pushed into the line, fails if the word does not fit
     pub fn try_push_word(
         &mut self,
         presymbols: &[Presymbol],
         start_index: usize,
         clip_rectangle: &Rectangle<f32>,
-    ) -> usize {
+    ) -> Result<usize, ()> {
         todo!()
     }
 
-    /// Tries to fit a symbol into the text line, given an x_max value
-    pub fn try_push_symbol(&mut self, presymbols: &[Presymbol], start_index: usize) -> usize {
-        todo!()
+    /// Tries to fit a symbol into the text line, given an x_max value. Will return Err if the
+    /// symbol does not fit
+    pub fn try_push_symbol(&mut self, presymbol: &Presymbol) -> Result<(), TextLineBuilderError> {
+        let symbol_metrics = presymbol.symbol_info.symbol_metrics;
+        let additional_width_px =
+            self.previous_symbol_advance_width_px + symbol_metrics.x_shift + symbol_metrics.width;
+        if self.width_px + additional_width_px < self.clip_rectangle_width_px {
+            self.num_symbols += 1;
+            self.width_px += additional_width_px;
+
+            self.previous_symbol_advance_width_px =
+                symbol_metrics.advance_width - (symbol_metrics.x_shift + symbol_metrics.width);
+
+            Ok(())
+        } else {
+            if symbol_metrics.width > self.clip_rectangle_width_px {
+                Err(TextLineBuilderError::WidthError)
+            } else {
+                Err(TextLineBuilderError::CreateNewLine)
+            }
+        }
     }
+
+    /// Will force push the symbol to the end of the line, can cause clipping of text!
+    pub fn force_push_symbol(&mut self, presymbol: &Presymbol) {
+        // TODO
+    }
+
+    /// Creates a TextLine out of the TextLineBuilder
+    pub fn build(self, font_metrics_px: &PixelFontMetrics) -> TextLine {
+        TextLine {
+            range: self.start_index..self.start_index + self.num_symbols as usize,
+            viewport_px_dimensions: glam::IVec2::new(self.width_px, font_metrics_px.height),
+        }
+    }
+}
+
+#[derive(Clone)]
+/// Represents a line of text as it appears on screen, can contain either Presymbols or Symbols
+pub struct TextLine {
+    /// The symbols that are part of the line
+    pub range: Range<usize>,
+
+    /// The width of the line
+    pub viewport_px_dimensions: glam::IVec2,
 }
 
 /// A collection of text lines
@@ -58,41 +122,26 @@ impl TextLines {
         let mut lines = Vec::new();
 
         if presymbols.len() > 0 {
-            let mut origin = GlyphOrigin::at_top_left(&clip_rect, font_metrics_px);
-            let mut line_start_index = 0usize;
-            let mut line_min_x = origin.viewport_px_position.x;
-            let mut line_max_x = origin.viewport_px_position.x;
+            let mut builder = TextLineBuilder::new(0, clip_rectangle);
 
             for (index, presymbol) in presymbols.iter().enumerate() {
-                if origin.presymbol_fits_in_rect(&clip_rect, presymbol) {
-                    // tracking the new max width of the line
-                    line_max_x = origin.viewport_px_position.x
-                        + presymbol.symbol_info.symbol_metrics.x_shift
-                        + presymbol.symbol_info.symbol_metrics.width;
-                } else {
-                    // resetting the origin to the start of the line
-                    origin = GlyphOrigin::at_top_left(&clip_rect, font_metrics_px);
+                match builder.try_push_symbol(presymbol) {
+                    Ok(_) => continue,
+                    Err(TextLineBuilderError::CreateNewLine) => {
+                        lines.push(builder.build(font_metrics_px));
+                        builder = TextLineBuilder::new(index, clip_rectangle);
+                    }
+                    Err(TextLineBuilderError::WidthError) => {
+                        builder.force_push_symbol(presymbol);
 
-                    // calculating the new line x min
-                    line_min_x = origin.viewport_px_position.x;
-
-                    // pushing the line
-                    let line_end_index = index.checked_sub(1).unwrap_or(0);
-                    lines.push(TextLine::new(
-                        line_start_index..=line_end_index,
-                        glam::IVec2::new(line_max_x - line_min_x, font_metrics_px.height),
-                    ));
-                    line_start_index = index;
+                        lines.push(builder.build(font_metrics_px));
+                        builder = TextLineBuilder::new(index, clip_rectangle);
+                    }
                 }
-
-                origin.increment_by_presymbol(presymbol);
             }
 
             // pushing final line
-            lines.push(TextLine::new(
-                line_start_index..=presymbols.len() - 1,
-                glam::IVec2::new(line_max_x - line_min_x, font_metrics_px.height),
-            ));
+            lines.push(builder.build(font_metrics_px));
         }
 
         Self { lines }
