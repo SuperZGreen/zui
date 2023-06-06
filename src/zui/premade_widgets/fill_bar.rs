@@ -81,7 +81,9 @@ where
                 Colour::WHITE,
             ))
             .with_configuration(TextConfiguration {
-                size: TextSize::ParentHeight(1f32),
+                // TODO: once dynamic text sizing is readded, do this
+                // size: TextSize::ParentHeight(1f32),
+                size: TextSize::Pixels(32),
                 line_wrapping: LineWrapping::None,
                 horizontal_alignment: TextAlignmentHorizontal::Right,
                 vertical_alignment: TextAlignmentVertical::Centre,
@@ -89,20 +91,18 @@ where
             })
     }
 
+    /// Determines the new 'value' of the FillBar based on the cursor position
     fn determine_value(bar_rectangle: Rectangle<f32>, cursor_position: PhysicalPosition<f64>) -> T {
-        // TODOPX
-        // let bar_pixel_length = bar_rectangle.x_max - bar_rectangle.x_min;
-        // let mut bar_normalised_value =
-        //     (cursor_position.x - bar_rectangle.x_min) / bar_pixel_length;
-        // if bar_normalised_value < 0f32 {
-        //     bar_normalised_value = 0f32;
-        // } else if bar_normalised_value > 1f32 {
-        //     bar_normalised_value = 1f32;
-        // }
+        let bar_length_px = bar_rectangle.x_max - bar_rectangle.x_min;
+        let mut bar_normalised_value =
+            (cursor_position.x as f32 - bar_rectangle.x_min) / bar_length_px;
+        if bar_normalised_value < 0f32 {
+            bar_normalised_value = 0f32;
+        } else if bar_normalised_value > 1f32 {
+            bar_normalised_value = 1f32;
+        }
 
-        // (bar_normalised_value * 100f32).into()
-
-        todo!()
+        (bar_normalised_value * 100f32).into()
     }
 
     /// Sets the value if not already equal to current value, returns true if updated
@@ -112,19 +112,15 @@ where
         } else {
             self.text = Self::format_text(&value, self.range.end());
             if let Some(background_rectangle) = self.bar_background_rectangle {
-                // TODOPX
-                // self.text.update_layout(
-                //     context.font,
-                //     &background_rectangle,
-                //     context.aspect_ratio,
-                //     context.viewport_dimensions_px,
-                // );
-                // self.text.place_symbols(
-                //     context.font,
-                //     &background_rectangle,
-                //     context.aspect_ratio,
-                //     context.viewport_dimensions_px,
-                // );
+                self.text.fit_rectangle(
+                    context.font,
+                    &background_rectangle,
+                    context.viewport_dimensions_px,
+                );
+                self.text.place_symbols(
+                    context.font,
+                    &background_rectangle,
+                );
 
                 if let Some(foreground_rectangle) = &mut self.bar_foreground_rectangle {
                     let bar_position = Self::viewport_px_position_from_value(
@@ -178,10 +174,10 @@ where
         context: &Context,
     ) -> crate::zui::widget::EventResponse<Message> {
         match event {
-            crate::zui::Event::MouseEvent(MouseEvent::CursorMoved(screen_space_position)) => {
+            crate::zui::Event::MouseEvent(MouseEvent::CursorMoved(cursor_position_px)) => {
                 if let Some(bar_rectangle) = self.bar_background_rectangle {
                     if self.is_grabbed {
-                        let value = Self::determine_value(bar_rectangle, *screen_space_position);
+                        let value = Self::determine_value(bar_rectangle, *cursor_position_px);
                         return if self.try_update_value(value, context) {
                             EventResponse::Message((self.on_change)(&self.value))
                         } else {
@@ -189,8 +185,7 @@ where
                         };
                     }
 
-                    // TODOPX
-                    // self.cursor_is_over = bar_rectangle.is_in(*screen_space_position);
+                    self.cursor_is_over = bar_rectangle.is_in(cursor_position_px);
                 }
                 crate::zui::widget::EventResponse::Consumed
             }
@@ -237,20 +232,16 @@ where
                 );
                 self.bar_foreground_rectangle = Some(bar_foreground_rectangle);
 
-                // TODOPX
                 // regenerating text symbols
-                // self.text.update_layout(
-                //     context.font,
-                //     &clip_rectangle,
-                //     context.aspect_ratio,
-                //     context.viewport_dimensions_px,
-                // );
-                // self.text.place_symbols(
-                //     context.font,
-                //     &clip_rectangle,
-                //     context.aspect_ratio,
-                //     context.viewport_dimensions_px,
-                // );
+                self.text.fit_rectangle(
+                    context.font,
+                    &clip_rectangle,
+                    context.viewport_dimensions_px,
+                );
+                self.text.place_symbols(
+                    context.font,
+                    &clip_rectangle,
+                );
 
                 crate::zui::widget::EventResponse::Consumed
             }
@@ -279,15 +270,12 @@ where
         self.span_px = Some(match self.span {
             Span::FitContents => {
                 if let Some(clip_rectangle) = &self.clip_rectangle {
-                    // TODOPX
-                    // self.text.update_layout(
-                    //     context.font,
-                    //     clip_rectangle,
-                    //     context.aspect_ratio,
-                    //     context.viewport_dimensions_px,
-                    // );
-                    // self.text.screen_space_span(parent_axis).unwrap_or(0f32)
-                    0f32
+                    self.text.fit_rectangle(
+                        context.font,
+                        clip_rectangle,
+                        context.viewport_dimensions_px,
+                    );
+                    self.text.span_px(parent_axis).unwrap_or(0f32)
                 } else {
                     0f32
                 }
@@ -321,11 +309,10 @@ where
                 viewport_dimensions_px,
             ));
 
-            // TODOPX
-            // let mut text_verts = self
-            //     .text
-            //     .to_vertices(background_rectangle, viewport_dimensions_px);
-            // text_vertices.append(&mut text_verts);
+            let mut text_verts = self
+                .text
+                .to_vertices(background_rectangle, viewport_dimensions_px);
+            text_vertices.append(&mut text_verts);
         }
 
         if let Some(foreground_rectangle) = self.bar_foreground_rectangle {

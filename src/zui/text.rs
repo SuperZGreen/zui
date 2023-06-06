@@ -152,7 +152,7 @@ impl Text {
 
     /// Updates/places/caluclates the symbol dimensions and locations from the Text's TextSegments,
     /// performing line wrapping, alignment etc
-    pub fn place_symbols(&mut self, font: &Typeface, parent_rect: &Rectangle<f32>) {
+    pub fn place_symbols(&mut self, font: &Typeface, clip_rectangle: &Rectangle<f32>) {
         let layout = match &mut self.layout {
             Some(layout) => layout,
             None => return,
@@ -167,7 +167,7 @@ impl Text {
                 .horizontal_line_metrics(
                     self.configuration
                         .size
-                        .to_viewport_pixels(parent_rect.height()) as f32,
+                        .to_viewport_pixels(clip_rectangle.height()) as f32,
                 )
                 .unwrap(), // TODO
         );
@@ -177,12 +177,12 @@ impl Text {
 
         // repositioning origin for vertical alignment
         let mut origin = match self.configuration.vertical_alignment {
-            TextAlignmentVertical::Top => GlyphOrigin::at_top_left(parent_rect, &font_metrics_px),
+            TextAlignmentVertical::Top => GlyphOrigin::at_top_left(clip_rectangle, &font_metrics_px),
             TextAlignmentVertical::Centre => {
-                GlyphOrigin::at_centre_left(parent_rect, &font_metrics_px)
+                GlyphOrigin::at_centre_left(clip_rectangle, &font_metrics_px)
             }
             TextAlignmentVertical::Bottom => {
-                GlyphOrigin::at_bottom_left(parent_rect, &font_metrics_px)
+                GlyphOrigin::at_bottom_left(clip_rectangle, &font_metrics_px)
             }
         };
 
@@ -191,10 +191,10 @@ impl Text {
             let horizontal_offset = match self.configuration.horizontal_alignment {
                 TextAlignmentHorizontal::Left => 0i32,
                 TextAlignmentHorizontal::Centre => {
-                    ((parent_rect.width() - line.viewport_px_dimensions.x as f32) / 2f32) as i32
+                    ((clip_rectangle.width() - line.viewport_px_dimensions.x as f32) / 2f32) as i32
                 }
                 TextAlignmentHorizontal::Right => {
-                    parent_rect.width() as i32 - line.viewport_px_dimensions.x
+                    clip_rectangle.width() as i32 - line.viewport_px_dimensions.x
                 }
             };
 
@@ -203,7 +203,7 @@ impl Text {
                 self.symbols.push(origin.symbol_from_presymbol(presymbol));
                 origin.increment_by_presymbol(presymbol);
             }
-            origin.new_line(parent_rect, &font_metrics_px);
+            origin.new_line(clip_rectangle, &font_metrics_px);
         }
     }
 
