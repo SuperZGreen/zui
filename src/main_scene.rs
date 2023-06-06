@@ -1,9 +1,8 @@
 use crate::{
     zui::{
         premade_widgets::{Button, Container},
-        text::TextAlignmentVertical,
         Axis, Colour, Scene, Span, Text, TextAlignmentHorizontal, TextConfiguration, TextSegment, TextSize,
-        Widget,
+        Widget, text::TextAlignmentVertical,
     },
     SceneIdentifier, UiMessage,
 };

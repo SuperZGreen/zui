@@ -168,12 +168,12 @@ impl Scene for OptionsScene {
                                         Colour::WHITE,
                                     ))
                                     .push_segment(TextSegment {
-                                        string: String::from("PASSION"),
+                                        string: String::from("PASSION("),
                                         colour: Colour::LIGHT_YELLOW,
                                         style: FontStyle::Bold,
                                     })
                                     .push_segment(TextSegment::new(
-                                        "!",
+                                        "!)",
                                         Colour::WHITE,
                                     ))
                                     .with_configuration(TextConfiguration {

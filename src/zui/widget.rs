@@ -51,7 +51,8 @@ pub enum Span {
     ParentRatio(f32),
 
     //
-    //  Contents based sizes, dynamically resizes based on the size of the contents
+    //  Contents based sizes, dynamically resizes based on the size of the contents. This is text in
+    //  the case of a Container.
     //
     FitContents,
 }
