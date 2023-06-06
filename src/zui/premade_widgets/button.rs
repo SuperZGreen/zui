@@ -101,7 +101,7 @@ where
                 self.clip_rectangle = Some(*clip_rectangle);
 
                 if let Some(text) = &mut self.text {
-                    text.update_layout(
+                    text.fit_rectangle(
                         context.font,
                         clip_rectangle,
                         context.viewport_dimensions_px,
@@ -149,7 +149,7 @@ where
             Span::FitContents => {
                 if let Some(text) = &mut self.text {
                     if let Some(clip_rectangle) = &self.clip_rectangle {
-                        text.update_layout(
+                        text.fit_rectangle(
                             context.font,
                             clip_rectangle,
                             context.viewport_dimensions_px,

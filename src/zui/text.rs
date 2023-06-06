@@ -15,11 +15,7 @@ use super::{
 };
 
 pub use text_configuration::{
-    TextConfiguration,
-    LineWrapping,
-    TextAlignmentHorizontal,
-    TextAlignmentVertical,
-    TextSize
+    LineWrapping, TextAlignmentHorizontal, TextAlignmentVertical, TextConfiguration, TextSize,
 };
 
 #[derive(Clone)]
@@ -111,11 +107,11 @@ impl Text {
 
     /// Calculates the screen space dimensions of the text for a given clip rectangle, and generates
     /// presymbols
-    pub fn update_layout(
+    pub fn fit_rectangle(
         &mut self,
         font: &Typeface,
         clip_rectangle: &Rectangle<f32>,
-        _viewport_dimensions_px: PhysicalSize<u32>,
+        _viewport_dimensions_px: PhysicalSize<u32>, // TODO: will be used for other text heigh calculations (?)
     ) {
         // converting the line metrics of Fontdue to screen space
         let font_metrics_px = PixelFontMetrics::new(

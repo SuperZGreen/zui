@@ -230,7 +230,7 @@ where
             Event::FitRectangle((rectangle, context)) => {
                 self.clip_rectangle = Some(*rectangle);
                 if let Some(text) = &mut self.text {
-                    text.update_layout(context.font, &rectangle, context.viewport_dimensions_px);
+                    text.fit_rectangle(context.font, &rectangle, context.viewport_dimensions_px);
                     text.place_symbols(context.font, &rectangle);
                 }
                 self.update_child_rectangles(context);
@@ -306,7 +306,7 @@ where
         self.span_px = Some(match self.span {
             Span::FitContents => {
                 if let Some(text) = &mut self.text {
-                    text.update_layout(
+                    text.fit_rectangle(
                         context.font,
                         clip_rectangle,
                         context.viewport_dimensions_px,

@@ -144,13 +144,13 @@ impl Scene for OptionsScene {
                                         "This is some more text ",
                                         Colour::WHITE,
                                     ))
-                                    // .push_segment(TextSegment::new("This is my ", Colour::WHITE))
-                                    // .push_segment(TextSegment::new(
-                                    //     "FAVOURITE ",
-                                    //     Colour::rgb(0.7f32, 1f32, 0.7f32),
-                                    // ))
-                                    // .push_segment(TextSegment::new("text!", Colour::WHITE))
-                                    // .push_segment(TextSegment::new(&dummy_string, Colour::WHITE))
+                                    .push_segment(TextSegment::new("This is my ", Colour::WHITE))
+                                    .push_segment(TextSegment::new(
+                                        "FAVOURITE ",
+                                        Colour::rgb(0.7f32, 1f32, 0.7f32),
+                                    ))
+                                    .push_segment(TextSegment::new("text!", Colour::WHITE))
+                                    .push_segment(TextSegment::new(&dummy_string, Colour::WHITE))
                                     .with_configuration(TextConfiguration {
                                         size: TextSize::Pixels(Self::FONT_SIZE_NORMAL),
                                         ..Default::default()
