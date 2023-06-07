@@ -44,11 +44,13 @@ impl OptionsScene {
         let fill_bar = FillBar::new(range, value, true, on_change);
         let bar_container: Container<UiMessage> = Container::new()
             .with_span(Span::ParentWeight(3f32))
+            .with_background(Some(Colour::DARK_MAGENTA))
             .push(fill_bar);
 
         Container::new()
             .with_span(Span::ViewHeight(0.025f32))
             .with_axis(Axis::Horizontal)
+            .with_background(Some(Colour::DARK_GREEN))
             .push(
                 Container::new()
                     .with_span(Span::ParentWeight(1f32))

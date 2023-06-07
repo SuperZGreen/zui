@@ -31,8 +31,10 @@ pub struct FillBar<'a, T, Message> {
     cursor_is_over: bool,
     is_grabbed: bool,
 
+    /// Acts as both the clip rectangle and the background rectangle of the FillBar
     clip_rectangle: Option<Rectangle<f32>>,
-    bar_background_rectangle: Option<Rectangle<f32>>,
+    
+    /// The foreground of the FillBar, used to render the foreground colour of the bar
     bar_foreground_rectangle: Option<Rectangle<f32>>,
 
     span: Span,
@@ -61,7 +63,6 @@ where
             cursor_is_over: false,
             is_grabbed: false,
             clip_rectangle: None,
-            bar_background_rectangle: None,
             bar_foreground_rectangle: None,
             span: Span::ParentWeight(1f32),
             span_px: None,
@@ -111,21 +112,21 @@ where
             false
         } else {
             self.text = Self::format_text(&value, self.range.end());
-            if let Some(background_rectangle) = self.bar_background_rectangle {
+            if let Some(clip_rectangle) = self.clip_rectangle {
                 self.text.fit_rectangle(
                     context.font,
-                    &background_rectangle,
+                    &clip_rectangle,
                     context.viewport_dimensions_px,
                 );
                 self.text.place_symbols(
                     context.font,
-                    &background_rectangle,
+                    &clip_rectangle,
                 );
 
                 if let Some(foreground_rectangle) = &mut self.bar_foreground_rectangle {
                     let bar_position = Self::viewport_px_position_from_value(
                         &self.range,
-                        background_rectangle,
+                        clip_rectangle,
                         &value,
                     );
                     foreground_rectangle.x_max = bar_position;
@@ -175,9 +176,9 @@ where
     ) -> crate::zui::widget::EventResponse<Message> {
         match event {
             crate::zui::Event::MouseEvent(MouseEvent::CursorMoved(cursor_position_px)) => {
-                if let Some(bar_rectangle) = self.bar_background_rectangle {
+                if let Some(clip_rectangle) = self.clip_rectangle {
                     if self.is_grabbed {
-                        let value = Self::determine_value(bar_rectangle, *cursor_position_px);
+                        let value = Self::determine_value(clip_rectangle, *cursor_position_px);
                         return if self.try_update_value(value, context) {
                             EventResponse::Message((self.on_change)(&self.value))
                         } else {
@@ -185,18 +186,18 @@ where
                         };
                     }
 
-                    self.cursor_is_over = bar_rectangle.is_in(cursor_position_px);
+                    self.cursor_is_over = clip_rectangle.is_in(cursor_position_px);
                 }
                 crate::zui::widget::EventResponse::Consumed
             }
 
             crate::zui::Event::MouseEvent(MouseEvent::ButtonPressed) => {
-                if let Some(bar_rectangle) = self.bar_background_rectangle {
+                if let Some(clip_rectangle) = self.clip_rectangle {
                     if self.cursor_is_over {
                         self.is_grabbed = true;
 
                         if let Some(cursor_position) = context.cursor_position {
-                            let value = Self::determine_value(bar_rectangle, cursor_position);
+                            let value = Self::determine_value(clip_rectangle, cursor_position);
 
                             return if self.try_update_value(value, context) {
                                 EventResponse::Message((self.on_change)(&self.value))
@@ -221,7 +222,6 @@ where
 
             crate::zui::Event::FitRectangle((clip_rectangle, context)) => {
                 self.clip_rectangle = Some(*clip_rectangle);
-                self.bar_background_rectangle = Some(*clip_rectangle);
 
                 // sizing the foreground bar
                 let mut bar_foreground_rectangle = *clip_rectangle;
@@ -302,16 +302,16 @@ where
         let mut simple_vertices = Vec::new();
         let mut text_vertices = Vec::new();
 
-        if let Some(background_rectangle) = self.bar_background_rectangle {
+        if let Some(clip_rectangle) = self.clip_rectangle {
             simple_vertices.extend_from_slice(&SimpleVertex::from_rectangle(
-                background_rectangle,
+                clip_rectangle,
                 self.back_colour,
                 viewport_dimensions_px,
             ));
 
             let mut text_verts = self
                 .text
-                .to_vertices(background_rectangle, viewport_dimensions_px);
+                .to_vertices(clip_rectangle, viewport_dimensions_px);
             text_vertices.append(&mut text_verts);
         }
 
