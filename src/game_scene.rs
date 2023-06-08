@@ -1,12 +1,12 @@
 use crate::{
     zui::{
-        premade_widgets::Container, Axis, Colour, Scene, Span, Text, TextConfiguration,
-        TextSegment, TextSize, Widget,
+        font::FontStyle, premade_widgets::Container, Axis, Colour, LineWrapping, Scene, Span, Text,
+        TextConfiguration, TextSegment, TextSize, Widget,
     },
     UiMessage,
 };
 
-use std::default::{self, Default};
+use std::default::Default;
 
 pub struct GameScene {
     // TODO
@@ -36,10 +36,12 @@ impl Scene for GameScene {
             .push_segment(TextSegment::new("Hello", Colour::WHITE));
 
         let left_container = Container::new()
-            .with_background(Some(Colour::rgb(1f32, 0f32, 0.5f32)))
-            .push(Container::new().with_background(Some(Colour::WHITE)))
-            .push(Container::new().with_background(Some(Colour::WHITE)))
-            .push(Container::new().with_background(Some(Colour::WHITE)));
+            .with_background(Some(Colour::LIGHT_GREY))
+            .with_text(Text::new().push_segment(TextSegment {
+                string: String::from("This is some test text. There will be a lot of test text to go here just for fun I think. Maybe not so much!"),
+                colour: Colour::DARK_MAGENTA,
+                style: FontStyle::Italic,
+            }).with_configuration(TextConfiguration {line_wrapping: LineWrapping::Word, ..Default::default()}));
 
         let right_container = Container::new()
             .with_background(Some(Colour::rgb(0f32, 0.5f32, 1f32)))

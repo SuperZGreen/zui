@@ -220,7 +220,7 @@ where
                 crate::zui::widget::EventResponse::Consumed
             }
 
-            crate::zui::Event::FitRectangle((clip_rectangle, context)) => {
+            crate::zui::Event::FitRectangle(clip_rectangle) => {
                 self.clip_rectangle = Some(*clip_rectangle);
 
                 // sizing the foreground bar

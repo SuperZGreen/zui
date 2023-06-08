@@ -170,13 +170,12 @@ pub enum WindowEvent {
 }
 
 #[derive(Debug)]
-pub enum Event<'a> {
+pub enum Event {
     /// An event that involves mouse interaction
     MouseEvent(MouseEvent),
 
     /// The widget is commanded to fit the provided rectangle
-    // TODO: remove Context from this
-    FitRectangle((Rectangle<f32>, &'a Context<'a>)),
+    FitRectangle(Rectangle<f32>),
 }
 
 pub enum EventResponse<Message> {

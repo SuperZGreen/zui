@@ -205,7 +205,7 @@ where
             // updating accumulator
             used_span_pixels_accumulator += child_span_px;
 
-            child.handle_event(&Event::FitRectangle((child_rectangle, context)), context);
+            child.handle_event(&Event::FitRectangle(child_rectangle), context);
         }
     }
 
@@ -225,13 +225,17 @@ impl<Message> Widget<Message> for Container<Message>
 where
     Message: Clone + Copy,
 {
-    fn handle_event(&mut self, event: &Event, _context: &Context) -> EventResponse<Message> {
+    fn handle_event(&mut self, event: &Event, context: &Context) -> EventResponse<Message> {
         match event {
             Event::MouseEvent(_) => EventResponse::Propagate,
-            Event::FitRectangle((rectangle, context)) => {
+            Event::FitRectangle(rectangle) => {
                 self.clip_rectangle = Some(*rectangle);
                 if let Some(text) = &mut self.text {
-                    text.fit_rectangle(context.font, &rectangle, context.viewport_dimensions_px);
+                    // preventing the double text.fit_rectangle call for containers with
+                    // Span::FitContents TODO: This should be resolved in a more graceful way
+                    if !matches!(self.span, Span::FitContents) {
+                        text.fit_rectangle(context.font, &rectangle, context.viewport_dimensions_px);
+                    }
                     text.place_symbols(context.font, &rectangle);
                 }
                 self.update_child_rectangles(context);

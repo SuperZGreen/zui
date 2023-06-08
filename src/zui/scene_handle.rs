@@ -69,20 +69,25 @@ where
         // recreating widgets
         self.root_widget = Some(self.scene.view(context.aspect_ratio));
 
-        // updating widget rectangles
-        // self.resize_widgets(context);
-        self.root_widget.as_mut().unwrap().handle_event(
-            &Event::FitRectangle((
-                Rectangle::new(
-                    0f32,
-                    context.viewport_dimensions_px.width as f32,
-                    0f32,
-                    context.viewport_dimensions_px.height as f32,
-                ),
-                &context,
-            )),
-            &context,
+        let root_widget = self.root_widget.as_mut().unwrap();
+
+        let clip_rectangle = Rectangle::new(
+            0f32,
+            context.viewport_dimensions_px.width as f32,
+            0f32,
+            context.viewport_dimensions_px.height as f32,
         );
+
+        // updating span_px so that text layout for the root widget will be updated
+        root_widget.update_viewport_span_px(
+            &clip_rectangle,
+            root_widget.axis(),
+            None,
+            None,
+            context,
+        );
+
+        root_widget.handle_event(&Event::FitRectangle(clip_rectangle), context);
 
         self.widget_recreation_required = false;
     }
@@ -91,14 +96,11 @@ where
     pub fn resize_scene(&mut self, context: &Context) {
         if let Some(root_widget) = &mut self.root_widget {
             root_widget.handle_event(
-                &Event::FitRectangle((
-                    Rectangle::new(
-                        0f32,
-                        context.viewport_dimensions_px.width as f32,
-                        0f32,
-                        context.viewport_dimensions_px.height as f32,
-                    ),
-                    &context,
+                &Event::FitRectangle(Rectangle::new(
+                    0f32,
+                    context.viewport_dimensions_px.width as f32,
+                    0f32,
+                    context.viewport_dimensions_px.height as f32,
                 )),
                 &context,
             );

@@ -75,7 +75,7 @@ where
     fn handle_event(
         &mut self,
         event: &Event,
-        _context: &Context,
+        context: &Context,
     ) -> zui::widget::EventResponse<Message> {
         match event {
             Event::MouseEvent(MouseEvent::CursorExitedWindow) => {
@@ -97,7 +97,7 @@ where
                 }
             }
 
-            crate::zui::widget::Event::FitRectangle((clip_rectangle, context)) => {
+            crate::zui::widget::Event::FitRectangle(clip_rectangle) => {
                 self.clip_rectangle = Some(*clip_rectangle);
 
                 if let Some(text) = &mut self.text {

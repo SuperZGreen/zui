@@ -8,6 +8,9 @@ pub struct Colour {
 
 impl Colour {
     pub const WHITE: Self = Self {r: 1f32, g: 1f32, b: 1f32, a: 1f32};
+    pub const LIGHT_GREY: Self = Self {r: 0.75f32, g:0.75f32, b: 0.75f32, a: 1f32};
+    pub const GREY: Self = Self {r: 0.5f32, g: 0.5f32, b: 0.5f32, a: 1f32};
+    pub const DARK_GREY: Self = Self {r: 0.25f32, g:0.25f32, b: 0.25f32, a: 1f32};
     pub const BLACK: Self = Self {r: 0f32, g: 0f32, b: 0f32, a: 1f32};
     
     pub const LIGHT_RED: Self = Self {r: 1f32, g: 0.5f32, b: 0.5f32, a: 1f32};
