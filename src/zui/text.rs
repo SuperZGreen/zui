@@ -394,31 +394,30 @@ impl<'a> Iterator for PresymbolWords<'a> {
     type Item = &'a [Presymbol];
 
     fn next(&mut self) -> Option<Self::Item> {
-        let mut index = self.index;
-        loop {
-            let presymbol = match self.presymbols.get(index) {
-                Some(presymbol) => presymbol,
-                None => {
-                    if self.index == index {
-                        return None;
-                    } else {
-                        let final_word_slice = &self.presymbols[self.index..index];
-                        self.index = index;
+        let start_index = self.index;
+        let mut index = start_index;
 
-                        return Some(final_word_slice);
-                    }
-                }
-            };
+        let remaining_presymbols = &self.presymbols[start_index..];
 
+        // if the iterator has finished
+        if remaining_presymbols.len() == 0 {
+            return None;
+        }
+
+        // can return middle words
+        for presymbol in self.presymbols[start_index..].iter() {
             if presymbol.contains_breakable_character() {
-                let word_slice = &self.presymbols[self.index..index + 1];
                 self.index = index + 1;
 
-                return Some(word_slice);
+                return Some(&self.presymbols[start_index..index + 1]);
+            } else {
+                index += 1;
             }
-            
-            index += 1;
         }
+
+        // will return final word
+        self.index = index;
+        Some(&self.presymbols[start_index..index])
     }
 }
 
