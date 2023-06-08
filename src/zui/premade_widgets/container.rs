@@ -137,7 +137,8 @@ where
     pub fn update_child_rectangles(&mut self, context: &Context) {
         let self_clip_rectangle = self.clip_rectangle.unwrap();
 
-        // updating the child screen spaces
+        // updating the child screen spaces, setting children with spans that are Span::ParentWeight
+        // to 0
         for child in &mut self.children {
             child.update_viewport_span_px(&self_clip_rectangle, self.axis, None, None, context);
         }

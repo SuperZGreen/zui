@@ -5,7 +5,7 @@ use crate::{
         font::FontStyle,
         premade_widgets::{Button, Container, FillBar},
         text::TextAlignmentVertical,
-        Axis, Colour, Scene, Span, Text, TextConfiguration, TextSegment, TextSize, Widget,
+        Axis, Colour, Scene, Span, Text, TextConfiguration, TextSegment, TextSize, Widget, LineWrapping,
     },
     OptionsMenuMessage, SceneIdentifier, UiMessage,
 };
@@ -41,7 +41,11 @@ impl OptionsScene {
     {
         let text = Text::new().push_segment(TextSegment::new(name, Colour::WHITE));
 
-        let fill_bar = FillBar::new(range, value, true, on_change);
+        let fill_bar =
+            // TODO: this breaks when span is set to Span::ParentWeight(1f32), as background pixels
+            // are visible
+            FillBar::new(range, value, true, on_change).with_span(Span::ParentRatio(1f32));
+
         let bar_container: Container<UiMessage> = Container::new()
             .with_span(Span::ParentWeight(3f32))
             .with_background(Some(Colour::DARK_MAGENTA))
@@ -134,6 +138,11 @@ impl Scene for OptionsScene {
                                         style: FontStyle::Bold,
                                     })
                                     .push_segment(TextSegment {
+                                        string: String::from("ThisIsAReallyReallyMassiveWordThatJust-Doesn'tEndAndWillProbablyBreakTheTextFormatting"),
+                                        colour: Colour::LIGHT_RED,
+                                        style: FontStyle::Bold,
+                                    })
+                                    .push_segment(TextSegment {
                                         string: String::from("This is ITALIC. "),
                                         colour: Colour::WHITE,
                                         style: FontStyle::Italic,
@@ -155,6 +164,7 @@ impl Scene for OptionsScene {
                                     .push_segment(TextSegment::new(&dummy_string, Colour::WHITE))
                                     .with_configuration(TextConfiguration {
                                         size: TextSize::Pixels(Self::FONT_SIZE_NORMAL),
+                                        line_wrapping: LineWrapping::Word,
                                         ..Default::default()
                                     }),
                             ),
@@ -174,10 +184,7 @@ impl Scene for OptionsScene {
                                         colour: Colour::LIGHT_YELLOW,
                                         style: FontStyle::Bold,
                                     })
-                                    .push_segment(TextSegment::new(
-                                        "!)",
-                                        Colour::WHITE,
-                                    ))
+                                    .push_segment(TextSegment::new("!)", Colour::WHITE))
                                     .with_configuration(TextConfiguration {
                                         size: TextSize::Pixels(Self::FONT_SIZE_LARGE),
                                         ..Default::default()

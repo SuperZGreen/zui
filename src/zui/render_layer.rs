@@ -1,5 +1,8 @@
 use super::{primitives::Rectangle, simple_renderer::SimpleVertex, text_renderer::TextVertex};
 
+/// A layer the contains vertices of different types, that will be rendered on top of other layers.
+/// The layer also may contain a clipping rectangle, which will prevent contents outside of this
+/// rectangle from being rendered
 pub struct RenderLayer {
     /// The SimpleVertices that will be rendered on this layer
     pub simple_vertices: Vec<SimpleVertex>,

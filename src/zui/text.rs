@@ -2,6 +2,8 @@ mod glyph_origin;
 mod text_configuration;
 mod text_line;
 
+use std::collections::btree_map::Iter;
+
 use glyph_origin::GlyphOrigin;
 use text_line::TextLines;
 
@@ -107,6 +109,7 @@ impl Text {
 
     /// Calculates the screen space dimensions of the text for a given clip rectangle, and generates
     /// presymbols
+    // TODO: Note that this hits twice due to containers Span::FitContents behaviour
     pub fn fit_rectangle(
         &mut self,
         font: &Typeface,
@@ -177,7 +180,9 @@ impl Text {
 
         // repositioning origin for vertical alignment
         let mut origin = match self.configuration.vertical_alignment {
-            TextAlignmentVertical::Top => GlyphOrigin::at_top_left(clip_rectangle, &font_metrics_px),
+            TextAlignmentVertical::Top => {
+                GlyphOrigin::at_top_left(clip_rectangle, &font_metrics_px)
+            }
             TextAlignmentVertical::Centre => {
                 GlyphOrigin::at_centre_left(clip_rectangle, &font_metrics_px)
             }
@@ -351,6 +356,70 @@ pub struct Presymbol {
     pub colour: Colour,
     /// The symbol info of the presymbol, giving its metrics and uv region
     pub symbol_info: SymbolInfo,
+}
+
+impl Presymbol {
+    /// Creates a new PresymbolWords struct for iterating through the words of a presymbol slice.
+    /// This is used mainly for word based line wrapping
+    pub fn words<'a>(presymbols: &'a [Presymbol]) -> PresymbolWords<'a> {
+        PresymbolWords::new(presymbols)
+    }
+
+    /// Returns true if the presymbol contains a character that should be broken after, when using
+    /// LineWrapping::Word
+    pub fn contains_breakable_character(&self) -> bool {
+        match self.character {
+            ' ' | '-' | '\n' | '\t' => true,
+            _ => false,
+        }
+    }
+}
+
+/// Struct for iterating through the words of a presymbol slice
+pub struct PresymbolWords<'a> {
+    presymbols: &'a [Presymbol],
+    index: usize,
+}
+
+impl<'a> PresymbolWords<'a> {
+    pub fn new(presymbols: &'a [Presymbol]) -> Self {
+        Self {
+            presymbols,
+            index: 0,
+        }
+    }
+}
+
+impl<'a> Iterator for PresymbolWords<'a> {
+    type Item = &'a [Presymbol];
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut index = self.index;
+        loop {
+            let presymbol = match self.presymbols.get(index) {
+                Some(presymbol) => presymbol,
+                None => {
+                    if self.index == index {
+                        return None;
+                    } else {
+                        let final_word_slice = &self.presymbols[self.index..index];
+                        self.index = index;
+
+                        return Some(final_word_slice);
+                    }
+                }
+            };
+
+            if presymbol.contains_breakable_character() {
+                let word_slice = &self.presymbols[self.index..index + 1];
+                self.index = index + 1;
+
+                return Some(word_slice);
+            }
+            
+            index += 1;
+        }
+    }
 }
 
 /// The viewport pixel font/line metrics of a font at a certain size
