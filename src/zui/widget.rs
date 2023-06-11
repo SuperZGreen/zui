@@ -2,10 +2,10 @@ use rustc_hash::FxHashSet;
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 
 use super::{
-    render_layer::RenderLayer, simple_renderer::SimpleVertex, text_renderer::TextVertex, Rectangle,
-    ScreenSpacePosition, Typeface, font::SymbolKey,
+    font::SymbolKey, render_layer::RenderLayer, simple_renderer::SimpleVertex,
+    text_renderer::TextVertex, Rectangle, ScreenSpacePosition, Typeface,
 };
-use std::collections::{VecDeque, HashSet};
+use std::collections::{HashSet, VecDeque};
 
 use crate::zui::Context;
 
@@ -28,16 +28,22 @@ impl Axis {
 #[allow(dead_code)]
 pub enum Span {
     //
-    //  Absolute Sizes
+    //  Fixed Spans: can be calculated given some environmental constants (viewport dimensions),
+    //               and the Span value itself
     //
-    /// Size as a portion of the view height, ie. the height of the application window surface is 1
+    /// Fixed Span, Size as a portion of the view height, ie. the height of the application window
+    /// surface is 1
     ViewWidth(f32),
 
-    /// Size as a portion of the view width, ie. the width of the application window surface is 1
+    /// Fixed Span: Size as a portion of the view width, ie. the width of the application window
+    /// surface is 1
     ViewHeight(f32),
 
-    /// Relative size with respect to the minimum dimension of the wgpu viewport
+    /// Fixed Span: Relative size with respect to the minimum dimension of the wgpu viewport
     ViewMin(f32),
+
+    /// Fixed Span: The length in pixels of the Span
+    Pixels(f32),
 
     // TODO: ViewMax?
 
@@ -59,51 +65,36 @@ pub enum Span {
 }
 
 impl Span {
-    pub fn view_min_to_viewport_px(
+    pub fn view_min_to_span_px(
         view_min: f32,
-        aspect_ratio: f32,
-        parent_widget_axis: Axis,
         viewport_dimensions_px: PhysicalSize<u32>,
     ) -> f32 {
-        if aspect_ratio < 1f32 {
-            Self::view_width_to_viewport_px(
+        if viewport_dimensions_px.width < viewport_dimensions_px.height {
+            Self::view_width_to_span_px(
                 view_min,
-                aspect_ratio,
-                parent_widget_axis,
-                viewport_dimensions_px,
+                viewport_dimensions_px.width,
             )
         } else {
-            Self::view_height_to_viewport_px(
+            Self::view_height_to_span_px(
                 view_min,
-                aspect_ratio,
-                parent_widget_axis,
-                viewport_dimensions_px,
+                viewport_dimensions_px.height,
             )
         }
     }
 
-    pub fn view_height_to_viewport_px(
+    pub fn view_height_to_span_px(
         view_height: f32,
-        aspect_ratio: f32,
-        parent_widget_axis: Axis,
-        viewport_dimensions_px: PhysicalSize<u32>,
+        viewport_height_px: u32,
     ) -> f32 {
-        match parent_widget_axis {
-            Axis::Vertical => view_height * viewport_dimensions_px.height as f32,
-            Axis::Horizontal => view_height / aspect_ratio * viewport_dimensions_px.width as f32,
-        }
+        view_height as f32 * viewport_height_px as f32
     }
 
-    pub fn view_width_to_viewport_px(
+    pub fn view_width_to_span_px(
         view_width: f32,
-        aspect_ratio: f32,
-        parent_widget_axis: Axis,
-        viewport_dimensions_px: PhysicalSize<u32>,
+        // The width of the viewport in pixels
+        viewport_width_px: u32,
     ) -> f32 {
-        match parent_widget_axis {
-            Axis::Vertical => view_width * viewport_dimensions_px.height as f32 * aspect_ratio,
-            Axis::Horizontal => view_width * viewport_dimensions_px.width as f32,
-        }
+        view_width as f32 * viewport_width_px as f32
     }
 
     /// Converts the span into a pixel span value given context and parent widget region and axis
@@ -118,24 +109,19 @@ impl Span {
         fit_contents_span_px: f32,
     ) -> f32 {
         match self {
-            Span::ViewWidth(vw) => Self::view_width_to_viewport_px(
+            Span::ViewWidth(vw) => Self::view_width_to_span_px(
                 *vw,
-                context.aspect_ratio,
-                parent_axis,
-                context.viewport_dimensions_px,
+                context.viewport_dimensions_px.width,
             ),
-            Span::ViewHeight(vh) => Self::view_height_to_viewport_px(
+            Span::ViewHeight(vh) => Self::view_height_to_span_px(
                 *vh,
-                context.aspect_ratio,
-                parent_axis,
-                context.viewport_dimensions_px,
+                context.viewport_dimensions_px.height,
             ),
-            Span::ViewMin(vm) => Self::view_min_to_viewport_px(
+            Span::ViewMin(vm) => Self::view_min_to_span_px(
                 *vm,
-                context.aspect_ratio,
-                parent_axis,
                 context.viewport_dimensions_px,
             ),
+            Span::Pixels(px) => *px,
             Span::ParentWeight(pw) => {
                 if sum_of_parent_weights.is_none() || parent_span_px_available.is_none() {
                     0f32
@@ -143,10 +129,21 @@ impl Span {
                     *pw / sum_of_parent_weights.unwrap() * parent_span_px_available.unwrap() as f32
                 }
             }
-            Span::ParentRatio(ratio) => {
-                *ratio * parent_rectangle.span_by_axis(parent_axis) as f32
-            }
+            Span::ParentRatio(ratio) => *ratio * parent_rectangle.span_by_axis(parent_axis) as f32,
             Span::FitContents => fit_contents_span_px,
+        }
+    }
+    
+    /// Converts fixed type Spans to f32 viewport pixels
+    pub fn fixed_span_to_span_px(&self, axis: Axis, viewport_dimensions_px: PhysicalSize<u32>) -> Option<f32> {
+        match self {
+            Span::ViewWidth(vw) => todo!(),
+            Span::ViewHeight(_) => todo!(),
+            Span::ViewMin(_) => todo!(),
+            Span::Pixels(_) => todo!(),
+            Span::ParentWeight(_) => todo!(),
+            Span::ParentRatio(_) => todo!(),
+            Span::FitContents => todo!(),
         }
     }
 }
@@ -177,7 +174,6 @@ pub enum Event {
 
     /// The widget is commanded to fit the provided rectangle
     FitRectangle(Rectangle<f32>),
-
 }
 
 pub enum EventResponse<Message> {
@@ -196,7 +192,7 @@ pub trait Widget<Message> {
     fn handle_event(&mut self, event: &Event, context: &Context) -> EventResponse<Message> {
         EventResponse::Propagate
     }
-    
+
     /// Gives the children of the [`Widget`] as a slice
     fn children(&self) -> &[Box<(dyn Widget<Message>)>] {
         &[]
@@ -248,7 +244,7 @@ pub trait Widget<Message> {
             child.collect_text(symbol_keys);
         }
     }
-    
+
     /// Returns the vertices necessary to render a widget, will append a new RenderLayer to
     /// render_layers to allow for a new clipping region when overflowing. This is not normally
     /// required by widgets that do not have nested children/do not have grand-children that may
