@@ -1,10 +1,11 @@
+use rustc_hash::FxHashSet;
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 
 use super::{
     render_layer::RenderLayer, simple_renderer::SimpleVertex, text_renderer::TextVertex, Rectangle,
-    ScreenSpacePosition,
+    ScreenSpacePosition, Typeface, font::SymbolKey,
 };
-use std::collections::VecDeque;
+use std::collections::{VecDeque, HashSet};
 
 use crate::zui::Context;
 
@@ -176,6 +177,7 @@ pub enum Event {
 
     /// The widget is commanded to fit the provided rectangle
     FitRectangle(Rectangle<f32>),
+
 }
 
 pub enum EventResponse<Message> {
@@ -194,12 +196,15 @@ pub trait Widget<Message> {
     fn handle_event(&mut self, event: &Event, context: &Context) -> EventResponse<Message> {
         EventResponse::Propagate
     }
+    
+    /// Gives the children of the [`Widget`] as a slice
+    fn children(&self) -> &[Box<(dyn Widget<Message>)>] {
+        &[]
+    }
 
-    /// A mutable iterator for all direct children, used for propagating events
-    fn children_iter_mut(
-        &mut self,
-    ) -> Option<std::slice::IterMut<'_, Box<(dyn Widget<Message> + 'static)>>> {
-        None
+    /// Gives the children of the [`Widget`] as a mutable slice
+    fn children_mut(&mut self) -> &mut [Box<(dyn Widget<Message>)>] {
+        &mut []
     }
 
     /// Returns the clipping rectangle of the widget
@@ -233,6 +238,17 @@ pub trait Widget<Message> {
         Axis::Vertical
     }
 
+    /// Widgets insert all characters (SymbolKeys) that they will need to render their Text, and
+    /// propogates the call to their children. This is to ensure that the font system has the
+    /// required characters rasterised and ready to render when text Presymbols are generated
+    fn collect_text(&self, symbol_keys: &mut FxHashSet<SymbolKey>) {
+        // Note: not collecting own text by default!
+
+        for child in self.children().iter() {
+            child.collect_text(symbol_keys);
+        }
+    }
+    
     /// Returns the vertices necessary to render a widget, will append a new RenderLayer to
     /// render_layers to allow for a new clipping region when overflowing. This is not normally
     /// required by widgets that do not have nested children/do not have grand-children that may

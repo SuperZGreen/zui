@@ -87,7 +87,7 @@ where
             context,
         );
 
-        root_widget.handle_event(&Event::FitRectangle(clip_rectangle), context);
+        root_widget.handle_event(&mut Event::FitRectangle(clip_rectangle), context);
 
         self.widget_recreation_required = false;
     }
@@ -96,7 +96,7 @@ where
     pub fn resize_scene(&mut self, context: &Context) {
         if let Some(root_widget) = &mut self.root_widget {
             root_widget.handle_event(
-                &Event::FitRectangle(Rectangle::new(
+                &mut Event::FitRectangle(Rectangle::new(
                     0f32,
                     context.viewport_dimensions_px.width as f32,
                     0f32,
@@ -126,9 +126,9 @@ where
     }
 
     /// Passes a certain event to the scene to be propageed through the widget tree
-    pub fn handle_event(&mut self, event: Event, context: &Context) {
+    pub fn handle_event(&mut self, mut event: Event, context: &Context) {
         if let Some(root_widget) = &mut self.root_widget {
-            Self::handle_event_recursively(root_widget, &event, context, &mut self.messages);
+            Self::handle_event_recursively(root_widget, &mut event, context, &mut self.messages);
         }
     }
 
@@ -138,7 +138,7 @@ where
         widget: &mut Box<dyn Widget<Message>>,
 
         // The event for the Widget to handle
-        event: &Event,
+        event: &mut Event,
 
         // The event Context (mouse position, aspect ratio, fonts, etc)
         context: &Context,
@@ -154,10 +154,8 @@ where
                 result_messages.push_back(message);
             }
             EventResponse::Propagate => {
-                if let Some(children_iter_mut) = widget.children_iter_mut() {
-                    for child in children_iter_mut {
-                        Self::handle_event_recursively(child, event, context, result_messages);
-                    }
+                for child in widget.children_mut().iter_mut() {
+                    Self::handle_event_recursively(child, event, context, result_messages);
                 }
             }
         }

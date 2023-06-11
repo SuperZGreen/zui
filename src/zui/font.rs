@@ -1,13 +1,13 @@
 use std::path::PathBuf;
 
 use image::{DynamicImage, ImageBuffer, Luma};
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::{primitives::Rectangle, texture_atlas::TextureAtlas};
 use crate::zui::texture_atlas::TextureAtlasBuilder;
 
 /// The identifying information for a character rasterised at a specific size
-#[derive(Hash, Eq, PartialEq)]
+#[derive(Copy, Clone, Hash, Eq, PartialEq)]
 pub struct SymbolKey {
     /// The character that the symbol represents
     pub character: char,
@@ -77,14 +77,24 @@ impl SymbolMetrics {
 
 /// A font that is available and rasterised in the TextureAtlas
 struct RasterisedFont {
-    style: FontStyle,    
+    style: FontStyle,
     size_px: u32,
 }
 
 /// Contains the fonts and rasterised glyphs for a typeface, useful in rendering text to the screen
 pub struct Typeface {
+    /// A map of symbol keys to symbol infos, which provides the metrics and uv coordinates for a
+    /// glyph
     symbols: FxHashMap<SymbolKey, SymbolInfo>,
-    
+
+    /// The symbols that have been requested by the user. This is where the required symbols are
+    /// gathered before they are packed
+    requested_symbols: FxHashSet<SymbolKey>,
+
+    /// This will be true if there are new symbols that are requested to be rasterised, that have
+    /// not previously been rasterised
+    new_symbols_to_rasterise: bool,
+
     /// The available RasterisedFonts for the TypeFace, ie the size & style of a typeface that can
     /// be drawn
     rasterised_fonts: Vec<RasterisedFont>,
@@ -144,14 +154,15 @@ impl Typeface {
         font_italic_file_path: Option<&str>,
     ) -> Result<Self, ()> {
         // getting all fonts from files
-        let font_regular = font_regular_file_path.map(|fp| Self::fontdue_font_from_file(fp).unwrap());
+        let font_regular =
+            font_regular_file_path.map(|fp| Self::fontdue_font_from_file(fp).unwrap());
         let font_bold = font_bold_file_path.map(|fp| Self::fontdue_font_from_file(fp).unwrap());
         let font_italic = font_italic_file_path.map(|fp| Self::fontdue_font_from_file(fp).unwrap());
 
-        let symbols = FxHashMap::default();
-
         Ok(Self {
-            symbols,
+            symbols: FxHashMap::default(),
+            requested_symbols: FxHashSet::default(),
+            new_symbols_to_rasterise: false,
             rasterised_fonts: Vec::new(),
             texture_atlas: None,
             font_regular,
@@ -194,7 +205,7 @@ impl Typeface {
                     continue;
                 }
             };
-            
+
             // reserving space for the new characters
             rasterisation_info.reserve(font.chars().len());
 
@@ -223,18 +234,107 @@ impl Typeface {
         for (texture_atlas_index, symbol_key, symbol_metrics) in rasterisation_info {
             let symbol_info = SymbolInfo {
                 symbol_metrics,
-                uv_region: texture_atlas.as_ref().unwrap().get(texture_atlas_index).unwrap().uv_region,
+                uv_region: texture_atlas
+                    .as_ref()
+                    .unwrap()
+                    .get(texture_atlas_index)
+                    .unwrap()
+                    .uv_region,
             };
 
             self.symbols.insert(symbol_key, symbol_info);
         }
-        
+
         self.texture_atlas = texture_atlas;
     }
 
     /// Gets the SymbolInfo and top-left, bottom-right UVs for a symbol
-    pub fn get_symbol(&self, symbol_key: SymbolKey) -> Option<SymbolInfo> {
+    pub fn get_symbol(& self, symbol_key: SymbolKey) -> Option<SymbolInfo> {
         let symbol_info = self.symbols.get(&symbol_key)?;
         Some(*symbol_info)
+    }
+
+    /// Requests a symbol to be rasterised, which will happen when try_rasterise is called
+    pub fn request_rasterise_symbol(&mut self, symbol_key: SymbolKey) {
+        if !self.requested_symbols.insert(symbol_key) {
+            self.new_symbols_to_rasterise = true;
+        }
+    }
+
+    /// Rasterises symbols if required, should be called once a frame
+    pub fn try_rasterise(&mut self, device: &wgpu::Device, queue: &wgpu::Queue) {
+        if self.new_symbols_to_rasterise {
+            let mut texture_atlas_builder = TextureAtlasBuilder::new();
+
+            // rasterising all characters and putting into texture atlas, contains the atlas index,
+            // SymbolKey and SymbolMetrics of a symbol, where the SymbolMetrics and atlas_index will
+            // later be combined into a public SymbolInfo struct
+            let mut rasterisation_info = Vec::new();
+
+            // reserving space for the new characters
+            rasterisation_info.reserve(self.requested_symbols.len());
+
+            // adding the font's characters to rasterisation_info and the texture atlas builder
+            for symbol_key in self.requested_symbols.iter() {
+                
+                // getting the font specified in the SymbolKey
+                let font = match self.font_from_font_style(symbol_key.font_style) {
+                    Some(f) => f,
+                    None => {
+                        error!(
+                            "cannot rasterise character: {}, as font style: {:?} does not exist!",
+                            symbol_key.character, symbol_key.font_style
+                        );
+                        continue;
+                    }
+                };
+
+                // rasterising the symbol and getting metrics
+                let (metrics, coverage) =
+                    font.rasterize(symbol_key.character, symbol_key.size_px as f32);
+                let width_px = metrics.width as u32;
+                let height_px = metrics.height as u32;
+                
+                // converting to an image image
+                let image = Self::coverage_to_dynamic_image(coverage, width_px, height_px);
+
+                // queueing for packing in the texture atlas
+                let texture_atlas_index =
+                    texture_atlas_builder.add_sprite(image, width_px, height_px);
+
+                // adding the rasterisation information for constructing SymbolInfo after packing
+                rasterisation_info.push((
+                    texture_atlas_index,
+                    *symbol_key,
+                    SymbolMetrics::new(&metrics),
+                ))
+            }
+
+            // building the texture atlas
+            let texture_atlas = Some(texture_atlas_builder.build_atlas(device, queue));
+            
+            // clearing self symbols as the information will be out of date with the new
+            // TextureAtlas
+            self.symbols.clear();
+
+            // getting uv coordinates from TextureAtlas for all characters, inserting into symbols
+            for (texture_atlas_index, symbol_key, symbol_metrics) in rasterisation_info {
+                let symbol_info = SymbolInfo {
+                    symbol_metrics,
+                    uv_region: texture_atlas
+                        .as_ref()
+                        .unwrap()
+                        .get(texture_atlas_index)
+                        .unwrap()
+                        .uv_region,
+                };
+
+                // adding to symbols
+                self.symbols.insert(symbol_key, symbol_info);
+            }
+
+            self.texture_atlas = texture_atlas;
+            self.new_symbols_to_rasterise = false;
+        }
     }
 }

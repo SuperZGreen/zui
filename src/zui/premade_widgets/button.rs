@@ -84,7 +84,7 @@ where
             }
             Event::MouseEvent(MouseEvent::CursorMoved(cursor_position)) => {
                 if let Some(clip_rectangle) = self.clip_rectangle {
-                    self.cursor_is_over = clip_rectangle.is_in(cursor_position);
+                    self.cursor_is_over = clip_rectangle.is_in(&cursor_position);
                 }
                 crate::zui::widget::EventResponse::Consumed
             }
@@ -103,7 +103,7 @@ where
                 if let Some(text) = &mut self.text {
                     text.fit_rectangle(
                         context.font,
-                        clip_rectangle,
+                        &clip_rectangle,
                         context.viewport_dimensions_px,
                     );
                     text.place_symbols(
@@ -116,12 +116,6 @@ where
             }
             _ => crate::zui::widget::EventResponse::Propagate,
         }
-    }
-
-    fn children_iter_mut(
-        &mut self,
-    ) -> Option<std::slice::IterMut<'_, Box<(dyn Widget<Message> + 'static)>>> {
-        None
     }
 
     fn clip_rectangle(&self) -> Option<Rectangle<f32>> {

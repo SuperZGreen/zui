@@ -8,9 +8,8 @@ use crate::zui::{
     render_layer::RenderLayer,
     simple_renderer::SimpleVertex,
     text::{TextAlignmentHorizontal, TextAlignmentVertical},
-    widget::EventResponse,
-    Axis, Colour, Context, LineWrapping, MouseEvent, ScreenSpacePosition, Span, Text,
-    TextConfiguration, TextSegment, TextSize, Widget,
+    widget::EventResponse, Colour, Context, LineWrapping, MouseEvent, Span, Text,
+    TextConfiguration, TextSegment, TextSize, Widget, Event,
 };
 
 pub struct FillBar<'a, T, Message> {
@@ -171,7 +170,7 @@ where
 {
     fn handle_event(
         &mut self,
-        event: &crate::zui::Event,
+        event: &Event,
         context: &Context,
     ) -> crate::zui::widget::EventResponse<Message> {
         match event {
@@ -186,7 +185,7 @@ where
                         };
                     }
 
-                    self.cursor_is_over = clip_rectangle.is_in(cursor_position_px);
+                    self.cursor_is_over = clip_rectangle.is_in(&cursor_position_px);
                 }
                 crate::zui::widget::EventResponse::Consumed
             }
@@ -294,7 +293,7 @@ where
     fn to_vertices(
         &self,
         viewport_dimensions_px: PhysicalSize<u32>,
-        render_layers: &mut VecDeque<RenderLayer>,
+        _render_layers: &mut VecDeque<RenderLayer>,
     ) -> (
         Vec<crate::zui::simple_renderer::SimpleVertex>,
         Vec<crate::zui::text_renderer::TextVertex>,

@@ -2,9 +2,8 @@ mod glyph_origin;
 mod text_configuration;
 mod text_line;
 
-use std::collections::btree_map::Iter;
-
 use glyph_origin::GlyphOrigin;
+use rustc_hash::FxHashSet;
 use text_line::TextLines;
 
 use winit::dpi::PhysicalSize;
@@ -81,6 +80,9 @@ pub struct Text {
     /// Includes alignment and styling information for the text
     pub configuration: TextConfiguration,
 
+    /// The size of the text in pixels, calculated from configuration.size in Self::udpate_size_px
+    size_px: Option<i32>,
+
     /// The layout of the text, including the lines, presymbols and viewport pixel dimensions
     layout: Option<TextLayout>,
 }
@@ -92,6 +94,7 @@ impl Text {
             segments: Vec::new(),
             symbols: Vec::new(),
             configuration: TextConfiguration::default(),
+            size_px: None,
             layout: None,
         }
     }
@@ -269,6 +272,40 @@ impl Text {
         }
 
         ps
+    }
+
+    /// Updates the internal size_px
+    pub fn update_size_px(&mut self, clip_rectangle: &Rectangle<f32>) {
+        self.size_px = Some(
+            self.configuration
+                .size
+                .to_viewport_pixels(clip_rectangle.height()),
+        );
+    }
+
+    /// Adds all the used symbolkeys to the provided FxHashSet<SymbolKey>. Used to determine what
+    /// symbols need to be rasterised by the font rasterising system
+    pub fn collect_symbol_keys(&self, symbol_keys: &mut FxHashSet<SymbolKey>) {
+        let size_px = match self.size_px {
+            Some(spx) => spx as u32,
+            None => {
+                error!("text size not yet calculated!");
+                return;
+            }
+        };
+
+        for segment in self.segments.iter() {
+            for character in segment.string.chars() {
+
+                let symbol_key = SymbolKey {
+                    character: character,
+                    font_style: segment.style,
+                    size_px,
+                };
+                
+                symbol_keys.insert(symbol_key);
+            }
+        }
     }
 }
 

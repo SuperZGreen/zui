@@ -205,7 +205,7 @@ where
             // updating accumulator
             used_span_pixels_accumulator += child_span_px;
 
-            child.handle_event(&Event::FitRectangle(child_rectangle), context);
+            child.handle_event(&mut Event::FitRectangle(child_rectangle), context);
         }
     }
 
@@ -234,7 +234,11 @@ where
                     // preventing the double text.fit_rectangle call for containers with
                     // Span::FitContents TODO: This should be resolved in a more graceful way
                     if !matches!(self.span, Span::FitContents) {
-                        text.fit_rectangle(context.font, &rectangle, context.viewport_dimensions_px);
+                        text.fit_rectangle(
+                            context.font,
+                            &rectangle,
+                            context.viewport_dimensions_px,
+                        );
                     }
                     text.place_symbols(context.font, &rectangle);
                 }
@@ -249,10 +253,22 @@ where
         self.clip_rectangle
     }
 
-    fn children_iter_mut(
-        &mut self,
-    ) -> Option<std::slice::IterMut<'_, Box<(dyn Widget<Message> + 'static)>>> {
-        Some(self.children.iter_mut())
+    fn children(&self) -> &[Box<(dyn Widget<Message>)>] {
+        &self.children
+    }
+
+    fn children_mut(&mut self) -> &mut [Box<(dyn Widget<Message>)>] {
+        &mut self.children
+    }
+    
+    fn collect_text(&self, symbol_keys: &mut rustc_hash::FxHashSet<crate::zui::font::SymbolKey>) {
+        if let Some(text) = &self.text {
+            text.collect_symbol_keys(symbol_keys);
+        }
+        
+        for child in self.children.iter() {
+            child.collect_text(symbol_keys);
+        }
     }
 
     fn to_vertices(
