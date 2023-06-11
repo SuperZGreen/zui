@@ -101,9 +101,9 @@ where
                 self.clip_rectangle = Some(*clip_rectangle);
 
                 if let Some(text) = &mut self.text {
-                    text.fit_rectangle(
+                    text.update_layout(
                         context.font,
-                        &clip_rectangle,
+                        clip_rectangle.into(),
                         context.viewport_dimensions_px,
                     );
                     text.place_symbols(
@@ -129,7 +129,7 @@ where
     fn span_px(&self) -> Option<f32> {
         self.span_px
     }
-
+    
     fn update_viewport_span_px(
         &mut self,
         parent_rectangle: &Rectangle<f32>,
@@ -143,9 +143,9 @@ where
             Span::FitContents => {
                 if let Some(text) = &mut self.text {
                     if let Some(clip_rectangle) = &self.clip_rectangle {
-                        text.fit_rectangle(
+                        text.update_layout(
                             context.font,
-                            clip_rectangle,
+                            clip_rectangle.into(),
                             context.viewport_dimensions_px,
                         );
                         text.span_px(parent_axis).unwrap_or(0f32)

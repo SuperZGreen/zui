@@ -137,21 +137,20 @@ where
     pub fn update_child_rectangles(&mut self, context: &Context) {
         let self_clip_rectangle = self.clip_rectangle.unwrap();
 
-        // updating the child screen spaces, setting children with spans that are Span::ParentWeight
-        // to 0
+        // getting the minimum span of the children
+        let mut children_min_span_px = 0f32;
         for child in &mut self.children {
-            child.update_viewport_span_px(&self_clip_rectangle, self.axis, None, None, context);
-        }
-
-        // calculating the number of unused pixels in the parent span
-        let mut children_cumulative_span = 0f32;
-        for child in &self.children {
-            if let Some(child_pixel_span) = child.span_px() {
-                children_cumulative_span += child_pixel_span;
+            if let Some(min_span_px) = child.min_span_px(
+                self.axis,
+                self_clip_rectangle.into(),
+                context.viewport_dimensions_px,
+            ) {
+                children_min_span_px += min_span_px
             }
         }
+
         let mut unused_pixels_in_parent_span =
-            self_clip_rectangle.span_by_axis(self.axis) - children_cumulative_span;
+            self_clip_rectangle.span_by_axis(self.axis) - children_min_span_px;
 
         // setting overflowing flag
         if unused_pixels_in_parent_span < 0f32 {
@@ -171,19 +170,14 @@ where
 
         // setting the child rectangles
         for child in self.children.iter_mut() {
-            // updating the child weight if not previously updated, ie for weighted spans
-            match child.span() {
-                Span::ParentWeight(_) => {
-                    child.update_viewport_span_px(
-                        &self_clip_rectangle,
-                        self.axis,
-                        Some(sum_of_child_span_weights),
-                        Some(unused_pixels_in_parent_span as u32),
-                        context,
-                    );
-                }
-                _ => {}
-            }
+            // updating the child spans
+            child.update_viewport_span_px(
+                &self_clip_rectangle,
+                self.axis,
+                Some(sum_of_child_span_weights),
+                Some(unused_pixels_in_parent_span as u32),
+                context,
+            );
 
             let child_span_px = child.span_px().unwrap_or(0f32);
 
@@ -234,9 +228,9 @@ where
                     // preventing the double text.fit_rectangle call for containers with
                     // Span::FitContents TODO: This should be resolved in a more graceful way
                     if !matches!(self.span, Span::FitContents) {
-                        text.fit_rectangle(
+                        text.update_layout(
                             context.font,
-                            &rectangle,
+                            rectangle.into(),
                             context.viewport_dimensions_px,
                         );
                     }
@@ -260,12 +254,12 @@ where
     fn children_mut(&mut self) -> &mut [Box<(dyn Widget<Message>)>] {
         &mut self.children
     }
-    
+
     fn collect_text(&self, symbol_keys: &mut rustc_hash::FxHashSet<crate::zui::font::SymbolKey>) {
         if let Some(text) = &self.text {
             text.collect_symbol_keys(symbol_keys);
         }
-        
+
         for child in self.children.iter() {
             child.collect_text(symbol_keys);
         }
@@ -327,9 +321,9 @@ where
         self.span_px = Some(match self.span {
             Span::FitContents => {
                 if let Some(text) = &mut self.text {
-                    text.fit_rectangle(
+                    text.update_layout(
                         context.font,
-                        clip_rectangle,
+                        clip_rectangle.into(),
                         context.viewport_dimensions_px,
                     );
                     text.span_px(parent_axis).unwrap_or(0f32)

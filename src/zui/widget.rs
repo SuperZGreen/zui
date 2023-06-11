@@ -3,9 +3,9 @@ use winit::dpi::{PhysicalPosition, PhysicalSize};
 
 use super::{
     font::SymbolKey, render_layer::RenderLayer, simple_renderer::SimpleVertex,
-    text_renderer::TextVertex, Rectangle, ScreenSpacePosition, Typeface,
+    text_renderer::TextVertex, Rectangle, primitives::Dimensions,
 };
-use std::collections::{HashSet, VecDeque};
+use std::collections::VecDeque;
 
 use crate::zui::Context;
 
@@ -45,6 +45,12 @@ pub enum Span {
     /// Fixed Span: The length in pixels of the Span
     Pixels(f32),
 
+    //
+    //  Contents based sizes, dynamically resizes based on the size of the contents. This is text in
+    //  the case of a Container.
+    //
+    FitContents,
+
     // TODO: ViewMax?
 
     //
@@ -56,36 +62,18 @@ pub enum Span {
 
     /// The size as a proportion of the parent's size
     ParentRatio(f32),
-
-    //
-    //  Contents based sizes, dynamically resizes based on the size of the contents. This is text in
-    //  the case of a Container.
-    //
-    FitContents,
 }
 
 impl Span {
-    pub fn view_min_to_span_px(
-        view_min: f32,
-        viewport_dimensions_px: PhysicalSize<u32>,
-    ) -> f32 {
+    pub fn view_min_to_span_px(view_min: f32, viewport_dimensions_px: PhysicalSize<u32>) -> f32 {
         if viewport_dimensions_px.width < viewport_dimensions_px.height {
-            Self::view_width_to_span_px(
-                view_min,
-                viewport_dimensions_px.width,
-            )
+            Self::view_width_to_span_px(view_min, viewport_dimensions_px.width)
         } else {
-            Self::view_height_to_span_px(
-                view_min,
-                viewport_dimensions_px.height,
-            )
+            Self::view_height_to_span_px(view_min, viewport_dimensions_px.height)
         }
     }
 
-    pub fn view_height_to_span_px(
-        view_height: f32,
-        viewport_height_px: u32,
-    ) -> f32 {
+    pub fn view_height_to_span_px(view_height: f32, viewport_height_px: u32) -> f32 {
         view_height as f32 * viewport_height_px as f32
     }
 
@@ -109,18 +97,13 @@ impl Span {
         fit_contents_span_px: f32,
     ) -> f32 {
         match self {
-            Span::ViewWidth(vw) => Self::view_width_to_span_px(
-                *vw,
-                context.viewport_dimensions_px.width,
-            ),
-            Span::ViewHeight(vh) => Self::view_height_to_span_px(
-                *vh,
-                context.viewport_dimensions_px.height,
-            ),
-            Span::ViewMin(vm) => Self::view_min_to_span_px(
-                *vm,
-                context.viewport_dimensions_px,
-            ),
+            Span::ViewWidth(vw) => {
+                Self::view_width_to_span_px(*vw, context.viewport_dimensions_px.width)
+            }
+            Span::ViewHeight(vh) => {
+                Self::view_height_to_span_px(*vh, context.viewport_dimensions_px.height)
+            }
+            Span::ViewMin(vm) => Self::view_min_to_span_px(*vm, context.viewport_dimensions_px),
             Span::Pixels(px) => *px,
             Span::ParentWeight(pw) => {
                 if sum_of_parent_weights.is_none() || parent_span_px_available.is_none() {
@@ -133,17 +116,26 @@ impl Span {
             Span::FitContents => fit_contents_span_px,
         }
     }
-    
+
     /// Converts fixed type Spans to f32 viewport pixels
-    pub fn fixed_span_to_span_px(&self, axis: Axis, viewport_dimensions_px: PhysicalSize<u32>) -> Option<f32> {
+    pub fn fixed_span_to_span_px(&self, viewport_dimensions_px: PhysicalSize<u32>) -> Option<f32> {
         match self {
-            Span::ViewWidth(vw) => todo!(),
-            Span::ViewHeight(_) => todo!(),
-            Span::ViewMin(_) => todo!(),
-            Span::Pixels(_) => todo!(),
-            Span::ParentWeight(_) => todo!(),
-            Span::ParentRatio(_) => todo!(),
-            Span::FitContents => todo!(),
+            Span::ViewWidth(vw) => Some(Self::view_width_to_span_px(
+                *vw,
+                viewport_dimensions_px.width,
+            )),
+            Span::ViewHeight(vh) => Some(Self::view_height_to_span_px(
+                *vh,
+                viewport_dimensions_px.height,
+            )),
+            // This is also potentially a 'fixed' type, but can not be calculated here, so returns
+            // None instead
+            Span::FitContents => None,
+
+            Span::ViewMin(vm) => Some(Self::view_min_to_span_px(*vm, viewport_dimensions_px)),
+            Span::Pixels(p) => Some(*p),
+            Span::ParentWeight(_) => None,
+            Span::ParentRatio(_) => None,
         }
     }
 }
@@ -228,6 +220,52 @@ pub trait Widget<Message> {
         viewport_span_px_available: Option<u32>,
         context: &Context,
     );
+
+    /// Updates span_px to its minimum possible value, this is the sum of its children's 'fixed'
+    /// type Spans, if the Widget is of type FitContents, it'll iterate through that Widget's
+    /// children to determine what the minimum size of the container will be.
+    /// Is a subset of span(). Basically returns the span for all except for Span::ParentWeight
+    fn min_span_px(
+        &mut self,
+        axis: Axis,
+        region_dimensions_px: Dimensions<f32>,
+        viewport_dimensions_px: PhysicalSize<u32>,
+    ) -> Option<f32> {
+        let parent_span_px = region_dimensions_px.span_by_axis(axis);
+
+        match self.span() {
+            Span::ViewWidth(vw) => Some(Span::view_width_to_span_px(
+                vw,
+                viewport_dimensions_px.width,
+            )),
+            Span::ViewHeight(vh) => Some(Span::view_height_to_span_px(
+                vh,
+                viewport_dimensions_px.height,
+            )),
+            Span::ViewMin(vm) => Some(Span::view_min_to_span_px(vm, viewport_dimensions_px)),
+            Span::Pixels(p) => Some(p),
+
+            // getting the size of all the children's min spans
+            Span::FitContents => {
+                let mut cumulative_min_span_px = 0f32;
+                for child in self.children_mut().iter_mut() {
+                    if let Some(span_px) =
+                        child.min_span_px(axis, region_dimensions_px, viewport_dimensions_px)
+                    {
+                        cumulative_min_span_px += span_px
+                    }
+                }
+
+                if cumulative_min_span_px != 0f32 {
+                    Some(cumulative_min_span_px)
+                } else {
+                    None
+                }
+            }
+            Span::ParentRatio(pr) => Some(pr * parent_span_px),
+            Span::ParentWeight(_) => None,
+        }
+    }
 
     /// The [`Axis`] of the widget
     fn axis(&self) -> Axis {

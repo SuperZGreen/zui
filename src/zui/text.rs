@@ -10,7 +10,7 @@ use winit::dpi::PhysicalSize;
 
 use super::{
     font::{FontStyle, SymbolInfo, SymbolKey},
-    primitives::Rectangle,
+    primitives::{Rectangle, Dimensions},
     text_renderer::TextVertex,
     Axis, Colour, Typeface,
 };
@@ -113,10 +113,10 @@ impl Text {
     /// Calculates the screen space dimensions of the text for a given clip rectangle, and generates
     /// presymbols
     // TODO: Note that this hits twice due to containers Span::FitContents behaviour
-    pub fn fit_rectangle(
+    pub fn update_layout(
         &mut self,
         font: &Typeface,
-        clip_rectangle: &Rectangle<f32>,
+        region_dimensions_px: Dimensions<f32>,
         _viewport_dimensions_px: PhysicalSize<u32>, // TODO: will be used for other text heigh calculations (?)
     ) {
         // converting the line metrics of Fontdue to screen space
@@ -128,7 +128,7 @@ impl Text {
                 .horizontal_line_metrics(
                     self.configuration
                         .size
-                        .to_viewport_pixels(clip_rectangle.height()) as f32,
+                        .to_viewport_pixels(region_dimensions_px.height) as f32,
                 )
                 .unwrap(), // TODO
         );
@@ -139,13 +139,13 @@ impl Text {
             font,
             self.configuration
                 .size
-                .to_viewport_pixels(clip_rectangle.height()) as u32,
+                .to_viewport_pixels(region_dimensions_px.height) as u32,
         );
 
         // getting lines
         let lines = TextLines::from_presymbols(
             &presymbols,
-            clip_rectangle,
+            region_dimensions_px.width,
             &font_metrics_px,
             &self.configuration.line_wrapping,
         );

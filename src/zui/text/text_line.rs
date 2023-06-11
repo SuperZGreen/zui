@@ -1,8 +1,6 @@
-use std::ops::{Range, RangeInclusive};
+use std::ops::Range;
 
-use crate::zui::Rectangle;
-
-use super::{text_configuration::LineWrapping, GlyphOrigin, PixelFontMetrics, Presymbol};
+use super::{text_configuration::LineWrapping, PixelFontMetrics, Presymbol};
 
 /// Used to calculate the width of a word or group of Text
 struct TextWidthAccumulator {
@@ -72,7 +70,7 @@ pub enum TextLineBuilderError {
 
 impl TextLineBuilder {
     /// Creates a new TextLineBuilder from the clip rectangle of the text
-    pub fn new(start_index: usize, clip_rectangle: &Rectangle<f32>) -> Self {
+    pub fn new(start_index: usize, region_width_px: i32) -> Self {
         Self {
             start_index,
             num_symbols: 0,
@@ -80,7 +78,7 @@ impl TextLineBuilder {
             width_px: 0,
             // The round here removes the jitter when fitting to a parent container, TODO: this
             // could be moved up into the calling context
-            clip_rectangle_width_px: clip_rectangle.width().round() as i32,
+            clip_rectangle_width_px: region_width_px,
         }
     }
 
@@ -179,16 +177,19 @@ pub struct TextLines {
 impl TextLines {
     pub fn from_presymbols(
         presymbols: &[Presymbol],
-        clip_rectangle: &Rectangle<f32>,
+        region_width_px: f32,
         font_metrics_px: &PixelFontMetrics,
         line_wrapping: &LineWrapping,
     ) -> Self {
         let mut lines = Vec::new();
 
+        // adjusting the region dimensions to prevent jitter
+        let region_width_px = region_width_px.round() as i32;
+
         match line_wrapping {
             LineWrapping::Word => {
                 if presymbols.len() > 0 {
-                    let mut builder = TextLineBuilder::new(0, clip_rectangle);
+                    let mut builder = TextLineBuilder::new(0, region_width_px);
                     let mut index = 0usize;
 
                     for word in Presymbol::words(presymbols).into_iter() {
@@ -207,7 +208,7 @@ impl TextLines {
                                         }
                                         Err(TextLineBuilderError::CreateNewLine) => {
                                             lines.push(builder.build(font_metrics_px));
-                                            builder = TextLineBuilder::new(index, clip_rectangle);
+                                            builder = TextLineBuilder::new(index, region_width_px);
                                             builder.force_push_symbol(presymbol);
                                             index += 1;
                                         }
@@ -220,7 +221,7 @@ impl TextLines {
                             }
                             Err(TextLineBuilderError::CreateNewLine) => {
                                 lines.push(builder.build(font_metrics_px));
-                                builder = TextLineBuilder::new(index, clip_rectangle);
+                                builder = TextLineBuilder::new(index, region_width_px);
                                 _ = builder.try_push_slice(word);
                                 index += word.len();
                             }
@@ -233,14 +234,14 @@ impl TextLines {
             }
             LineWrapping::Symbol => {
                 if presymbols.len() > 0 {
-                    let mut builder = TextLineBuilder::new(0, clip_rectangle);
+                    let mut builder = TextLineBuilder::new(0, region_width_px);
 
                     for (index, presymbol) in presymbols.iter().enumerate() {
                         match builder.try_push_symbol(presymbol) {
                             Ok(_) => continue,
                             Err(TextLineBuilderError::CreateNewLine) => {
                                 lines.push(builder.build(font_metrics_px));
-                                builder = TextLineBuilder::new(index, clip_rectangle);
+                                builder = TextLineBuilder::new(index, region_width_px);
 
                                 // can force push the symbol here, as it is proven to not be too small for
                                 // the provided clip rectangle
@@ -250,7 +251,7 @@ impl TextLines {
                                 builder.force_push_symbol(presymbol);
 
                                 lines.push(builder.build(font_metrics_px));
-                                builder = TextLineBuilder::new(index, clip_rectangle);
+                                builder = TextLineBuilder::new(index, region_width_px);
                             }
                         }
                     }
@@ -260,7 +261,7 @@ impl TextLines {
                 }
             }
             LineWrapping::None => {
-                let mut builder = TextLineBuilder::new(0, clip_rectangle);
+                let mut builder = TextLineBuilder::new(0, region_width_px);
                 for presymbol in presymbols.iter() {
                     builder.force_push_symbol(presymbol);
                 }

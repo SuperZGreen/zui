@@ -1,3 +1,5 @@
+use std::ops::Sub;
+
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 
 use super::{simple_renderer::SimpleVertex, util, Axis, Colour};
@@ -171,6 +173,63 @@ impl Rectangle<f32> {
                 self.y_min,
                 viewport_dimensions_px.y,
             ),
+        }
+    }
+}
+
+impl From<&Rectangle<f32>> for PhysicalSize<f32> {
+    fn from(value: &Rectangle<f32>) -> Self {
+        PhysicalSize {
+            width: value.width(),
+            height: value.height(),
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+/// A width and height pair, basically a Rectangle without a position
+pub struct Dimensions<T> {
+    pub width: T,
+    pub height: T,
+}
+
+impl<T> Dimensions<T>
+where
+    T: Copy,
+{
+    pub fn new(width: T, height: T) -> Self {
+        Self { width, height }
+    }
+
+    /// Returns the relevant span of the Dimensions
+    pub fn span_by_axis(&self, axis: Axis) -> T {
+        match axis {
+            Axis::Vertical => self.height,
+            Axis::Horizontal => self.width,
+        }
+    }
+}
+
+impl<T> From<&Rectangle<T>> for Dimensions<T>
+where
+    T: Sub<Output = T> + Copy,
+{
+    fn from(value: &Rectangle<T>) -> Self {
+        Dimensions {
+            width: value.width(),
+            height: value.height(),
+        }
+    }
+}
+
+impl<T> From<Rectangle<T>> for Dimensions<T>
+where
+    T: Sub<Output = T> + Copy,
+{
+    fn from(value: Rectangle<T>) -> Self {
+        Dimensions {
+            width: value.width(),
+            height: value.height(),
         }
     }
 }

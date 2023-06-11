@@ -111,10 +111,10 @@ where
             false
         } else {
             self.text = Self::format_text(&value, self.range.end());
-            if let Some(clip_rectangle) = self.clip_rectangle {
-                self.text.fit_rectangle(
+            if let Some(clip_rectangle) = &self.clip_rectangle {
+                self.text.update_layout(
                     context.font,
-                    &clip_rectangle,
+                    clip_rectangle.into(),
                     context.viewport_dimensions_px,
                 );
                 self.text.place_symbols(
@@ -125,7 +125,7 @@ where
                 if let Some(foreground_rectangle) = &mut self.bar_foreground_rectangle {
                     let bar_position = Self::viewport_px_position_from_value(
                         &self.range,
-                        clip_rectangle,
+                        *clip_rectangle,
                         &value,
                     );
                     foreground_rectangle.x_max = bar_position;
@@ -232,9 +232,9 @@ where
                 self.bar_foreground_rectangle = Some(bar_foreground_rectangle);
 
                 // regenerating text symbols
-                self.text.fit_rectangle(
+                self.text.update_layout(
                     context.font,
-                    &clip_rectangle,
+                    clip_rectangle.into(),
                     context.viewport_dimensions_px,
                 );
                 self.text.place_symbols(
@@ -269,9 +269,9 @@ where
         self.span_px = Some(match self.span {
             Span::FitContents => {
                 if let Some(clip_rectangle) = &self.clip_rectangle {
-                    self.text.fit_rectangle(
+                    self.text.update_layout(
                         context.font,
-                        clip_rectangle,
+                        clip_rectangle.into(),
                         context.viewport_dimensions_px,
                     );
                     self.text.span_px(parent_axis).unwrap_or(0f32)
