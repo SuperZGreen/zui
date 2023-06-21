@@ -1,22 +1,44 @@
-use crate::zui::{widget::EventResponse, Event, Rectangle, Text, Widget, primitives::Dimensions};
+use std::collections::VecDeque;
 
-// A Text widget that shrinks to its Text's size
+use winit::dpi::PhysicalSize;
+
+use crate::zui::{
+    primitives::Dimensions,
+    render_layer::RenderLayer,
+    simple_renderer::SimpleVertex,
+    text_renderer::TextVertex,
+    widget::{Bounds, EventResponse, Layout, LayoutBoundaries},
+    Colour, Context, Event, Rectangle, Span, Text, Typeface, Widget,
+};
+
+// A basic widget that contains text
 pub struct TextContainer {
     text: Option<Text>,
+    background_colour: Option<Colour>,
     clip_rectangle: Option<Rectangle<f32>>,
+    span: Span,
     span_px: Option<f32>,
+    layout: Layout,
 }
 impl TextContainer {
     pub fn new() -> Self {
         Self {
             text: None,
+            background_colour: None,
             clip_rectangle: None,
+            span: Span::FitContents,
             span_px: None,
+            layout: Layout::new(),
         }
     }
 
     pub fn with_text(mut self, text: Text) -> Self {
         self.text = Some(text);
+        self
+    }
+
+    pub fn with_background_colour(mut self, colour: Option<Colour>) -> Self {
+        self.background_colour = colour;
         self
     }
 }
@@ -30,45 +52,78 @@ where
         event: &crate::zui::Event,
         context: &crate::zui::Context,
     ) -> crate::zui::widget::EventResponse<Message> {
-        match event {
-            Event::FitRectangle(clip_rectangle) => {
-                self.clip_rectangle = Some(*clip_rectangle);
-                if let Some(text) = &mut self.text {
-                    text.update_layout(
-                        context.font,
-                        clip_rectangle.into(),
-                        context.viewport_dimensions_px,
-                    );
-                    text.place_symbols(context.font, clip_rectangle);
-                }
-                EventResponse::Consumed
+        // responds to no input events
+        EventResponse::Consumed
+    }
+
+    fn to_vertices(
+        &self,
+        viewport_dimensions_px: PhysicalSize<u32>,
+        render_layers: &mut VecDeque<RenderLayer>,
+    ) -> (Vec<SimpleVertex>, Vec<TextVertex>) {
+        // adding own text vertices
+        let mut text_vertices = Vec::new();
+        if let Some(text) = &self.text {
+            if let Some(clip_rectangle) = self.clip_rectangle {
+                text_vertices.append(&mut text.to_vertices(clip_rectangle, viewport_dimensions_px));
             }
-            _ => EventResponse::Consumed,
+        }
+
+        // adding own rectangle/simple vertices
+        let mut simple_vertices = Vec::new();
+        if let Some(rectangle) = self.clip_rectangle {
+            if let Some(colour) = self.background_colour {
+                // simple_vertices.append(&mut rectangle.to_simple_vertices(colour));
+                simple_vertices.extend_from_slice(&SimpleVertex::from_rectangle(
+                    rectangle,
+                    colour,
+                    viewport_dimensions_px,
+                ));
+            }
+        }
+
+        (simple_vertices, text_vertices)
+    }
+
+    fn try_update_dimensions(
+        &mut self,
+        layout_boundaries: &LayoutBoundaries,
+        context: &crate::zui::Context,
+    ) -> Dimensions<f32> {
+        if let Some(text) = self.text.as_mut() {
+            let boundary_width = layout_boundaries.horizontal.span_px;
+
+            text.update_layout(
+                context.font,
+                Bounds {
+                    span: boundary_width,
+                },
+                context.viewport_dimensions_px,
+            );
+
+            text.dimensions_px().unwrap()
+        } else {
+            Dimensions::new(0f32, 0f32)
         }
     }
 
-    fn span(&self) -> crate::zui::Span {
-        todo!()
+    fn layout<'a>(&'a self) -> &'a Layout {
+        &self.layout
     }
 
-    fn min_span_px(
-        &mut self,
-        parent_axis: crate::zui::Axis,
-        region_dimensions_px: Dimensions<f32>,
-        viewport_dimensions_px: winit::dpi::PhysicalSize<u32>,
-    ) -> Option<f32> {
-        None
+    fn try_fit_rectangle(&mut self, clip_rectangle: &Rectangle<f32>, context: &Context) {
+        self.clip_rectangle = Some(*clip_rectangle);
+        if let Some(text) = self.text.as_mut() {
+            text.place_symbols(context.font, clip_rectangle);
+        }
     }
+}
 
-    fn update_viewport_span_px(
-        &mut self,
-        clip_rectangle: &Rectangle<f32>,
-        parent_axis: crate::zui::Axis,
-        sum_of_parent_weights: Option<f32>,
-        // the amount of screen space not taken up by non-weighted widgets
-        viewport_span_px_available: Option<u32>,
-        context: &crate::zui::Context,
-    ) {
-        todo!()
+impl<'a, Message> Into<Box<dyn Widget<Message> + 'a>> for TextContainer
+where
+    Message: Clone + Copy + 'a,
+{
+    fn into(self) -> Box<dyn Widget<Message> + 'a> {
+        Box::new(self)
     }
 }

@@ -2,7 +2,7 @@
 /// Holds information describing how to form the layout of the [`Text`]
 pub struct TextConfiguration {
     pub line_wrapping: LineWrapping,
-    pub size: TextSize,
+    pub size_px: u32,
     pub horizontal_alignment: TextAlignmentHorizontal,
     pub vertical_alignment: TextAlignmentVertical,
 }
@@ -11,7 +11,7 @@ impl Default for TextConfiguration {
     fn default() -> Self {
         Self {
             line_wrapping: LineWrapping::Symbol,
-            size: TextSize::Pixels(32u32),
+            size_px: 32u32,
             horizontal_alignment: TextAlignmentHorizontal::Left,
             vertical_alignment: TextAlignmentVertical::Top,
         }

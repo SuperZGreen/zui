@@ -2,6 +2,8 @@ mod glyph_origin;
 mod text_configuration;
 mod text_line;
 
+use std::u128::MAX;
+
 use glyph_origin::GlyphOrigin;
 use rustc_hash::FxHashSet;
 use text_line::TextLines;
@@ -10,8 +12,9 @@ use winit::dpi::PhysicalSize;
 
 use super::{
     font::{FontStyle, SymbolInfo, SymbolKey},
-    primitives::{Rectangle, Dimensions},
+    primitives::{Dimensions, Rectangle},
     text_renderer::TextVertex,
+    widget::Bounds,
     Axis, Colour, Typeface,
 };
 
@@ -105,9 +108,34 @@ impl Text {
         self
     }
 
+    /// Sets the configuration for the Text
     pub fn with_configuration(mut self, configuration: TextConfiguration) -> Self {
         self.configuration = configuration;
         self
+    }
+
+    /// Adds all the used symbolkeys to the provided FxHashSet<SymbolKey>. Used to determine what
+    /// symbols need to be rasterised by the font rasterising system
+    pub fn collect_symbol_keys(&self, symbol_keys: &mut FxHashSet<SymbolKey>) {
+        let size_px = match self.size_px {
+            Some(spx) => spx as u32,
+            None => {
+                error!("text size not yet calculated!");
+                return;
+            }
+        };
+
+        for segment in self.segments.iter() {
+            for character in segment.string.chars() {
+                let symbol_key = SymbolKey {
+                    character: character,
+                    font_style: segment.style,
+                    size_px,
+                };
+
+                symbol_keys.insert(symbol_key);
+            }
+        }
     }
 
     /// Calculates the screen space dimensions of the text for a given clip rectangle, and generates
@@ -116,7 +144,7 @@ impl Text {
     pub fn update_layout(
         &mut self,
         font: &Typeface,
-        region_dimensions_px: Dimensions<f32>,
+        bounds: Bounds<f32>,
         _viewport_dimensions_px: PhysicalSize<u32>, // TODO: will be used for other text heigh calculations (?)
     ) {
         // converting the line metrics of Fontdue to screen space
@@ -125,27 +153,20 @@ impl Text {
                 .font_regular // TODO: this shouldn't just be regular, but what the TextStyle of the Text actually is
                 .as_ref()
                 .unwrap()
-                .horizontal_line_metrics(
-                    self.configuration
-                        .size
-                        .to_viewport_pixels(region_dimensions_px.height) as f32,
-                )
-                .unwrap(), // TODO
+                .horizontal_line_metrics(self.configuration.size_px as f32)
+                .unwrap(), // TODO?
         );
 
         // calculating the screen space metrics of all symbols
-        let presymbols = Self::generate_presymbols(
-            &self,
-            font,
-            self.configuration
-                .size
-                .to_viewport_pixels(region_dimensions_px.height) as u32,
-        );
+        let presymbols = Self::generate_presymbols(&self, font, self.configuration.size_px);
+
+        // TODOW
+        let max_width = f32::INFINITY;
 
         // getting lines
         let lines = TextLines::from_presymbols(
             &presymbols,
-            region_dimensions_px.width,
+            max_width,
             &font_metrics_px,
             &self.configuration.line_wrapping,
         );
@@ -170,12 +191,8 @@ impl Text {
                 .font_regular
                 .as_ref() // TODO: this shouldn't just be regular, but what the TextStyle of the Text actually is
                 .unwrap()
-                .horizontal_line_metrics(
-                    self.configuration
-                        .size
-                        .to_viewport_pixels(clip_rectangle.height()) as f32,
-                )
-                .unwrap(), // TODO
+                .horizontal_line_metrics(self.configuration.size_px as f32)
+                .unwrap(), // TODO ?
         );
 
         // placing symbols
@@ -220,6 +237,18 @@ impl Text {
         let axis_index = axis.to_index();
         if let Some(layout) = &self.layout {
             Some(layout.viewport_dimensions_px[axis_index] as f32)
+        } else {
+            None
+        }
+    }
+
+    /// Gives the dimensions of the text object after it has been layed out with 'update_layout'
+    pub fn dimensions_px(&self) -> Option<Dimensions<f32>> {
+        if let Some(layout) = self.layout.as_ref() {
+            Some(Dimensions::new(
+                layout.viewport_dimensions_px.x as f32,
+                layout.viewport_dimensions_px.y as f32,
+            ))
         } else {
             None
         }
@@ -272,40 +301,6 @@ impl Text {
         }
 
         ps
-    }
-
-    /// Updates the internal size_px
-    pub fn update_size_px(&mut self, clip_rectangle: &Rectangle<f32>) {
-        self.size_px = Some(
-            self.configuration
-                .size
-                .to_viewport_pixels(clip_rectangle.height()),
-        );
-    }
-
-    /// Adds all the used symbolkeys to the provided FxHashSet<SymbolKey>. Used to determine what
-    /// symbols need to be rasterised by the font rasterising system
-    pub fn collect_symbol_keys(&self, symbol_keys: &mut FxHashSet<SymbolKey>) {
-        let size_px = match self.size_px {
-            Some(spx) => spx as u32,
-            None => {
-                error!("text size not yet calculated!");
-                return;
-            }
-        };
-
-        for segment in self.segments.iter() {
-            for character in segment.string.chars() {
-
-                let symbol_key = SymbolKey {
-                    character: character,
-                    font_style: segment.style,
-                    size_px,
-                };
-                
-                symbol_keys.insert(symbol_key);
-            }
-        }
     }
 }
 

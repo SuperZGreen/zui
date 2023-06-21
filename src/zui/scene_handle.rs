@@ -7,7 +7,7 @@ use super::{
     render_layer::RenderLayer,
     simple_renderer::SimpleVertex,
     text_renderer::TextVertex,
-    widget::{Event, EventResponse, Widget},
+    widget::{Boundary, BoundaryType, Event, EventResponse, LayoutBoundaries, Widget},
     Context, Renderable, Scene,
 };
 
@@ -71,42 +71,57 @@ where
 
         let root_widget = self.root_widget.as_mut().unwrap();
 
+        // let clip_rectangle = Rectangle::new(
+        //     0f32,
+        //     context.viewport_dimensions_px.width as f32,
+        //     0f32,
+        //     context.viewport_dimensions_px.height as f32,
+        // );
+
+        let layout_boundaries = &LayoutBoundaries::new(
+            Boundary::new(
+                BoundaryType::Dynamic,
+                context.viewport_dimensions_px.width as f32,
+            ),
+            Boundary::new(
+                BoundaryType::Dynamic,
+                context.viewport_dimensions_px.height as f32,
+            ),
+        );
+
+        let dims = root_widget.try_update_dimensions(layout_boundaries, context);
         let clip_rectangle = Rectangle::new(
             0f32,
-            context.viewport_dimensions_px.width as f32,
-            0f32,
+            dims.width,
+            context.viewport_dimensions_px.height as f32 - dims.height,
             context.viewport_dimensions_px.height as f32,
         );
+        root_widget.try_fit_rectangle(&clip_rectangle, context);
 
-        // updating span_px so that text layout for the root widget will be updated
-        root_widget.update_viewport_span_px(
-            &clip_rectangle,
-            root_widget.axis(),
-            None,
-            None,
-            context,
-        );
-
-        root_widget.handle_event(&mut Event::FitRectangle(clip_rectangle), context);
+        root_widget.place_children(context);
 
         self.widget_recreation_required = false;
     }
 
     /// Queues resizing the root widget
     pub fn resize_scene(&mut self, context: &Context) {
-        if let Some(root_widget) = &mut self.root_widget {
-            root_widget.handle_event(
-                &mut Event::FitRectangle(Rectangle::new(
-                    0f32,
-                    context.viewport_dimensions_px.width as f32,
-                    0f32,
-                    context.viewport_dimensions_px.height as f32,
-                )),
-                &context,
-            );
-        } else {
-            warn!("no root widget to resize!");
-        }
+        // TODO: resize_scene might be defunct?
+        self.rebuild_scene(context);
+
+        // if let Some(root_widget) = &mut self.root_widget {
+        //     // root_widget.handle_event(
+        //     //     &mut Event::FitRectangle(Rectangle::new(
+        //     //         0f32,
+        //     //         context.viewport_dimensions_px.width as f32,
+        //     //         0f32,
+        //     //         context.viewport_dimensions_px.height as f32,
+        //     //     )),
+        //     //     &context,
+        //     // );
+        //     re
+        // } else {
+        //     warn!("no root widget to resize!");
+        // }
     }
 
     /// Iterates through the self.messages queue and passes messages to the underlying scene one by

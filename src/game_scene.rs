@@ -30,7 +30,7 @@ impl Scene for GameScene {
     fn view(&self, _aspect_ratio: f32) -> Box<dyn Widget<Self::Message>> {
         let text = Text::new()
             .with_configuration(TextConfiguration {
-                size: TextSize::Pixels(32),
+                size_px: 32,
                 ..Default::default()
             })
             .push_segment(TextSegment::new("Hello", Colour::WHITE));

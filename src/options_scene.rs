@@ -3,9 +3,10 @@ use std::ops::RangeInclusive;
 use crate::{
     zui::{
         font::FontStyle,
-        premade_widgets::{Button, Container, FillBar},
+        premade_widgets::{Button, Container, FillBar, TextContainer},
         text::TextAlignmentVertical,
-        Axis, Colour, Scene, Span, Text, TextConfiguration, TextSegment, TextSize, Widget, LineWrapping,
+        Axis, Colour, LineWrapping, Scene, Span, Text, TextConfiguration, TextSegment, TextSize,
+        Widget,
     },
     OptionsMenuMessage, SceneIdentifier, UiMessage,
 };
@@ -117,7 +118,7 @@ impl Scene for OptionsScene {
                                 Text::new()
                                     .push_segment(TextSegment::new("Options Menu", Colour::WHITE))
                                     .with_configuration(TextConfiguration {
-                                        size: TextSize::Pixels(Self::FONT_SIZE_LARGE),
+                                        size_px: Self::FONT_SIZE_LARGE,
                                         ..Default::default()
                                     }),
                             ),
@@ -163,7 +164,7 @@ impl Scene for OptionsScene {
                                     .push_segment(TextSegment::new("text!", Colour::WHITE))
                                     .push_segment(TextSegment::new(&dummy_string, Colour::WHITE))
                                     .with_configuration(TextConfiguration {
-                                        size: TextSize::Pixels(Self::FONT_SIZE_NORMAL),
+                                        size_px: Self::FONT_SIZE_NORMAL,
                                         line_wrapping: LineWrapping::Word,
                                         ..Default::default()
                                     }),
@@ -186,11 +187,28 @@ impl Scene for OptionsScene {
                                     })
                                     .push_segment(TextSegment::new("!)", Colour::WHITE))
                                     .with_configuration(TextConfiguration {
-                                        size: TextSize::Pixels(Self::FONT_SIZE_LARGE),
+                                        size_px: Self::FONT_SIZE_LARGE,
                                         ..Default::default()
                                     }),
                             ),
                     )
+                    .push(TextContainer::new().with_background_colour(Some(Colour::DARK_GREY)).with_text(
+                                Text::new()
+                                    .push_segment(TextSegment::new(
+                                        "This is my text container Segment 1, ",
+                                        Colour::WHITE,
+                                    ))
+                                    .push_segment(TextSegment {
+                                        string: String::from("Segment 2, "),
+                                        colour: Colour::CYAN,
+                                        style: FontStyle::Bold,
+                                    })
+                                    .push_segment(TextSegment::new("Segment 3!", Colour::MAGENTA))
+                                    .with_configuration(TextConfiguration {
+                                        size_px: Self::FONT_SIZE_NORMAL,
+                                        ..Default::default()
+                                    }),
+                    ))
                     .push(Self::named_slider(
                         "Master Volume",
                         0f32..=100f32,
@@ -257,7 +275,7 @@ impl Scene for OptionsScene {
                 .with_text(
                     Text::new()
                         .with_configuration(TextConfiguration {
-                            size: TextSize::Pixels(64),
+                            size_px: 64,
                             vertical_alignment: TextAlignmentVertical::Centre,
                             horizontal_alignment: crate::zui::TextAlignmentHorizontal::Centre,
                             ..Default::default()

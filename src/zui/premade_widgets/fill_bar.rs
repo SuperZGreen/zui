@@ -4,11 +4,11 @@ use winit::dpi::{PhysicalPosition, PhysicalSize};
 
 use crate::zui::{
     self,
-    primitives::Rectangle,
+    primitives::{Rectangle, Dimensions},
     render_layer::RenderLayer,
     simple_renderer::SimpleVertex,
     text::{TextAlignmentHorizontal, TextAlignmentVertical},
-    widget::EventResponse, Colour, Context, LineWrapping, MouseEvent, Span, Text,
+    widget::{EventResponse, LayoutBoundaries, Layout}, Colour, Context, LineWrapping, MouseEvent, Span, Text,
     TextConfiguration, TextSegment, TextSize, Widget, Event,
 };
 
@@ -40,6 +40,8 @@ pub struct FillBar<'a, T, Message> {
     span_px: Option<f32>,
 
     text: Text,
+    
+    layout: Layout,
 }
 
 impl<'a, T, Message> FillBar<'a, T, Message>
@@ -66,6 +68,7 @@ where
             span: Span::ParentWeight(1f32),
             span_px: None,
             text,
+            layout: Layout::new(),
         }
     }
 
@@ -81,9 +84,6 @@ where
                 Colour::WHITE,
             ))
             .with_configuration(TextConfiguration {
-                // TODO: once dynamic text sizing is readded, do this
-                // size: TextSize::ParentHeight(1f32),
-                size: TextSize::Pixels(32),
                 line_wrapping: LineWrapping::None,
                 horizontal_alignment: TextAlignmentHorizontal::Right,
                 vertical_alignment: TextAlignmentVertical::Centre,
@@ -112,15 +112,16 @@ where
         } else {
             self.text = Self::format_text(&value, self.range.end());
             if let Some(clip_rectangle) = &self.clip_rectangle {
-                self.text.update_layout(
-                    context.font,
-                    clip_rectangle.into(),
-                    context.viewport_dimensions_px,
-                );
-                self.text.place_symbols(
-                    context.font,
-                    &clip_rectangle,
-                );
+                // TODOW
+                // self.text.update_layout(
+                //     context.font,
+                //     clip_rectangle.into(),
+                //     context.viewport_dimensions_px,
+                // );
+                // self.text.place_symbols(
+                //     context.font,
+                //     &clip_rectangle,
+                // );
 
                 if let Some(foreground_rectangle) = &mut self.bar_foreground_rectangle {
                     let bar_position = Self::viewport_px_position_from_value(
@@ -219,75 +220,35 @@ where
                 crate::zui::widget::EventResponse::Consumed
             }
 
-            crate::zui::Event::FitRectangle(clip_rectangle) => {
-                self.clip_rectangle = Some(*clip_rectangle);
+            // crate::zui::Event::FitRectangle(clip_rectangle) => {
+            //     self.clip_rectangle = Some(*clip_rectangle);
 
-                // sizing the foreground bar
-                let mut bar_foreground_rectangle = *clip_rectangle;
-                bar_foreground_rectangle.x_max = Self::viewport_px_position_from_value(
-                    &self.range,
-                    *clip_rectangle,
-                    &self.value,
-                );
-                self.bar_foreground_rectangle = Some(bar_foreground_rectangle);
+            //     // sizing the foreground bar
+            //     let mut bar_foreground_rectangle = *clip_rectangle;
+            //     bar_foreground_rectangle.x_max = Self::viewport_px_position_from_value(
+            //         &self.range,
+            //         *clip_rectangle,
+            //         &self.value,
+            //     );
+            //     self.bar_foreground_rectangle = Some(bar_foreground_rectangle);
 
-                // regenerating text symbols
-                self.text.update_layout(
-                    context.font,
-                    clip_rectangle.into(),
-                    context.viewport_dimensions_px,
-                );
-                self.text.place_symbols(
-                    context.font,
-                    &clip_rectangle,
-                );
+            //     // TODOW
+            //     // // regenerating text symbols
+            //     // self.text.update_layout(
+            //     //     context.font,
+            //     //     clip_rectangle.into(),
+            //     //     context.viewport_dimensions_px,
+            //     // );
+            //     // self.text.place_symbols(
+            //     //     context.font,
+            //     //     &clip_rectangle,
+            //     // );
 
-                crate::zui::widget::EventResponse::Consumed
-            }
+            //     crate::zui::widget::EventResponse::Consumed
+            // }
 
             _ => EventResponse::Consumed,
         }
-    }
-
-    fn span(&self) -> Span {
-        self.span
-    }
-
-    fn span_px(&self) -> Option<f32> {
-        self.span_px
-    }
-
-    fn update_viewport_span_px(
-        &mut self,
-        parent_rectangle: &Rectangle<f32>,
-        parent_axis: zui::Axis,
-        sum_of_parent_weights: Option<f32>,
-        // the amount of screen space not taken up by non-weighted widgets
-        parent_span_px_available: Option<u32>,
-        context: &Context,
-    ) {
-        self.span_px = Some(match self.span {
-            Span::FitContents => {
-                if let Some(clip_rectangle) = &self.clip_rectangle {
-                    self.text.update_layout(
-                        context.font,
-                        clip_rectangle.into(),
-                        context.viewport_dimensions_px,
-                    );
-                    self.text.span_px(parent_axis).unwrap_or(0f32)
-                } else {
-                    0f32
-                }
-            }
-            span => span.to_viewport_px(
-                parent_rectangle,
-                parent_axis,
-                sum_of_parent_weights,
-                parent_span_px_available,
-                context,
-                0f32,
-            ),
-        })
     }
 
     fn to_vertices(
@@ -324,4 +285,21 @@ where
 
         (simple_vertices, text_vertices)
     }
+
+    fn try_update_dimensions(&mut self, layout_boundaries: &LayoutBoundaries, context: &Context) -> Dimensions<f32> {
+        Dimensions::new(128f32, 64f32)
+    }
+
+    fn layout<'b>(&'b self) -> &'b Layout {
+        &self.layout
+    }
+
+    fn try_fit_rectangle(
+        &mut self,
+        clip_rectangle: &Rectangle<f32>,
+        _context: &Context,
+    ) {
+        self.clip_rectangle = Some(*clip_rectangle);
+    }
+    
 }

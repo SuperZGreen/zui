@@ -62,11 +62,11 @@ impl Zui {
         };
 
         typeface.queue_rasterise(FontStyle::Regular, 32);
-        typeface.queue_rasterise(FontStyle::Bold, 32);
-        typeface.queue_rasterise(FontStyle::Italic, 32);
+        // typeface.queue_rasterise(FontStyle::Bold, 32);
+        // typeface.queue_rasterise(FontStyle::Italic, 32);
 
-        typeface.queue_rasterise(FontStyle::Regular, 64);
-        typeface.queue_rasterise(FontStyle::Bold, 64);
+        // typeface.queue_rasterise(FontStyle::Regular, 64);
+        // typeface.queue_rasterise(FontStyle::Bold, 64);
 
         typeface.rasterise(device, queue);
 

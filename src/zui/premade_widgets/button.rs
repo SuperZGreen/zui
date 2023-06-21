@@ -4,10 +4,10 @@ use winit::dpi::PhysicalSize;
 
 use crate::zui::{
     self,
-    primitives::Rectangle,
+    primitives::{Dimensions, Rectangle},
     render_layer::RenderLayer,
     simple_renderer::SimpleVertex,
-    widget::{Event, MouseEvent, Widget},
+    widget::{Event, MouseEvent, Widget, LayoutBoundaries, Layout},
     Colour, Context, Span, Text,
 };
 
@@ -25,6 +25,8 @@ pub struct Button<Message> {
     span: Span,
     span_px: Option<f32>,
     clip_rectangle: Option<Rectangle<f32>>,
+    
+    layout: Layout,
 }
 
 impl<Message> Button<Message> {
@@ -45,6 +47,7 @@ impl<Message> Button<Message> {
             span: Span::ParentWeight(1f32),
             span_px: None,
             clip_rectangle: None,
+            layout: Layout::new(),
         }
     }
 
@@ -97,74 +100,29 @@ where
                 }
             }
 
-            crate::zui::widget::Event::FitRectangle(clip_rectangle) => {
-                self.clip_rectangle = Some(*clip_rectangle);
+            // crate::zui::widget::Event::FitRectangle(clip_rectangle) => {
+            //     self.clip_rectangle = Some(*clip_rectangle);
 
-                if let Some(text) = &mut self.text {
-                    text.update_layout(
-                        context.font,
-                        clip_rectangle.into(),
-                        context.viewport_dimensions_px,
-                    );
-                    text.place_symbols(
-                        context.font,
-                        &clip_rectangle,
-                    );
-                }
+            //     if let Some(text) = &mut self.text {
+            //         text.update_layout(
+            //             context.font,
+            //             clip_rectangle.into(),
+            //             context.viewport_dimensions_px,
+            //         );
+            //         text.place_symbols(
+            //             context.font,
+            //             &clip_rectangle,
+            //         );
+            //     }
 
-                crate::zui::widget::EventResponse::Propagate
-            }
+            //     crate::zui::widget::EventResponse::Propagate
+            // }
             _ => crate::zui::widget::EventResponse::Propagate,
         }
     }
-
-    fn clip_rectangle(&self) -> Option<Rectangle<f32>> {
-        self.clip_rectangle
-    }
-
-    fn span(&self) -> Span {
-        self.span
-    }
-
-    fn span_px(&self) -> Option<f32> {
-        self.span_px
-    }
     
-    fn update_viewport_span_px(
-        &mut self,
-        parent_rectangle: &Rectangle<f32>,
-        parent_axis: zui::Axis,
-        sum_of_parent_weights: Option<f32>,
-        // the amount of screen space not taken up by non-weighted widgets
-        parent_span_px_available: Option<u32>,
-        context: &Context,
-    ) {
-        self.span_px = Some(match self.span {
-            Span::FitContents => {
-                if let Some(text) = &mut self.text {
-                    if let Some(clip_rectangle) = &self.clip_rectangle {
-                        text.update_layout(
-                            context.font,
-                            clip_rectangle.into(),
-                            context.viewport_dimensions_px,
-                        );
-                        text.span_px(parent_axis).unwrap_or(0f32)
-                    } else {
-                        0f32
-                    }
-                } else {
-                    0f32
-                }
-            }
-            span => span.to_viewport_px(
-                parent_rectangle,
-                parent_axis,
-                sum_of_parent_weights,
-                parent_span_px_available,
-                context,
-                0f32,
-            ),
-        })
+    fn layout<'a>(&'a self) -> &'a Layout {
+        &self.layout
     }
 
     fn to_vertices(
@@ -196,4 +154,23 @@ where
 
         (simple_vertices, text_vertices)
     }
+
+    fn try_update_dimensions(
+        &mut self,
+        layout_boundaries: &LayoutBoundaries,
+        _context: &Context,
+    ) -> zui::primitives::Dimensions<f32> {
+        Dimensions::new(64f32, 64f32)
+    }
+
+    fn try_fit_rectangle(
+        &mut self,
+        clip_rectangle: &Rectangle<f32>,
+        context: &Context,
+    ) {
+        info!("fitting button: {clip_rectangle:?}");
+        self.clip_rectangle = Some(*clip_rectangle);
+    }
+    
+    
 }
