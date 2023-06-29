@@ -220,9 +220,9 @@ where
                 simple_vertices,
                 text_vertices,
                 self.layout.clip_rectangle_px,
-            );
+            ).with_name(self.name.as_ref().map(|n| n.as_str()));
 
-            render_layers.push_back(render_layer);
+            render_layers.push_front(render_layer);
         } else {
             for child in self.children.iter() {
                 child.to_vertices(
@@ -357,11 +357,11 @@ where
                 free_px / sum_of_child_weights
             };
 
-            info!("container {self_name_str}, free_px: {free_px}, reserved_px: {reserved_px}, sum_of_child_weights: {sum_of_child_weights}, pixels_per_parent_weight: {pixels_per_parent_weight}");
+            // info!("container {self_name_str}, free_px: {free_px}, reserved_px: {reserved_px}, sum_of_child_weights: {sum_of_child_weights}, pixels_per_parent_weight: {pixels_per_parent_weight}");
 
             // flagging overflow
             if free_px < 0f32 {
-                info!("container: {} is overflowing!", self_name_str);
+                // info!("container: {} is overflowing!", self_name_str);
                 self.overflowing = true;
             }
 
@@ -379,7 +379,7 @@ where
 
                         child.set_dimensions(Some(child_dimensions));
 
-                        info!("container {self_name_str} child_dimensions: {child_dimensions:?}");
+                        // info!("container {self_name_str} child_dimensions: {child_dimensions:?}");
                     }
                     _ => {},
                 };

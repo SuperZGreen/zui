@@ -87,6 +87,56 @@ impl Zui {
         })
     }
 
+    /// Converts a clip rectangle from f32 to u32
+    fn rectangle_f32_to_u32(rect: &Rectangle<f32>) -> Rectangle<u32> {
+        Rectangle::new(
+            rect.x_min.round() as u32,
+            rect.x_max.round() as u32,
+            rect.y_min.round() as u32,
+            rect.y_max.round() as u32,
+        )
+    }
+
+    /// Returns a rectangle that gives the intersection of the y-up rectangle with the viewport
+    fn rectangle_viewport_intersection(rect: &Rectangle<u32>, viewport_dimensions_px: PhysicalSize<u32>) -> Option<Rectangle<u32>> {
+        let viewport_rect_px = Rectangle::new(
+            0u32,
+            viewport_dimensions_px.width,
+            0u32,
+            viewport_dimensions_px.height,
+        );
+
+        rect.intersection(&viewport_rect_px)
+    }
+
+    /// Converts a rectangle from y-up pixel coordinates to y-down framebuffer coordinates
+    fn rectangle_pixel_to_framebuffer(rect: &Rectangle<u32>, viewport_dimensions_px: PhysicalSize<u32>) -> Rectangle<u32> {
+        Rectangle::new(
+            rect.x_min,
+            rect.x_max,
+            viewport_dimensions_px.height - rect.y_max as u32,
+            viewport_dimensions_px.height - rect.y_min as u32,
+        )
+    }
+
+    /// Returns true if the rectangle width or height is zero
+    fn rectangle_has_no_area(rect: &Rectangle<u32>) -> bool {
+        rect.width() == 0 || rect.height() == 0
+    }
+
+    /// Tries to render a render pass, if it exists
+    fn try_render(&self, render_pass_opt: Option<wgpu::RenderPass>) {
+        match render_pass_opt {
+            Some(mut rp) => {
+                self.renderer.render(&mut rp);
+                self.text_renderer
+                    .render(&mut rp, &self.typeface.texture_atlas.as_ref().unwrap());
+            }
+            None => {}
+        };
+    }
+
+    /// Renders a scene handle
     pub fn render_scene_handle<Message>(
         &mut self,
         scene_handle: &SceneHandle<Message>,
@@ -94,83 +144,84 @@ impl Zui {
     ) where
         Message: Copy + Clone,
     {
+        /// Describes how the RenderLayer should be rendered
+        #[derive(Debug)]
+        enum RenderLayerBehaviour {
+            WithFramebufferClipRectangle(Rectangle<u32>),
+            WithoutClipRectangle,
+            DoNotRender
+        }
+
         let render_layers = scene_handle.to_render_layers(&self.context());
 
         // clearing the screen, this is where the world render pass would go
         _ = render_state.render_clear();
-        // render_state.submit_command_encoder();
 
-        // for each layer in render_layers
+        // rendering each of the render layers
         for render_layer in render_layers {
-            self.renderer
-                .upload(render_state.device(), &render_layer.simple_vertices);
-            self.text_renderer
-                .upload(render_state.device(), &render_layer.text_vertices);
 
-            let clip_rectangle = match render_layer.clip_rectangle {
+            // determining whether the layer should be rendered or not
+            let render_layer_behaviour = match render_layer.clip_rectangle {
                 Some(clip_rect) => {
                     // converting to whole-pixel u32 coordinates
-                    let clip_rect_u32 = Rectangle::new(
-                        clip_rect.x_min.round() as u32,
-                        clip_rect.x_max.round() as u32,
-                        clip_rect.y_min.round() as u32,
-                        clip_rect.y_max.round() as u32,
-                    );
+                    let clip_rect = Self::rectangle_f32_to_u32(&clip_rect);
 
-                    // clipping the rectangle to prevent it from being off screen, which will cause
-                    // wpgu to error
-                    match clip_rect_u32.intersection(&Rectangle::new(
-                            0u32,
-                            self.viewport_dimensions_px.width,
-                            0u32,
-                            self.viewport_dimensions_px.height,
-                    )) {
-                        Some(on_screen_clip_rect) => {
+                    // getting intersection with the viewport
+                    match Self::rectangle_viewport_intersection(
+                        &clip_rect,
+                        self.viewport_dimensions_px,
+                    ) {
 
-                            let scissor_rect_framebuffer_coordinates = Rectangle::new(
-                                on_screen_clip_rect.x_min as u32,
-                                on_screen_clip_rect.x_max as u32,
-                                self.viewport_dimensions_px.height - on_screen_clip_rect.y_max as u32,
-                                self.viewport_dimensions_px.height - on_screen_clip_rect.y_min as u32,
-                            );
-
-                            // wgpu will panic if the scissor rectangle has a width or height of 0
-                            if scissor_rect_framebuffer_coordinates.width() == 0
-                                || scissor_rect_framebuffer_coordinates.height() == 0
-                            {
-                                None
-                            } else {
-                                Some(scissor_rect_framebuffer_coordinates)
+                        // if in viewport render with clip rectangle
+                        Some(clip_rect) => {
+                            match Self::rectangle_has_no_area(&clip_rect) {
+                                false => {
+                                    RenderLayerBehaviour::WithFramebufferClipRectangle(
+                                        Self::rectangle_pixel_to_framebuffer(
+                                            &clip_rect,
+                                            self.viewport_dimensions_px,
+                                        )
+                                    )
+                                }
+                                true => RenderLayerBehaviour::DoNotRender,
                             }
                         },
-                        None => None,
+
+                        // if not intersecting with viewport, render nothing
+                        None => RenderLayerBehaviour::DoNotRender,
+
                     }
-
                 }
-                None => None,
+
+                // if no clip rectangle, render the whole screen, ie - without clip rectangle
+                None => RenderLayerBehaviour::WithoutClipRectangle,
             };
 
-            let render_pass_opt = render_state.render_with_clip_rectangle(clip_rectangle);
-            match render_pass_opt {
-                Some(mut rp) => {
-                    self.renderer.render(&mut rp);
+            match render_layer_behaviour {
+                RenderLayerBehaviour::WithFramebufferClipRectangle(fcr) => {
+                    self.renderer
+                        .upload(render_state.device(), &render_layer.simple_vertices);
                     self.text_renderer
-                        .render(&mut rp, &self.typeface.texture_atlas.as_ref().unwrap());
-                }
-                None => {}
-            };
-        }
-        // render_state.submit_command_encoder();
+                        .upload(render_state.device(), &render_layer.text_vertices);
 
-        // for render_layer in render_layers {
-        //     self.renderer
-        //         .upload(render_state.device(), &render_layer.simple_vertices);
-        //     self.text_renderer
-        //         .upload(render_state.device(), &render_layer.text_vertices);
-        // }
-        // for (index, render_layer) in render_layers.iter().enumerate() {
-        //     println!("layer: {}", index);
-        // }
+                    let render_pass_opt = render_state.try_render_pass_with_clip_rectangle(Some(fcr));
+                    self.try_render(render_pass_opt);
+                },
+                RenderLayerBehaviour::WithoutClipRectangle => {
+                    self.renderer
+                        .upload(render_state.device(), &render_layer.simple_vertices);
+                    self.text_renderer
+                        .upload(render_state.device(), &render_layer.text_vertices);
+
+                    let render_pass_opt = render_state.try_render_pass_with_clip_rectangle(None);
+                    self.try_render(render_pass_opt);
+                },
+                RenderLayerBehaviour::DoNotRender => {
+                    // Do nothing!
+                }
+            };
+
+        }
 
         render_state.submit_command_encoder();
         _ = render_state.present();

@@ -85,8 +85,6 @@ where
         if let Some(text) = self.text.as_mut() {
             let boundary_width = layout_boundaries.horizontal.span_px;
 
-            info!("boundary_width: {boundary_width:?}");
-
             text.update_layout(
                 context.font,
                 Bounds {

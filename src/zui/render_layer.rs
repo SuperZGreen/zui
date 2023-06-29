@@ -4,6 +4,9 @@ use super::{primitives::Rectangle, simple_renderer::SimpleVertex, text_renderer:
 /// The layer also may contain a clipping rectangle, which will prevent contents outside of this
 /// rectangle from being rendered
 pub struct RenderLayer {
+    /// The name of the RenderLayer, for debugging
+    pub name: Option<String>,
+
     /// The SimpleVertices that will be rendered on this layer
     pub simple_vertices: Vec<SimpleVertex>,
 
@@ -21,9 +24,15 @@ impl RenderLayer {
         clip_rectangle: Option<Rectangle<f32>>,
     ) -> Self {
         Self {
+            name: None,
             simple_vertices,
             text_vertices,
             clip_rectangle,
         }
+    }
+
+    pub fn with_name(mut self, name: Option<&str>) -> Self {
+        self.name = name.map(|n| String::from(n));
+        self
     }
 }

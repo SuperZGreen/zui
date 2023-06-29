@@ -200,7 +200,20 @@ where
             &mut render_layers
         );
 
-        render_layers.push_front(RenderLayer::new(simple_vertices, text_vertices, None));
+        render_layers.push_front(
+            RenderLayer::new(simple_vertices, text_vertices, None)
+                .with_name(Some("root_layer"))
+        );
+
+        // for (render_layer_index, render_layer) in render_layers.iter().enumerate() {
+        //     info!(
+        //         "render_layer[{render_layer_index}] sv.len: {}, tv.len: {}, clip_rect: {:?}",
+        //         render_layer.simple_vertices.len(),
+        //         render_layer.text_vertices.len(),
+        //         render_layer.clip_rectangle,
+        //     );
+        // }
+        // info!("");
 
         render_layers
     }

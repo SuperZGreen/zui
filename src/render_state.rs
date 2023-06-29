@@ -1,7 +1,6 @@
-use image::GenericImageView;
 use wgpu::{CommandEncoder, RenderPass, SurfaceTexture, TextureView};
 
-use crate::zui::{Zui, Rectangle};
+use crate::zui::Rectangle;
 
 pub struct RenderState {
     _adapter: wgpu::Adapter,
@@ -194,62 +193,37 @@ impl RenderState {
         // self.surface_texture.take().unwrap().present();
     }
 
-    /// Gives the RenderPass that does the initial clear of the screen
-    pub fn render_with_clip_rectangle(&mut self, clip_rectangle: Option<Rectangle<u32>>) -> Option<RenderPass> {
+    /// Gives a RenderPass, with a clip rectangle set if provided
+    pub fn try_render_pass_with_clip_rectangle(&mut self, clip_rectangle: Option<Rectangle<u32>>) -> Option<RenderPass> {
         if self.skip_rendering {
             return None;
         }
 
-        // self.surface_texture = match self.surface.get_current_texture() {
-        //     Ok(t) => Some(t),
-        //     Err(_) => {
-        //         error!("failed to get surface texture!");
-        //         return None;
-        //     }
-        // };
+        let mut render_pass = self.command_encoder.as_mut().unwrap().begin_render_pass(
+            &wgpu::RenderPassDescriptor {
+                label: Some("world_render_pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &self.surface_texture_view.as_ref().unwrap(),
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Load,
+                        store: true,
+                    },
+                })],
+                depth_stencil_attachment: None,
+        });
 
-        // self.surface_texture_view = Some(
-        //     self.surface_texture
-        //         .as_mut()
-        //         .unwrap()
-        //         .texture
-        //         .create_view(&wgpu::TextureViewDescriptor::default()),
-        // );
-
-        // self.command_encoder = Some(self.device.create_command_encoder(
-        //     &wgpu::CommandEncoderDescriptor {
-        //         label: Some("render pass command encoder"),
-        //     },
-        // ));
-
-        {
-            let mut render_pass = self.command_encoder.as_mut().unwrap().begin_render_pass(
-                &wgpu::RenderPassDescriptor {
-                    label: Some("world_render_pass"),
-                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                        view: &self.surface_texture_view.as_ref().unwrap(),
-                        resolve_target: None,
-                        ops: wgpu::Operations {
-                            load: wgpu::LoadOp::Load,
-                            store: true,
-                        },
-                    })],
-                    depth_stencil_attachment: None,
-                },
+        if let Some(clip_rectangle) = clip_rectangle {
+            render_pass.set_scissor_rect(
+                clip_rectangle.x_min,
+                clip_rectangle.y_min,
+                clip_rectangle.width(),
+                clip_rectangle.height(),
             );
-
-            if let Some(clip_rectangle) = clip_rectangle {
-                render_pass.set_scissor_rect(
-                    clip_rectangle.x_min,
-                    clip_rectangle.y_min,
-                    clip_rectangle.width(),
-                    clip_rectangle.height(),
-                );
-            }
-
-            // Do rendering
-            return Some(render_pass);
         }
+
+        // Do rendering
+        return Some(render_pass);
     }
 
     pub fn submit_command_encoder(&mut self) {
