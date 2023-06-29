@@ -100,6 +100,8 @@ fn main() {
                         exit(control_flow);
                     }
                     WindowEvent::Resized(physical_size) => {
+                        info!("resized to: {physical_size:?}");
+
                         render_state.resize(physical_size);
                         zui.resize(*physical_size);
                         scene_store

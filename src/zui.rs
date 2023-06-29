@@ -109,21 +109,43 @@ impl Zui {
 
             let clip_rectangle = match render_layer.clip_rectangle {
                 Some(clip_rect) => {
-                    let scissor_rect_framebuffer_coordinates = Rectangle::new(
-                        clip_rect.x_min as u32,
-                        clip_rect.x_max as u32,
-                        self.viewport_dimensions_px.height - clip_rect.y_max as u32,
-                        self.viewport_dimensions_px.height - clip_rect.y_min as u32,
+                    // converting to whole-pixel u32 coordinates
+                    let clip_rect_u32 = Rectangle::new(
+                        clip_rect.x_min.round() as u32,
+                        clip_rect.x_max.round() as u32,
+                        clip_rect.y_min.round() as u32,
+                        clip_rect.y_max.round() as u32,
                     );
 
-                    // wgpu will panic if the scissor rectangle has a width or height of 0
-                    if scissor_rect_framebuffer_coordinates.width() == 0
-                        || scissor_rect_framebuffer_coordinates.height() == 0
-                    {
-                        None
-                    } else {
-                        Some(scissor_rect_framebuffer_coordinates)
+                    // clipping the rectangle to prevent it from being off screen, which will cause
+                    // wpgu to error
+                    match clip_rect_u32.intersection(&Rectangle::new(
+                            0u32,
+                            self.viewport_dimensions_px.width,
+                            0u32,
+                            self.viewport_dimensions_px.height,
+                    )) {
+                        Some(on_screen_clip_rect) => {
+
+                            let scissor_rect_framebuffer_coordinates = Rectangle::new(
+                                on_screen_clip_rect.x_min as u32,
+                                on_screen_clip_rect.x_max as u32,
+                                self.viewport_dimensions_px.height - on_screen_clip_rect.y_max as u32,
+                                self.viewport_dimensions_px.height - on_screen_clip_rect.y_min as u32,
+                            );
+
+                            // wgpu will panic if the scissor rectangle has a width or height of 0
+                            if scissor_rect_framebuffer_coordinates.width() == 0
+                                || scissor_rect_framebuffer_coordinates.height() == 0
+                            {
+                                None
+                            } else {
+                                Some(scissor_rect_framebuffer_coordinates)
+                            }
+                        },
+                        None => None,
                     }
+
                 }
                 None => None,
             };

@@ -48,7 +48,9 @@ pub struct Rectangle<T> {
 
 impl<T> Rectangle<T>
 where
-    T: std::ops::Sub<Output = T> + Copy,
+    T: std::ops::Sub<Output = T> +
+       std::cmp::PartialOrd +
+       Copy,
 {
     pub fn new(x_min: T, x_max: T, y_min: T, y_max: T) -> Self {
         Self {
@@ -75,6 +77,47 @@ where
             Axis::Vertical => self.height(),
             Axis::Horizontal => self.width(),
         }
+    }
+
+    fn max(a: T, b: T) -> T {
+        if a > b{
+            a
+        } else {
+            b
+        }
+    }
+
+    fn min(a: T, b: T) -> T {
+        if a < b{
+            a
+        } else {
+            b
+        }
+    }
+
+    /// Returns the intersection of two rectangles
+    pub fn intersection(&self, other: &Rectangle<T>) -> Option<Rectangle<T>> {
+
+        let min_max_x = Self::min(self.x_max, other.x_max);
+        let max_min_x = Self::max(self.x_min, other.x_min);
+
+        if max_min_x > min_max_x {
+            return None;
+        }
+
+        let min_max_y = Self::min(self.y_max, other.y_max);
+        let max_min_y = Self::max(self.y_min, other.y_min);
+
+        if max_min_y > min_max_y {
+            return None;
+        }
+
+        Some(Rectangle {
+            x_min: max_min_x,
+            x_max: min_max_x,
+            y_min: max_min_y,
+            y_max: min_max_y,
+        })
     }
 }
 
@@ -212,7 +255,9 @@ where
 
 impl<T> From<&Rectangle<T>> for Dimensions<T>
 where
-    T: Sub<Output = T> + Copy,
+    T: std::ops::Sub<Output = T> +
+       std::cmp::PartialOrd +
+       Copy,
 {
     fn from(value: &Rectangle<T>) -> Self {
         Dimensions {
@@ -224,7 +269,9 @@ where
 
 impl<T> From<Rectangle<T>> for Dimensions<T>
 where
-    T: Sub<Output = T> + Copy,
+    T: std::ops::Sub<Output = T> +
+       std::cmp::PartialOrd +
+       Copy,
 {
     fn from(value: Rectangle<T>) -> Self {
         Dimensions {

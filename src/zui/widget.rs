@@ -3,7 +3,7 @@ use winit::dpi::{PhysicalPosition, PhysicalSize};
 
 use super::{
     font::SymbolKey, primitives::Dimensions, render_layer::RenderLayer,
-    simple_renderer::SimpleVertex, text_renderer::TextVertex, Rectangle, Typeface,
+    simple_renderer::SimpleVertex, text_renderer::TextVertex, Rectangle,
 };
 use std::collections::VecDeque;
 
@@ -211,17 +211,25 @@ pub trait Widget<Message> {
         &mut []
     }
 
-    /// This tells the children to update their internal layouts (ie for text etc), such that they
-    /// can calculate their minimum dimensions in the next step. The Widget must comply with the
-    /// LayoutBoundaries, given to it by its parents. Gives the minimum possible dimensions of the
-    /// child widget given the provided layout_boundaries
+    /// This allows the parent container to set a child's dimensions, this is useful in the case of
+    /// Span::ParentWeighted containers, who need their parent to tell them how much space to take
+    /// up
+    fn set_dimensions(&mut self, dimensions_px: Option<Dimensions<f32>>) {
+        // Do nothing by default
+    }
+
+    /// This tells the Widget to update its internal layout's minimum dimensions, IF the Widget has
+    /// not calculated this previously. The Widget must comply with the LayoutBoundaries provided
+    /// by its parents, and returns the minimum possible dimensions of itself - that will usually
+    /// be stored in the Widget in a Layout struct for later use.
     fn try_update_dimensions(
         &mut self,
         layout_boundaries: &LayoutBoundaries,
         context: &Context,
     ) -> Dimensions<f32>;
     
-    /// Gives the layout struct of self
+    /// Gives the Layout struct of self, containing the internal minimum dimensions of the Widget,
+    /// and the clip rectangle that has possibly been assigned to the Widget
     fn layout<'a>(&'a self) -> &'a Layout;
 
     /// Tells the widget to place itself in the rectangle

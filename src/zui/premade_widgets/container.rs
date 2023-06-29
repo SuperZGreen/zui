@@ -8,37 +8,28 @@ use crate::zui::{
     simple_renderer::SimpleVertex,
     text_renderer::TextVertex,
     widget::{Boundary, BoundaryType, EventResponse, Layout, LayoutBoundaries},
-    Axis, Colour, Context, Event, Span, Text, Widget,
+    Axis, Colour, Context, Event, Span, Widget,
 };
 
 pub struct Container<Message>
 where
     Message: Clone + Copy,
 {
+    /// The children of the Container
     children: Vec<Box<dyn Widget<Message>>>,
 
-    // structure
+    /// The axis that the children of the Container are placed along within the Container
     pub axis: Axis,
+
+    /// The spatial span that the Container will try to take up
     pub span: Span,
 
-    // internal callbacks
-    pub callback_cursor_clicked: Option<fn(&mut Self) -> bool>,
-    pub callback_cursor_on: Option<fn(&mut Self) -> bool>,
-    pub callback_cursor_off: Option<fn(&mut Self) -> bool>,
+    // The name/tag of the Container, usually for debugging purposes
+    pub name: Option<String>,
 
-    // message behaviour
-    pub message_cursor_clicked: Option<Message>,
-    pub message_cursor_on: Option<Message>,
-    pub message_cursor_off: Option<Message>,
-
-    /// style
+    /// The background of the Container, None is comletely transparent, a Colour will cause the
+    /// container to render vertices of that Colour in the region of its Layout's clip Rectangle
     pub background: Option<Colour>,
-
-    /// The number of pixels reserved for this Container's contents
-    pub dimensions_px: Option<Dimensions<f32>>,
-
-    /// calculated screen space area
-    pub clip_rectangle: Option<Rectangle<f32>>,
 
     /// calculated screen space span
     pub span_px: Option<f32>,
@@ -46,9 +37,7 @@ where
     /// Flag that describes whether the container is overflowing or not
     pub overflowing: bool,
 
-    /// Text contained within a widget's area
-    pub text: Option<Text>,
-
+    /// The Layout of the container, containing the clip rectangle and inner content dimensions
     pub layout: Layout,
 }
 
@@ -56,92 +45,110 @@ impl<Message> Container<Message>
 where
     Message: Clone + Copy,
 {
-    #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
+            name: None,
             children: Vec::new(),
             axis: Axis::Vertical,
             span: Span::ParentWeight(1f32),
-            callback_cursor_clicked: None,
-            callback_cursor_on: None,
-            callback_cursor_off: None,
-            message_cursor_clicked: None,
-            message_cursor_on: None,
-            message_cursor_off: None,
             background: None,
-            dimensions_px: None,
-            clip_rectangle: None,
             span_px: None,
             overflowing: false,
-            text: None,
             layout: Layout::new(),
         }
     }
 
-    #[allow(dead_code)]
+    /// Used for diagnostic purposes
+    pub fn with_name(mut self, name: &str) -> Self {
+        self.name = Some(String::from(name));
+        self
+    }
+
     pub fn with_axis(mut self, axis: Axis) -> Self {
         self.axis = axis;
         self
     }
 
-    #[allow(dead_code)]
     pub fn with_span(mut self, span: Span) -> Self {
         self.span = span;
         self
     }
 
-    #[allow(dead_code)]
     pub fn with_background(mut self, background: Option<Colour>) -> Self {
         self.background = background;
         self
     }
 
-    #[allow(dead_code)]
-    pub fn with_callback_cursor_clicked(mut self, callback: Option<fn(&mut Self) -> bool>) -> Self {
-        self.callback_cursor_clicked = callback;
-        self
-    }
-
-    #[allow(dead_code)]
-    pub fn with_callback_cursor_on(mut self, callback: Option<fn(&mut Self) -> bool>) -> Self {
-        self.callback_cursor_on = callback;
-        self
-    }
-
-    #[allow(dead_code)]
-    pub fn with_callback_cursor_off(mut self, callback: Option<fn(&mut Self) -> bool>) -> Self {
-        self.callback_cursor_off = callback;
-        self
-    }
-
-    #[allow(dead_code)]
-    pub fn with_message_clicked(mut self, message: Option<Message>) -> Self {
-        self.message_cursor_clicked = message;
-        self
-    }
-
-    #[allow(dead_code)]
-    pub fn with_message_cursor_on(mut self, message: Option<Message>) -> Self {
-        self.message_cursor_on = message;
-        self
-    }
-
-    #[allow(dead_code)]
-    pub fn with_message_cursor_off(mut self, message: Option<Message>) -> Self {
-        self.message_cursor_off = message;
-        self
-    }
-
-    #[allow(dead_code)]
-    pub fn with_text(mut self, text: Text) -> Self {
-        self.text = Some(text);
-        self
-    }
-
-    #[allow(dead_code)]
     pub fn push(mut self, child: impl Into<Box<dyn Widget<Message>>>) -> Self {
         self.children.push(child.into());
         self
+    }
+
+    /// Gives the name of the widget as a string or "N/A"
+    fn name_as_str<'a>(name: &'a Option<String>) -> &'a str {
+        match name {
+            Some(name) => name.as_str(),
+            None => "N/A",
+        }
+    }
+
+    /// Increments a span_px accumulator by the child's rectangle
+    fn update_span_accumulator_px(
+        span_accumulator_px: &mut f32,
+        axis: Axis,
+        dimensions: &Dimensions<f32>,
+    ) {
+        match axis {
+            Axis::Vertical => *span_accumulator_px += dimensions.height,
+            Axis::Horizontal => *span_accumulator_px += dimensions.width,
+        }
+    }
+
+    /// Gives the number of span pixels used by children's layout minimum dimensions
+    fn calculate_reserved_span_px(&self) -> f32 {
+        let mut span_accumulator_px = 0f32;
+        for child in self.children.iter() {
+            // getting the child's dimensions_px
+            let child_dimensions = match child.layout().dimensions_px {
+                Some(dp) => dp,
+                None => continue,
+            };
+
+            // updating the accumulator
+            Self::update_span_accumulator_px(
+                &mut span_accumulator_px,
+                self.axis,
+                &child_dimensions.into(),
+            );
+        }
+
+        span_accumulator_px
+    }
+
+    // Gives the sum of children's Span::ParentWeight values
+    fn sum_of_child_span_parent_weights(&self) -> f32 {
+        let mut sum = 0f32;
+        for child in self.children.iter() {
+            match child.span_weight() {
+                Some(w) => sum += w,
+                None => {}
+            };
+        }
+
+        sum
+    }
+
+    /// Calculates the dimensions of a child based on the dimensions of a parent, essentially
+    /// cutting a dimensions/rectangle into smaller parts
+    fn calculate_child_dimensions(
+        self_dimensions: Dimensions<f32>,
+        axis: Axis,
+        span_px: f32,
+    ) -> Dimensions<f32> {
+        match axis {
+            Axis::Vertical => Dimensions::new(self_dimensions.width, span_px),
+            Axis::Horizontal => Dimensions::new(span_px, self_dimensions.height),
+        }
     }
 }
 
@@ -149,10 +156,10 @@ impl<Message> Widget<Message> for Container<Message>
 where
     Message: Clone + Copy,
 {
-    fn handle_event(&mut self, event: &Event, context: &Context) -> EventResponse<Message> {
+    fn handle_event(&mut self, event: &Event, _context: &Context) -> EventResponse<Message> {
         match event {
             Event::MouseEvent(_) => EventResponse::Propagate,
-            _ => EventResponse::Propagate,
+            // _ => EventResponse::Propagate,
         }
     }
 
@@ -169,10 +176,6 @@ where
     }
 
     fn collect_text(&self, symbol_keys: &mut rustc_hash::FxHashSet<crate::zui::font::SymbolKey>) {
-        if let Some(text) = &self.text {
-            text.collect_symbol_keys(symbol_keys);
-        }
-
         for child in self.children.iter() {
             child.collect_text(symbol_keys);
         }
@@ -183,17 +186,9 @@ where
         viewport_dimensions_px: PhysicalSize<u32>,
         render_layers: &mut VecDeque<RenderLayer>,
     ) -> (Vec<SimpleVertex>, Vec<TextVertex>) {
-        // adding own text vertices
-        let mut text_vertices = Vec::new();
-        if let Some(text) = &self.text {
-            if let Some(clip_rectangle) = self.clip_rectangle {
-                text_vertices.append(&mut text.to_vertices(clip_rectangle, viewport_dimensions_px));
-            }
-        }
-
         // adding own rectangle/simple vertices
         let mut simple_vertices = Vec::new();
-        if let Some(rectangle) = self.clip_rectangle {
+        if let Some(rectangle) = self.layout.clip_rectangle_px {
             if let Some(colour) = self.background {
                 // simple_vertices.append(&mut rectangle.to_simple_vertices(colour));
                 simple_vertices.extend_from_slice(&SimpleVertex::from_rectangle(
@@ -205,6 +200,7 @@ where
         }
 
         // adding children's vertices
+        let mut text_vertices = Vec::new();
         for child in self.children.iter() {
             let (mut sv, mut tv) = child.to_vertices(viewport_dimensions_px, render_layers);
             simple_vertices.append(&mut sv);
@@ -213,8 +209,11 @@ where
 
         // creating new layer if overflowing
         if self.overflowing {
-            let render_layer =
-                RenderLayer::new(simple_vertices, text_vertices, self.clip_rectangle);
+            let render_layer = RenderLayer::new(
+                simple_vertices,
+                text_vertices,
+                self.layout.clip_rectangle_px,
+            );
             render_layers.push_back(render_layer);
             (Vec::new(), Vec::new())
         } else {
@@ -229,7 +228,6 @@ where
         }
     }
 
-    // TODO: this will always "fit contents"
     fn try_update_dimensions(
         &mut self,
         layout_boundaries: &LayoutBoundaries,
@@ -242,10 +240,10 @@ where
         }
 
         let dimensions = match self.span {
-            Span::Pixels(p) => Dimensions::new(p, p),
+            Span::Pixels(p) => Some(Dimensions::new(p * 2f32, p)),
             Span::FitContents => {
-                // calculating the self dimensions based on the updated contents dimensions of the children
-                // the span along the self.axis
+                // calculating the self dimensions based on the updated contents dimensions of the
+                // children the span along the self.axis
                 let mut self_axis_span = 0f32;
 
                 // the span perpendicular to the self.axis
@@ -272,71 +270,148 @@ where
                 }
 
                 match self.axis {
-                    Axis::Vertical => Dimensions::new(self_perpendicular_span, self_axis_span),
-                    Axis::Horizontal => Dimensions::new(self_axis_span, self_perpendicular_span),
+                    Axis::Vertical => {
+                        Some(Dimensions::new(self_perpendicular_span, self_axis_span))
+                    }
+                    Axis::Horizontal => {
+                        Some(Dimensions::new(self_axis_span, self_perpendicular_span))
+                    }
                 }
             }
-            _ => Dimensions::new(0f32, 0f32),
+            Span::ParentRatio(pr) => {
+                let available_width_px = layout_boundaries.horizontal.span_px;
+                let available_height_px = layout_boundaries.vertical.span_px;
+
+                match self.axis {
+                    Axis::Horizontal => {
+                        Some(Dimensions::new(available_width_px * pr, available_height_px))
+                    },
+                    Axis::Vertical => {
+                        Some(Dimensions::new(available_width_px, available_height_px * pr))
+                    },
+                }
+            }
+            _ => None,
         };
 
-        self.layout.dimensions_px = Some(dimensions);
+        self.layout.dimensions_px = dimensions;
 
-        dimensions
+        dimensions.unwrap_or(Dimensions::new(0f32, 0f32))
     }
 
-    fn try_fit_rectangle(&mut self, clip_rectangle: &Rectangle<f32>, context: &Context) {
-        self.clip_rectangle = Some(*clip_rectangle);
+    fn try_fit_rectangle(&mut self, clip_rectangle: &Rectangle<f32>, _context: &Context) {
+        self.layout.clip_rectangle_px = Some(*clip_rectangle);
+
+        // // this will be called when the Span::ParentWeights are used
+        // if self.layout.dimensions_px.is_none {
+        //     self.try_update_dimensions
+        // }
     }
 
     fn place_children(&mut self, context: &Context) {
-        if let Some(self_clip_rectangle) = self.clip_rectangle {
+        if self.children.is_empty() {
+            return;
+        }
+
+        if let Some(self_clip_rectangle) = self.layout.clip_rectangle_px {
+            // name for diagnostics later
+            let self_name_str = Self::name_as_str(&self.name);
+
+            // determining the LayoutBoundaries for the children
             let layout_boundaries = LayoutBoundaries::new(
                 Boundary::new(BoundaryType::Static, self_clip_rectangle.width()),
                 Boundary::new(BoundaryType::Static, self_clip_rectangle.height()),
             );
 
-            let mut children_dimensions = Vec::new();
+            // trying to update all children's reserved dimensions
             for child in self.children.iter_mut() {
-                children_dimensions.push(child.try_update_dimensions(&layout_boundaries, context));
+                child.try_update_dimensions(&layout_boundaries, context);
             }
 
+            // calculating the total span used by children
+            let reserved_px = self.calculate_reserved_span_px();
+            let free_px = self_clip_rectangle.span_by_axis(self.axis) - reserved_px;
+
+            // calculating the number of pixels per Span::ParentWeight(1f32)
+            let sum_of_child_weights = self.sum_of_child_span_parent_weights();
+
+            let pixels_per_parent_weight = if free_px <= 0f32 {
+                0f32
+            } else {
+                free_px / sum_of_child_weights
+            };
+
+            info!("container {self_name_str}, free_px: {free_px}, reserved_px: {reserved_px}, sum_of_child_weights: {sum_of_child_weights}, pixels_per_parent_weight: {pixels_per_parent_weight}");
+
+            // flagging overflow
+            if free_px < 0f32 {
+                info!("container: {} is overflowing!", self_name_str);
+                self.overflowing = true;
+            }
+
+            // force updating the dimensions of weighted children
+            for child in self.children.iter_mut() {
+                match child.span_weight() {
+                    Some(pw) => {
+                        let span_px = pw * pixels_per_parent_weight;
+
+                        let child_dimensions = Self::calculate_child_dimensions(
+                            self_clip_rectangle.into(),
+                            self.axis,
+                            span_px,
+                        );
+
+                        child.set_dimensions(Some(child_dimensions));
+
+                        info!("container {self_name_str} child_dimensions: {child_dimensions:?}");
+                    }
+                    _ => {},
+                };
+            }
+
+            // placing the children
             let mut span_accumulator_px = 0f32;
-            for (child, child_dimensions) in self.children.iter_mut().zip(children_dimensions) {
-                let child_rect = match self.axis {
-                    Axis::Vertical => {
-                        let rect = Rectangle::new(
-                            self_clip_rectangle.x_min,
-                            self_clip_rectangle.x_min + child_dimensions.width,
-                            self_clip_rectangle.y_max
-                                - span_accumulator_px
-                                - child_dimensions.height,
-                            self_clip_rectangle.y_max - span_accumulator_px,
-                        );
-                        span_accumulator_px += child_dimensions.height;
+            for child in self.children.iter_mut() {
 
-                        rect
-                    }
-                    Axis::Horizontal => {
-                        let rect = Rectangle::new(
-                            self_clip_rectangle.x_min + span_accumulator_px,
-                            self_clip_rectangle.x_min
-                                + span_accumulator_px
-                                + child_dimensions.width,
-                            self_clip_rectangle.y_max - child_dimensions.height,
-                            self_clip_rectangle.y_max,
-                        );
-                        span_accumulator_px += child_dimensions.width;
-
-                        rect
-                    }
+                // getting the child dimensions if they have been generated, otherwise continuing
+                let child_dimensions = match child.layout().dimensions_px {
+                    Some(dims) => dims,
+                    None => continue,
                 };
 
-                child.try_fit_rectangle(&child_rect, context);
+                // determining the child rectangle
+                let child_rectangle = match self.axis {
+                    Axis::Vertical => Rectangle::new(
+                        self_clip_rectangle.x_min,
+                        self_clip_rectangle.x_min + child_dimensions.width,
+                        self_clip_rectangle.y_max - span_accumulator_px - child_dimensions.height,
+                        self_clip_rectangle.y_max - span_accumulator_px,
+                    ),
+                    Axis::Horizontal => Rectangle::new(
+                        self_clip_rectangle.x_min + span_accumulator_px,
+                        self_clip_rectangle.x_min + span_accumulator_px + child_dimensions.width,
+                        self_clip_rectangle.y_max - child_dimensions.height,
+                        self_clip_rectangle.y_max,
+                    ),
+                };
+
+                child.try_fit_rectangle(&child_rectangle, context);
                 child.place_children(context);
+
+                // increments the span accumulator
+                Self::update_span_accumulator_px(
+                    &mut span_accumulator_px,
+                    self.axis,
+                    &child_rectangle.into(),
+                );
             }
         } else {
             warn!("no self.clip_rectangle!");
         }
+    }
+
+    fn set_dimensions(&mut self, dimensions_px: Option<Dimensions<f32>>) {
+        self.layout.dimensions_px = dimensions_px;
     }
 }
 

@@ -2,10 +2,9 @@ use std::ops::RangeInclusive;
 
 use crate::{
     zui::{
-        font::FontStyle,
-        premade_widgets::{Button, Container, FillBar, TextContainer},
+        premade_widgets::{Button, Container, FillBar},
         text::TextAlignmentVertical,
-        Axis, Colour, LineWrapping, Scene, Span, Text, TextConfiguration, TextSegment, TextSize,
+        Axis, Colour, Scene, Span, Text, TextConfiguration, TextSegment,
         Widget,
     },
     OptionsMenuMessage, SceneIdentifier, UiMessage,
@@ -18,9 +17,6 @@ pub struct OptionsScene {
 }
 
 impl OptionsScene {
-    const FONT_SIZE_NORMAL: u32 = 32u32;
-    const FONT_SIZE_LARGE: u32 = 64u32;
-
     pub fn new() -> Self {
         Self {
             master_volume: 50f32,
@@ -56,11 +52,11 @@ impl OptionsScene {
             .with_span(Span::ViewHeight(0.025f32))
             .with_axis(Axis::Horizontal)
             .with_background(Some(Colour::DARK_GREEN))
-            .push(
-                Container::new()
-                    .with_span(Span::ParentWeight(1f32))
-                    .with_text(text),
-            )
+            // .push(
+            //     Container::new()
+            //         .with_span(Span::ParentWeight(1f32))
+            //         .with_text(text),
+            // )
             .push(bar_container)
     }
 }
@@ -106,164 +102,164 @@ impl Scene for OptionsScene {
         let central_content = Container::new()
             .with_axis(Axis::Vertical)
             .push(Container::new())
-            .push(
-                Container::new()
-                    .with_span(Span::ParentWeight(10f32))
-                    .with_background(Some(Colour::rgb(0.1f32, 0.1f32, 0.1f32)))
-                    .push(
-                        Container::new()
-                            .with_span(Span::FitContents)
-                            .with_background(Some(Colour::DARK_RED))
-                            .with_text(
-                                Text::new()
-                                    .push_segment(TextSegment::new("Options Menu", Colour::WHITE))
-                                    .with_configuration(TextConfiguration {
-                                        size_px: Self::FONT_SIZE_LARGE,
-                                        ..Default::default()
-                                    }),
-                            ),
-                    )
-                    .push(
-                        Container::new()
-                            .with_span(Span::FitContents)
-                            .with_background(Some(Colour::DARK_BLUE))
-                            .with_text(
-                                Text::new()
-                                    .push_segment(TextSegment::new(
-                                        "This is my text! ",
-                                        Colour::WHITE,
-                                    ))
-                                    .push_segment(TextSegment {
-                                        string: String::from("This is BOLD. "),
-                                        colour: Colour::LIGHT_CYAN,
-                                        style: FontStyle::Bold,
-                                    })
-                                    .push_segment(TextSegment {
-                                        string: String::from("ThisIsAReallyReallyMassiveWordThatJust-Doesn'tEndAndWillProbablyBreakTheTextFormatting"),
-                                        colour: Colour::LIGHT_RED,
-                                        style: FontStyle::Bold,
-                                    })
-                                    .push_segment(TextSegment {
-                                        string: String::from("This is ITALIC. "),
-                                        colour: Colour::WHITE,
-                                        style: FontStyle::Italic,
-                                    })
-                                    .push_segment(TextSegment::new(
-                                        "This is another part of my text! ",
-                                        Colour::rgb(0f32, 1f32, 1f32),
-                                    ))
-                                    .push_segment(TextSegment::new(
-                                        "This is some more text ",
-                                        Colour::WHITE,
-                                    ))
-                                    .push_segment(TextSegment::new("This is my ", Colour::WHITE))
-                                    .push_segment(TextSegment::new(
-                                        "FAVOURITE ",
-                                        Colour::rgb(0.7f32, 1f32, 0.7f32),
-                                    ))
-                                    .push_segment(TextSegment::new("text!", Colour::WHITE))
-                                    .push_segment(TextSegment::new(&dummy_string, Colour::WHITE))
-                                    .with_configuration(TextConfiguration {
-                                        size_px: Self::FONT_SIZE_NORMAL,
-                                        line_wrapping: LineWrapping::Word,
-                                        ..Default::default()
-                                    }),
-                            ),
-                    )
-                    .push(
-                        Container::new()
-                            .with_span(Span::FitContents)
-                            .with_background(Some(Colour::DARK_RED))
-                            .with_text(
-                                Text::new()
-                                    .push_segment(TextSegment::new(
-                                        "Graphic Design is my ",
-                                        Colour::WHITE,
-                                    ))
-                                    .push_segment(TextSegment {
-                                        string: String::from("PASSION("),
-                                        colour: Colour::LIGHT_YELLOW,
-                                        style: FontStyle::Bold,
-                                    })
-                                    .push_segment(TextSegment::new("!)", Colour::WHITE))
-                                    .with_configuration(TextConfiguration {
-                                        size_px: Self::FONT_SIZE_LARGE,
-                                        ..Default::default()
-                                    }),
-                            ),
-                    )
-                    .push(TextContainer::new().with_background_colour(Some(Colour::DARK_GREY)).with_text(
-                                Text::new()
-                                    .push_segment(TextSegment::new(
-                                        "This is my text container Segment 1, ",
-                                        Colour::WHITE,
-                                    ))
-                                    .push_segment(TextSegment {
-                                        string: String::from("Segment 2, "),
-                                        colour: Colour::CYAN,
-                                        style: FontStyle::Bold,
-                                    })
-                                    .push_segment(TextSegment::new("Segment 3!", Colour::MAGENTA))
-                                    .with_configuration(TextConfiguration {
-                                        size_px: Self::FONT_SIZE_NORMAL,
-                                        ..Default::default()
-                                    }),
-                    ))
-                    .push(Self::named_slider(
-                        "Master Volume",
-                        0f32..=100f32,
-                        self.master_volume,
-                        |val| {
-                            UiMessage::OptionsMenuMessage(OptionsMenuMessage::MasterVolumeChanged(
-                                *val,
-                            ))
-                        },
-                    ))
-                    .push(Self::named_slider(
-                        "Music Volume",
-                        0f32..=100f32,
-                        self.music_volume,
-                        |val| {
-                            UiMessage::OptionsMenuMessage(OptionsMenuMessage::MusicVolumeChanged(
-                                *val,
-                            ))
-                        },
-                    ))
-                    .push(Self::named_slider(
-                        "Sound Effects",
-                        0f32..=100f32,
-                        self.sound_effects_volume,
-                        |val| {
-                            UiMessage::OptionsMenuMessage(
-                                OptionsMenuMessage::SoundEffectsVolumeChanged(*val),
-                            )
-                        },
-                    ))
-                    .push(
-                        FillBar::new(0f32..=100f32, self.sound_effects_volume, true, |val| {
-                            UiMessage::OptionsMenuMessage(
-                                OptionsMenuMessage::SoundEffectsVolumeChanged(*val),
-                            )
-                        })
-                        .with_span(Span::ViewHeight(0.025f32)),
-                    )
-                    .push(
-                        FillBar::new(0f32..=100f32, self.sound_effects_volume, true, |val| {
-                            UiMessage::OptionsMenuMessage(
-                                OptionsMenuMessage::SoundEffectsVolumeChanged(*val),
-                            )
-                        })
-                        .with_span(Span::ViewHeight(0.025f32)),
-                    )
-                    .push(
-                        FillBar::new(0f32..=100f32, self.sound_effects_volume, true, |val| {
-                            UiMessage::OptionsMenuMessage(
-                                OptionsMenuMessage::SoundEffectsVolumeChanged(*val),
-                            )
-                        })
-                        .with_span(Span::ViewHeight(0.025f32)),
-                    ),
-            )
+            // .push(
+            //     Container::new()
+            //         .with_span(Span::ParentWeight(10f32))
+            //         .with_background(Some(Colour::rgb(0.1f32, 0.1f32, 0.1f32)))
+            //         .push(
+            //             Container::new()
+            //                 .with_span(Span::FitContents)
+            //                 .with_background(Some(Colour::DARK_RED))
+            //                 .with_text(
+            //                     Text::new()
+            //                         .push_segment(TextSegment::new("Options Menu", Colour::WHITE))
+            //                         .with_configuration(TextConfiguration {
+            //                             size_px: Self::FONT_SIZE_LARGE,
+            //                             ..Default::default()
+            //                         }),
+            //                 ),
+            //         )
+            //         .push(
+            //             Container::new()
+            //                 .with_span(Span::FitContents)
+            //                 .with_background(Some(Colour::DARK_BLUE))
+            //                 .with_text(
+            //                     Text::new()
+            //                         .push_segment(TextSegment::new(
+            //                             "This is my text! ",
+            //                             Colour::WHITE,
+            //                         ))
+            //                         .push_segment(TextSegment {
+            //                             string: String::from("This is BOLD. "),
+            //                             colour: Colour::LIGHT_CYAN,
+            //                             style: FontStyle::Bold,
+            //                         })
+            //                         .push_segment(TextSegment {
+            //                             string: String::from("ThisIsAReallyReallyMassiveWordThatJust-Doesn'tEndAndWillProbablyBreakTheTextFormatting"),
+            //                             colour: Colour::LIGHT_RED,
+            //                             style: FontStyle::Bold,
+            //                         })
+            //                         .push_segment(TextSegment {
+            //                             string: String::from("This is ITALIC. "),
+            //                             colour: Colour::WHITE,
+            //                             style: FontStyle::Italic,
+            //                         })
+            //                         .push_segment(TextSegment::new(
+            //                             "This is another part of my text! ",
+            //                             Colour::rgb(0f32, 1f32, 1f32),
+            //                         ))
+            //                         .push_segment(TextSegment::new(
+            //                             "This is some more text ",
+            //                             Colour::WHITE,
+            //                         ))
+            //                         .push_segment(TextSegment::new("This is my ", Colour::WHITE))
+            //                         .push_segment(TextSegment::new(
+            //                             "FAVOURITE ",
+            //                             Colour::rgb(0.7f32, 1f32, 0.7f32),
+            //                         ))
+            //                         .push_segment(TextSegment::new("text!", Colour::WHITE))
+            //                         .push_segment(TextSegment::new(&dummy_string, Colour::WHITE))
+            //                         .with_configuration(TextConfiguration {
+            //                             size_px: Self::FONT_SIZE_NORMAL,
+            //                             line_wrapping: LineWrapping::Word,
+            //                             ..Default::default()
+            //                         }),
+            //                 ),
+            //         )
+            //         .push(
+            //             Container::new()
+            //                 .with_span(Span::FitContents)
+            //                 .with_background(Some(Colour::DARK_RED))
+            //                 .with_text(
+            //                     Text::new()
+            //                         .push_segment(TextSegment::new(
+            //                             "Graphic Design is my ",
+            //                             Colour::WHITE,
+            //                         ))
+            //                         .push_segment(TextSegment {
+            //                             string: String::from("PASSION("),
+            //                             colour: Colour::LIGHT_YELLOW,
+            //                             style: FontStyle::Bold,
+            //                         })
+            //                         .push_segment(TextSegment::new("!)", Colour::WHITE))
+            //                         .with_configuration(TextConfiguration {
+            //                             size_px: Self::FONT_SIZE_LARGE,
+            //                             ..Default::default()
+            //                         }),
+            //                 ),
+            //         )
+            //         .push(TextContainer::new().with_background_colour(Some(Colour::DARK_GREY)).with_text(
+            //                     Text::new()
+            //                         .push_segment(TextSegment::new(
+            //                             "This is my text container Segment 1, ",
+            //                             Colour::WHITE,
+            //                         ))
+            //                         .push_segment(TextSegment {
+            //                             string: String::from("Segment 2, "),
+            //                             colour: Colour::CYAN,
+            //                             style: FontStyle::Bold,
+            //                         })
+            //                         .push_segment(TextSegment::new("Segment 3!", Colour::MAGENTA))
+            //                         .with_configuration(TextConfiguration {
+            //                             size_px: Self::FONT_SIZE_NORMAL,
+            //                             ..Default::default()
+            //                         }),
+            //         ))
+            //         .push(Self::named_slider(
+            //             "Master Volume",
+            //             0f32..=100f32,
+            //             self.master_volume,
+            //             |val| {
+            //                 UiMessage::OptionsMenuMessage(OptionsMenuMessage::MasterVolumeChanged(
+            //                     *val,
+            //                 ))
+            //             },
+            //         ))
+            //         .push(Self::named_slider(
+            //             "Music Volume",
+            //             0f32..=100f32,
+            //             self.music_volume,
+            //             |val| {
+            //                 UiMessage::OptionsMenuMessage(OptionsMenuMessage::MusicVolumeChanged(
+            //                     *val,
+            //                 ))
+            //             },
+            //         ))
+            //         .push(Self::named_slider(
+            //             "Sound Effects",
+            //             0f32..=100f32,
+            //             self.sound_effects_volume,
+            //             |val| {
+            //                 UiMessage::OptionsMenuMessage(
+            //                     OptionsMenuMessage::SoundEffectsVolumeChanged(*val),
+            //                 )
+            //             },
+            //         ))
+            //         .push(
+            //             FillBar::new(0f32..=100f32, self.sound_effects_volume, true, |val| {
+            //                 UiMessage::OptionsMenuMessage(
+            //                     OptionsMenuMessage::SoundEffectsVolumeChanged(*val),
+            //                 )
+            //             })
+            //             .with_span(Span::ViewHeight(0.025f32)),
+            //         )
+            //         .push(
+            //             FillBar::new(0f32..=100f32, self.sound_effects_volume, true, |val| {
+            //                 UiMessage::OptionsMenuMessage(
+            //                     OptionsMenuMessage::SoundEffectsVolumeChanged(*val),
+            //                 )
+            //             })
+            //             .with_span(Span::ViewHeight(0.025f32)),
+            //         )
+            //         .push(
+            //             FillBar::new(0f32..=100f32, self.sound_effects_volume, true, |val| {
+            //                 UiMessage::OptionsMenuMessage(
+            //                     OptionsMenuMessage::SoundEffectsVolumeChanged(*val),
+            //                 )
+            //             })
+            //             .with_span(Span::ViewHeight(0.025f32)),
+            //         ),
+            // )
             .push(Container::new())
             .push(
                 Button::new(

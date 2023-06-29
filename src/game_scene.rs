@@ -28,41 +28,42 @@ impl Scene for GameScene {
     }
 
     fn view(&self, _aspect_ratio: f32) -> Box<dyn Widget<Self::Message>> {
-        let text = Text::new()
-            .with_configuration(TextConfiguration {
-                size_px: 32,
-                ..Default::default()
-            })
-            .push_segment(TextSegment::new("Hello", Colour::WHITE));
+        // let text = Text::new()
+        //     .with_configuration(TextConfiguration {
+        //         size_px: 32,
+        //         ..Default::default()
+        //     })
+        //     .push_segment(TextSegment::new("Hello", Colour::WHITE));
 
         let left_container = Container::new()
-            .with_background(Some(Colour::LIGHT_GREY))
-            .with_text(Text::new().push_segment(TextSegment {
-                string: String::from("This is some test text. There will be a lot of test text to go here just for fun I think. Maybe not so much!"),
-                colour: Colour::DARK_MAGENTA,
-                style: FontStyle::Italic,
-            }).with_configuration(TextConfiguration {line_wrapping: LineWrapping::Word, ..Default::default()}));
+            .with_background(Some(Colour::LIGHT_GREY));
+            // .with_text(Text::new().push_segment(TextSegment {
+            //     string: String::from("This is some test text. There will be a lot of test text to go here just for fun I think. Maybe not so much!"),
+            //     colour: Colour::DARK_MAGENTA,
+            //     style: FontStyle::Italic,
+            // }).with_configuration(TextConfiguration {line_wrapping: LineWrapping::Word, ..Default::default()}));
 
         let right_container = Container::new()
-            .with_background(Some(Colour::rgb(0f32, 0.5f32, 1f32)))
-            .push(
-                Container::new()
-                    .with_background(Some(Colour::DARK_GREEN))
-                    .with_span(Span::ParentRatio(0.2f32))
-                    .with_text(text.clone()),
-            )
-            .push(
-                Container::new()
-                    .with_background(Some(Colour::GREEN))
-                    .with_span(Span::ParentRatio(0.2f32))
-                    .with_text(text.clone()),
-            )
-            .push(
-                Container::new()
-                    .with_background(Some(Colour::LIGHT_GREEN))
-                    .with_span(Span::ParentRatio(0.2f32))
-                    .with_text(text.clone()),
-            );
+            .with_background(Some(Colour::rgb(0f32, 0.5f32, 1f32)));
+            // .push(
+            //     Container::new()
+            //         .with_background(Some(Colour::DARK_GREEN))
+            //         .with_span(Span::ParentRatio(0.2f32))
+            //         .with_text(text.clone()),
+            // )
+            // .push(
+            //     Container::new()
+            //         .with_background(Some(Colour::GREEN))
+            //         .with_span(Span::ParentRatio(0.2f32))
+            //         .with_text(text.clone()),
+            // )
+            // .push(
+            //     Container::new()
+            //         .with_background(Some(Colour::LIGHT_GREEN))
+            //         .with_span(Span::ParentRatio(0.2f32))
+            //         .with_text(text.clone()),
+            // );
+
         Container::new()
             .with_axis(Axis::Horizontal)
             .push(left_container)

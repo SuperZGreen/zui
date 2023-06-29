@@ -1,11 +1,9 @@
 use crate::{
     zui::{
-        premade_widgets::{Button, Container, FillBar, TextContainer},
-        text::TextAlignmentVertical,
-        Axis, Colour, Scene, Span, Text, TextAlignmentHorizontal, TextConfiguration, TextSegment,
-        TextSize, Widget,
+        premade_widgets::{Container, TextContainer},
+        Axis, Colour, Scene, Span, Text, TextSegment, Widget,
     },
-    SceneIdentifier, UiMessage,
+    UiMessage,
 };
 
 pub struct MainScene {
@@ -27,14 +25,17 @@ impl Scene for MainScene {
         (Some(message), false)
     }
 
-    fn view(&self, aspect_ratio: f32) -> Box<dyn Widget<Self::Message>> {
+    fn view(&self, _aspect_ratio: f32) -> Box<dyn Widget<Self::Message>> {
         let v1 = Container::new()
+            .with_name("v1")
             .with_span(Span::Pixels(64f32))
             .with_background(Some(Colour::RED));
         let v2 = Container::new()
+            .with_name("v2")
             .with_span(Span::Pixels(128f32))
             .with_background(Some(Colour::YELLOW));
         let v3 = Container::new()
+            .with_name("v3")
             .with_span(Span::Pixels(192f32))
             .with_background(Some(Colour::GREEN));
         let v4_text = TextContainer::new()
@@ -42,22 +43,36 @@ impl Scene for MainScene {
             .with_background_colour(Some(Colour::DARK_CYAN));
 
         let h1 = Container::new()
+            .with_name("h1")
             .with_span(Span::Pixels(64f32))
             .with_background(Some(Colour::CYAN));
+        let h2_text = TextContainer::new()
+            .with_text(
+                Text::new().push_segment(TextSegment::new(
+                    "This is the h2 text, it goes and goes and keeps on going on and on and on",
+                    // "This is the h2 text",
+                    Colour::ORANGE
+            )));
         let h2 = Container::new()
+            .with_name("h2")
             .with_span(Span::Pixels(128f32))
-            .with_background(Some(Colour::BLUE));
+            .with_background(Some(Colour::BLUE))
+            .push(h2_text);
         let h3 = Container::new()
+            .with_name("h3")
             .with_span(Span::Pixels(192f32))
             .with_background(Some(Colour::MAGENTA));
         let h4 = Container::new()
+            .with_name("h4")
             .with_span(Span::Pixels(64f32))
             .with_background(Some(Colour::CYAN));
         let h5 = Container::new()
+            .with_name("h5")
             .with_span(Span::Pixels(128f32))
             .with_background(Some(Colour::BLUE));
 
         let row = Container::new()
+            .with_name("row")
             .with_background(Some(Colour::LIGHT_GREY))
             .with_axis(Axis::Horizontal)
             .with_span(Span::FitContents)
@@ -67,14 +82,97 @@ impl Scene for MainScene {
             .push(h4)
             .push(h5);
 
-        Container::new()
+        let th1 = TextContainer::new()
+            .with_text(
+                Text::new().push_segment(TextSegment::new(" This is text 1!  ", Colour::BLACK)),
+            )
+            .with_background_colour(Some(Colour::LIGHT_RED));
+        let th2 = TextContainer::new()
+            .with_text(Text::new().push_segment(TextSegment::new(
+                " This is the second text!  ",
+                Colour::BLACK,
+            )))
+            .with_background_colour(Some(Colour::LIGHT_GREEN));
+        let th3 = TextContainer::new()
+            .with_text(Text::new().push_segment(TextSegment::new(
+                " This is the third text!   ",
+                Colour::BLACK,
+            )))
+            .with_background_colour(Some(Colour::LIGHT_BLUE));
+
+        let text_row = Container::new()
+            .with_name("text_row")
+            .with_background(Some(Colour::LIGHT_GREY))
+            .with_axis(Axis::Horizontal)
             .with_span(Span::FitContents)
+            .push(th1)
+            .push(th2)
+            .push(th3);
+
+        let expandable_child_1 = Container::new()
+            .with_name("expandable_child_1")
+            .with_span(Span::Pixels(128f32))
+            .with_background(Some(Colour::DARK_RED));
+        let expandable_child_2 = Container::new()
+            .with_name("expandable_child_2")
+            .with_span(Span::Pixels(256f32))
+            .with_background(Some(Colour::DARK_GREEN));
+        let expandable_child_3 = Container::new()
+            .with_name("expandable_child_3")
+            .with_span(Span::Pixels(64f32))
+            .with_background(Some(Colour::DARK_BLUE));
+
+        let expandable_1 = Container::new()
+            .with_name("expandable_1")
+            .with_span(Span::ParentWeight(1f32))
+            .with_background(Some(Colour::YELLOW))
+            .push(expandable_child_1)
+            .push(expandable_child_2)
+            .push(expandable_child_3);
+
+        let expandable_2_1 = Container::new()
+            .with_name("expandable_2_1")
+            .with_span(Span::ParentWeight(1f32))
+            .with_background(Some(Colour::WHITE));
+        let expandable_2_2_text = TextContainer::new()
+            .with_text(Text::new().push_segment(TextSegment::new(
+                "This is my long test text for the expandable_2_2, I want to make it pretty long \
+                so that I can see it wrap around for a bit. I think that might be pretty useful to \
+                check out my formatting.",
+                Colour::LIGHT_BLUE,
+            )));
+        let expandable_2_2 = Container::new()
+            .with_name("expandable_2_2")
+            .with_span(Span::ParentWeight(2f32))
+            .with_background(Some(Colour::BLACK))
+            .push(expandable_2_2_text);
+        let expandable_2_3 = Container::new()
+            .with_name("expandable_2_3")
+            .with_span(Span::ParentWeight(1f32))
+            .with_background(Some(Colour::GREY));
+
+        let expandable_2 = Container::new()
+            .with_name("expandable_2")
+            .with_axis(Axis::Horizontal)
+            .with_span(Span::ParentWeight(1f32))
+            .with_background(Some(Colour::MAGENTA))
+            .push(expandable_2_1)
+            .push(expandable_2_2)
+            .push(expandable_2_3);
+
+
+        Container::new()
+            .with_name("root_widget")
+            .with_span(Span::ParentRatio(1f32))
             .with_background(Some(Colour::DARK_GREY))
             .push(v1)
             .push(v2)
             .push(row)
             .push(v3)
             .push(v4_text)
+            .push(text_row)
+            .push(expandable_1)
+            .push(expandable_2)
             .into()
     }
 

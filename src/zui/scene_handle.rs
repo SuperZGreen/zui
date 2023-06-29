@@ -5,8 +5,6 @@ use winit::dpi::PhysicalSize;
 use super::{
     primitives::Rectangle,
     render_layer::RenderLayer,
-    simple_renderer::SimpleVertex,
-    text_renderer::TextVertex,
     widget::{Boundary, BoundaryType, Event, EventResponse, LayoutBoundaries, Widget},
     Context, Renderable, Scene,
 };
@@ -69,26 +67,22 @@ where
         // recreating widgets
         self.root_widget = Some(self.scene.view(context.aspect_ratio));
 
+        // getting the root widget
         let root_widget = self.root_widget.as_mut().unwrap();
 
-        // let clip_rectangle = Rectangle::new(
-        //     0f32,
-        //     context.viewport_dimensions_px.width as f32,
-        //     0f32,
-        //     context.viewport_dimensions_px.height as f32,
-        // );
-
+        // creating the layout boundaries to pass to the root widget
         let layout_boundaries = &LayoutBoundaries::new(
             Boundary::new(
-                BoundaryType::Dynamic,
+                BoundaryType::Static,
                 context.viewport_dimensions_px.width as f32,
             ),
             Boundary::new(
-                BoundaryType::Dynamic,
+                BoundaryType::Static,
                 context.viewport_dimensions_px.height as f32,
             ),
         );
 
+        // updating the root widget's dimensions
         let dims = root_widget.try_update_dimensions(layout_boundaries, context);
         let clip_rectangle = Rectangle::new(
             0f32,

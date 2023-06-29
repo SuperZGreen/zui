@@ -93,6 +93,8 @@ where
         if let Some(text) = self.text.as_mut() {
             let boundary_width = layout_boundaries.horizontal.span_px;
 
+            info!("boundary_width: {boundary_width:?}");
+
             text.update_layout(
                 context.font,
                 Bounds {
@@ -101,7 +103,12 @@ where
                 context.viewport_dimensions_px,
             );
 
-            text.dimensions_px().unwrap()
+            let dimensions = text.dimensions_px().unwrap();
+
+            self.layout.dimensions_px = Some(dimensions);
+
+            dimensions
+
         } else {
             Dimensions::new(0f32, 0f32)
         }

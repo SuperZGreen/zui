@@ -25,7 +25,12 @@ impl RenderState {
         // instance's purpose is to create adapters and surfaces
         // let default_backend = wgpu::Backends::VULKAN;
         // let instance = wgpu::Instance::new(default_backend);
-        let instance = wgpu::Instance::default();
+        // let instance = wgpu::Instance::default();
+
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+            backends: wgpu::Backends::VULKAN,
+            ..Default::default()
+        });
 
         let surface = match unsafe { instance.create_surface(&window) } {
             Ok(s) => s,

@@ -161,12 +161,12 @@ impl Text {
         let presymbols = Self::generate_presymbols(&self, font, self.configuration.size_px);
 
         // TODOW
-        let max_width = f32::INFINITY;
+        let max_width_px = bounds.span;
 
         // getting lines
         let lines = TextLines::from_presymbols(
             &presymbols,
-            max_width,
+            max_width_px,
             &font_metrics_px,
             &self.configuration.line_wrapping,
         );
