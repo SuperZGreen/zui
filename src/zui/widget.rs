@@ -262,10 +262,12 @@ pub trait Widget<Message> {
     /// overflow
     fn to_vertices(
         &self,
-        viewport_dimensions_px: PhysicalSize<u32>,
+        context: &Context,
+        simple_vertices: &mut Vec<SimpleVertex>,
+        text_vertices: &mut Vec<TextVertex>,
         render_layers: &mut VecDeque<RenderLayer>,
-    ) -> (Vec<SimpleVertex>, Vec<TextVertex>) {
-        (Vec::new(), Vec::new())
+    ) {
+        // Do nothing
     }
 }
 

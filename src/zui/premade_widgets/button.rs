@@ -125,35 +125,36 @@ where
         &self.layout
     }
 
-    fn to_vertices(
-        &self,
-        viewport_dimensions_px: PhysicalSize<u32>,
-        _render_layers: &mut VecDeque<RenderLayer>,
-    ) -> (
-        Vec<crate::zui::simple_renderer::SimpleVertex>,
-        Vec<crate::zui::text_renderer::TextVertex>,
-    ) {
-        let mut simple_vertices = Vec::new();
-        let mut text_vertices = Vec::new();
-        if let Some(clip_rectangle) = self.clip_rectangle {
-            let button_colour = match self.cursor_is_over {
-                true => self.cursor_on_colour,
-                false => self.cursor_off_colour,
-            };
+    // TODOW
+    // fn to_vertices(
+    //     &self,
+    //     viewport_dimensions_px: PhysicalSize<u32>,
+    //     _render_layers: &mut VecDeque<RenderLayer>,
+    // ) -> (
+    //     Vec<crate::zui::simple_renderer::SimpleVertex>,
+    //     Vec<crate::zui::text_renderer::TextVertex>,
+    // ) {
+    //     let mut simple_vertices = Vec::new();
+    //     let mut text_vertices = Vec::new();
+    //     if let Some(clip_rectangle) = self.clip_rectangle {
+    //         let button_colour = match self.cursor_is_over {
+    //             true => self.cursor_on_colour,
+    //             false => self.cursor_off_colour,
+    //         };
 
-            simple_vertices.extend_from_slice(&SimpleVertex::from_rectangle(
-                clip_rectangle,
-                button_colour,
-                viewport_dimensions_px,
-            ));
+    //         simple_vertices.extend_from_slice(&SimpleVertex::from_rectangle(
+    //             clip_rectangle,
+    //             button_colour,
+    //             viewport_dimensions_px,
+    //         ));
 
-            if let Some(text) = &self.text {
-                text_vertices.append(&mut text.to_vertices(clip_rectangle, viewport_dimensions_px))
-            }
-        }
+    //         if let Some(text) = &self.text {
+    //             text_vertices.append(&mut text.to_vertices(clip_rectangle, viewport_dimensions_px))
+    //         }
+    //     }
 
-        (simple_vertices, text_vertices)
-    }
+    //     (simple_vertices, text_vertices)
+    // }
 
     fn try_update_dimensions(
         &mut self,

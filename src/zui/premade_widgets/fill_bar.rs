@@ -251,40 +251,41 @@ where
         }
     }
 
-    fn to_vertices(
-        &self,
-        viewport_dimensions_px: PhysicalSize<u32>,
-        _render_layers: &mut VecDeque<RenderLayer>,
-    ) -> (
-        Vec<crate::zui::simple_renderer::SimpleVertex>,
-        Vec<crate::zui::text_renderer::TextVertex>,
-    ) {
-        let mut simple_vertices = Vec::new();
-        let mut text_vertices = Vec::new();
+    // TODOW
+    // fn to_vertices(
+    //     &self,
+    //     viewport_dimensions_px: PhysicalSize<u32>,
+    //     _render_layers: &mut VecDeque<RenderLayer>,
+    // ) -> (
+    //     Vec<crate::zui::simple_renderer::SimpleVertex>,
+    //     Vec<crate::zui::text_renderer::TextVertex>,
+    // ) {
+    //     let mut simple_vertices = Vec::new();
+    //     let mut text_vertices = Vec::new();
 
-        if let Some(clip_rectangle) = self.clip_rectangle {
-            simple_vertices.extend_from_slice(&SimpleVertex::from_rectangle(
-                clip_rectangle,
-                self.back_colour,
-                viewport_dimensions_px,
-            ));
+    //     if let Some(clip_rectangle) = self.clip_rectangle {
+    //         simple_vertices.extend_from_slice(&SimpleVertex::from_rectangle(
+    //             clip_rectangle,
+    //             self.back_colour,
+    //             viewport_dimensions_px,
+    //         ));
 
-            let mut text_verts = self
-                .text
-                .to_vertices(clip_rectangle, viewport_dimensions_px);
-            text_vertices.append(&mut text_verts);
-        }
+    //         let mut text_verts = self
+    //             .text
+    //             .to_vertices(clip_rectangle, viewport_dimensions_px);
+    //         text_vertices.append(&mut text_verts);
+    //     }
 
-        if let Some(foreground_rectangle) = self.bar_foreground_rectangle {
-            simple_vertices.extend_from_slice(&SimpleVertex::from_rectangle(
-                foreground_rectangle,
-                self.front_colour,
-                viewport_dimensions_px,
-            ));
-        }
+    //     if let Some(foreground_rectangle) = self.bar_foreground_rectangle {
+    //         simple_vertices.extend_from_slice(&SimpleVertex::from_rectangle(
+    //             foreground_rectangle,
+    //             self.front_colour,
+    //             viewport_dimensions_px,
+    //         ));
+    //     }
 
-        (simple_vertices, text_vertices)
-    }
+    //     (simple_vertices, text_vertices)
+    // }
 
     fn try_update_dimensions(&mut self, layout_boundaries: &LayoutBoundaries, context: &Context) -> Dimensions<f32> {
         Dimensions::new(128f32, 64f32)

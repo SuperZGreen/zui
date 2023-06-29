@@ -1,14 +1,12 @@
 use std::collections::VecDeque;
 
-use winit::dpi::PhysicalSize;
-
 use crate::zui::{
     primitives::Dimensions,
     render_layer::RenderLayer,
     simple_renderer::SimpleVertex,
     text_renderer::TextVertex,
     widget::{Bounds, EventResponse, Layout, LayoutBoundaries},
-    Colour, Context, Event, Rectangle, Span, Text, Typeface, Widget,
+    Colour, Context, Rectangle, Text, Widget,
 };
 
 // A basic widget that contains text
@@ -16,8 +14,6 @@ pub struct TextContainer {
     text: Option<Text>,
     background_colour: Option<Colour>,
     clip_rectangle: Option<Rectangle<f32>>,
-    span: Span,
-    span_px: Option<f32>,
     layout: Layout,
 }
 impl TextContainer {
@@ -26,8 +22,6 @@ impl TextContainer {
             text: None,
             background_colour: None,
             clip_rectangle: None,
-            span: Span::FitContents,
-            span_px: None,
             layout: Layout::new(),
         }
     }
@@ -49,8 +43,8 @@ where
 {
     fn handle_event(
         &mut self,
-        event: &crate::zui::Event,
-        context: &crate::zui::Context,
+        _event: &crate::zui::Event,
+        _context: &crate::zui::Context,
     ) -> crate::zui::widget::EventResponse<Message> {
         // responds to no input events
         EventResponse::Consumed
@@ -58,31 +52,29 @@ where
 
     fn to_vertices(
         &self,
-        viewport_dimensions_px: PhysicalSize<u32>,
-        render_layers: &mut VecDeque<RenderLayer>,
-    ) -> (Vec<SimpleVertex>, Vec<TextVertex>) {
+        context: &Context,
+        simple_vertices: &mut Vec<SimpleVertex>,
+        text_vertices: &mut Vec<TextVertex>,
+        _render_layers: &mut VecDeque<RenderLayer>,
+    ) {
         // adding own text vertices
-        let mut text_vertices = Vec::new();
         if let Some(text) = &self.text {
             if let Some(clip_rectangle) = self.clip_rectangle {
-                text_vertices.append(&mut text.to_vertices(clip_rectangle, viewport_dimensions_px));
+                text_vertices
+                    .append(&mut text.to_vertices(clip_rectangle, context.viewport_dimensions_px));
             }
         }
 
         // adding own rectangle/simple vertices
-        let mut simple_vertices = Vec::new();
         if let Some(rectangle) = self.clip_rectangle {
             if let Some(colour) = self.background_colour {
-                // simple_vertices.append(&mut rectangle.to_simple_vertices(colour));
                 simple_vertices.extend_from_slice(&SimpleVertex::from_rectangle(
                     rectangle,
                     colour,
-                    viewport_dimensions_px,
+                    context.viewport_dimensions_px,
                 ));
             }
         }
-
-        (simple_vertices, text_vertices)
     }
 
     fn try_update_dimensions(
@@ -108,7 +100,6 @@ where
             self.layout.dimensions_px = Some(dimensions);
 
             dimensions
-
         } else {
             Dimensions::new(0f32, 0f32)
         }

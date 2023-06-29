@@ -94,7 +94,7 @@ impl Zui {
     ) where
         Message: Copy + Clone,
     {
-        let render_layers = scene_handle.to_render_layers(self.viewport_dimensions_px);
+        let render_layers = scene_handle.to_render_layers(&self.context());
 
         // clearing the screen, this is where the world render pass would go
         _ = render_state.render_clear();

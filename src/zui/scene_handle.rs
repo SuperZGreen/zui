@@ -180,7 +180,7 @@ impl<Message> Renderable for SceneHandle<Message>
 where
     Message: Clone + Copy,
 {
-    fn to_render_layers(&self, viewport_dimensions_px: PhysicalSize<u32>) -> VecDeque<RenderLayer> {
+    fn to_render_layers(&self, context: &Context) -> VecDeque<RenderLayer> {
         let root_widget = match &self.root_widget {
             Some(rw) => rw,
             None => {
@@ -190,8 +190,15 @@ where
         };
 
         let mut render_layers = VecDeque::new();
-        let (simple_vertices, text_vertices) =
-            root_widget.to_vertices(viewport_dimensions_px, &mut render_layers);
+        let mut simple_vertices = Vec::new();
+        let mut text_vertices = Vec::new();
+
+        root_widget.to_vertices(
+            context,
+            &mut simple_vertices,
+            &mut text_vertices,
+            &mut render_layers
+        );
 
         render_layers.push_front(RenderLayer::new(simple_vertices, text_vertices, None));
 

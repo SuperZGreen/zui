@@ -183,42 +183,58 @@ where
 
     fn to_vertices(
         &self,
-        viewport_dimensions_px: PhysicalSize<u32>,
+        context: &Context,
+        simple_vertices: &mut Vec<SimpleVertex>,
+        text_vertices: &mut Vec<TextVertex>,
         render_layers: &mut VecDeque<RenderLayer>,
-    ) -> (Vec<SimpleVertex>, Vec<TextVertex>) {
+    ) {
+
         // adding own rectangle/simple vertices
-        let mut simple_vertices = Vec::new();
         if let Some(rectangle) = self.layout.clip_rectangle_px {
             if let Some(colour) = self.background {
-                // simple_vertices.append(&mut rectangle.to_simple_vertices(colour));
                 simple_vertices.extend_from_slice(&SimpleVertex::from_rectangle(
                     rectangle,
                     colour,
-                    viewport_dimensions_px,
+                    context.viewport_dimensions_px,
                 ));
             }
         }
 
         // adding children's vertices
-        let mut text_vertices = Vec::new();
-        for child in self.children.iter() {
-            let (mut sv, mut tv) = child.to_vertices(viewport_dimensions_px, render_layers);
-            simple_vertices.append(&mut sv);
-            text_vertices.append(&mut tv);
-        }
-
-        // creating new layer if overflowing
         if self.overflowing {
+
+            // creating new layer if overflowing
+            let mut simple_vertices = Vec::new();
+            let mut text_vertices = Vec::new();
+
+            for child in self.children.iter() {
+                child.to_vertices(
+                    context,
+                    &mut simple_vertices,
+                    &mut text_vertices,
+                    render_layers,
+                );
+            }
+
             let render_layer = RenderLayer::new(
                 simple_vertices,
                 text_vertices,
                 self.layout.clip_rectangle_px,
             );
+
             render_layers.push_back(render_layer);
-            (Vec::new(), Vec::new())
         } else {
-            (simple_vertices, text_vertices)
+            for child in self.children.iter() {
+                child.to_vertices(
+                    context,
+                    simple_vertices,
+                    text_vertices,
+                    render_layers,
+                );
+            }
         }
+
+
     }
 
     fn span_weight(&self) -> Option<f32> {
