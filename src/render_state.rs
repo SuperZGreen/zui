@@ -226,6 +226,7 @@ impl RenderState {
         return Some(render_pass);
     }
 
+    /// Submits the previously created RenderPass/Command encoder, must be done before presenting
     pub fn submit_command_encoder(&mut self) {
         let command_encoder = match self.command_encoder.take() {
             Some(ce) => ce,
@@ -240,7 +241,7 @@ impl RenderState {
         self.queue.submit(std::iter::once(command_encoder.finish()));
     }
 
-    /// Presents the surfacecommand_encoder
+    /// Presents the surfacecommand_encoder, must be done after submitting the command encoder
     pub fn present(&mut self) -> Result<(), wgpu::SurfaceError> {
         let surface_texture = match self.surface_texture.take() {
             Some(st) => st,

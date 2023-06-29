@@ -81,6 +81,7 @@ fn main() {
     )
     .unwrap();
 
+    // setting up the scenes
     let mut scene_store = SceneStore::new();
     scene_store.add_scene(SceneIdentifier::StartMenu, Box::new(MainScene::new()));
     scene_store.add_scene(SceneIdentifier::OptionsMenu, Box::new(OptionsScene::new()));
@@ -107,7 +108,6 @@ fn main() {
                         scene_store
                             .current_scene_mut()
                             .unwrap()
-                            // .queue_widget_recreation();
                             .resize_scene(&zui.context());
                     }
                     WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
@@ -185,7 +185,7 @@ fn main() {
             Event::Suspended => {}
             Event::Resumed => {}
             Event::MainEventsCleared => {
-                // TODO: Solving
+                // // TODO: Solving
                 let current_scene_mut = scene_store.current_scene_mut().unwrap();
                 current_scene_mut.update(&zui.context());
 
@@ -212,25 +212,19 @@ fn main() {
             }
             Event::RedrawRequested(_) => {
                 if !render_state.skip_rendering() {
-                    // uploading
+
+                    // clearing the screen, this is where the world render pass would go
+                    _ = render_state.render_clear();
+
+                    // rendering the current scene, submits its own command encoder
                     let current_scene = scene_store.current_scene().unwrap();
                     zui.render_scene_handle(current_scene, &mut render_state);
-                    // zui.render_scene_handle(&current_scene);
-                    // zui.upload_vertices(render_state.device(), current_scene);
 
-                    // // rendering
-                    // match render_state.render(&zui) {
-                    //     Ok(_) => {}
-                    //     Err(wgpu::SurfaceError::Lost) => {
-                    //         warn!("wgpu::SurfaceError::Lost");
-
-                    //         let size = render_state.window_size();
-                    //         render_state.resize(&size);
-                    //     }
-                    //     Err(e) => {
-                    //         warn!("encountered error: {:?}", e);
-                    //     }
-                    // }
+                    // presenting the final surface
+                    match render_state.present() {
+                        Err(e) => error!("wgpu::SurfaceError: {e}"),
+                        Ok(_) => {},
+                    }
                 }
             }
             Event::RedrawEventsCleared => {}

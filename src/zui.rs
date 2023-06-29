@@ -124,8 +124,8 @@ impl Zui {
         rect.width() == 0 || rect.height() == 0
     }
 
-    /// Tries to render a render pass, if it exists
-    fn try_render(&self, render_pass_opt: Option<wgpu::RenderPass>) {
+    /// Tries to draw with a render pass, if it exists
+    fn try_render_pass_draw(&self, render_pass_opt: Option<wgpu::RenderPass>) {
         match render_pass_opt {
             Some(mut rp) => {
                 self.renderer.render(&mut rp);
@@ -153,9 +153,6 @@ impl Zui {
         }
 
         let render_layers = scene_handle.to_render_layers(&self.context());
-
-        // clearing the screen, this is where the world render pass would go
-        _ = render_state.render_clear();
 
         // rendering each of the render layers
         for render_layer in render_layers {
@@ -205,7 +202,7 @@ impl Zui {
                         .upload(render_state.device(), &render_layer.text_vertices);
 
                     let render_pass_opt = render_state.try_render_pass_with_clip_rectangle(Some(fcr));
-                    self.try_render(render_pass_opt);
+                    self.try_render_pass_draw(render_pass_opt);
                 },
                 RenderLayerBehaviour::WithoutClipRectangle => {
                     self.renderer
@@ -214,7 +211,7 @@ impl Zui {
                         .upload(render_state.device(), &render_layer.text_vertices);
 
                     let render_pass_opt = render_state.try_render_pass_with_clip_rectangle(None);
-                    self.try_render(render_pass_opt);
+                    self.try_render_pass_draw(render_pass_opt);
                 },
                 RenderLayerBehaviour::DoNotRender => {
                     // Do nothing!
@@ -223,8 +220,8 @@ impl Zui {
 
         }
 
+        // submitting the command encoder
         render_state.submit_command_encoder();
-        _ = render_state.present();
     }
 
     // /// Turns the Widget's rectangles into vertices, uploads them to the GPU
