@@ -44,6 +44,17 @@ where
         }
     }
 
+    /// Allows passing a message to the Scene externally, to be dealt with by the UI
+    pub fn handle_message(&mut self, message: Message) -> Option<Message> {
+        let (message, rebuild_requested) = self.scene.handle_message(message);
+
+        if rebuild_requested {
+            self.widget_recreation_required = true;
+        }
+
+        message
+    }
+
     /// Handles external events and rebuilds widgets and rectangles if required
     pub fn update(
         &mut self,

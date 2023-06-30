@@ -8,14 +8,12 @@ use crate::{
 };
 
 pub struct MainScene {
-    // TODO
+    count: u64,
 }
 
 impl MainScene {
     pub fn new() -> Self {
-        Self {
-            // TODO
-        }
+        Self { count: 0u64 }
     }
 }
 
@@ -23,7 +21,13 @@ impl Scene for MainScene {
     type Message = UiMessage;
 
     fn handle_message(&mut self, message: Self::Message) -> (Option<Self::Message>, bool) {
-        (Some(message), false)
+        match message {
+            UiMessage::SetCounter(count) => {
+                self.count = count;
+                (None, true)
+            },
+            _ => (Some(message), false),
+        }
     }
 
     fn view(&self, _aspect_ratio: f32) -> Box<dyn Widget<Self::Message>> {
@@ -147,7 +151,10 @@ impl Scene for MainScene {
                 so that I can see it wrap around for a bit. I think that might be pretty useful to \
                 check out my formatting.",
                 Colour::LIGHT_BLUE,
-            )));
+            ))
+            .push_segment(TextSegment::new(" count: ", Colour::MAGENTA))
+            .push_segment(TextSegment::new(&format!("{}", self.count), Colour::DARK_MAGENTA))
+        );
         let expandable_2_2 = Container::new()
             .with_name("expandable_2_2")
             .with_span(Span::ParentWeight(2f32))

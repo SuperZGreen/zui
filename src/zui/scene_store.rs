@@ -54,6 +54,10 @@ where
         }
     }
 
+    pub fn current_scene_identifier(&self) -> &Option<SceneIdentifier> {
+        &self.current_scene_identifier
+    }
+
     pub fn current_scene_mut(&mut self) -> Option<&mut SceneHandle<Message>> {
         if let Some(current_scene_identitifer) = &self.current_scene_identifier {
             self.scenes.get_mut(current_scene_identitifer)

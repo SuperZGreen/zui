@@ -36,6 +36,7 @@ pub enum UiMessage {
     StartMenuMessage(StartMenuMessage),
     OptionsMenuMessage(OptionsMenuMessage),
     GoToScene(SceneIdentifier),
+    SetCounter(u64),
     Exit,
 }
 
@@ -55,6 +56,7 @@ pub enum OptionsMenuMessage {
 
 fn main() {
     info!("starting!");
+    let mut frame_counter = 0u64;
 
     // configuring log
     std::env::set_var("RUST_BACKTRACE", "1");
@@ -191,6 +193,8 @@ fn main() {
             Event::MainEventsCleared => {
                 // // TODO: Solving
                 let current_scene_mut = scene_store.current_scene_mut().unwrap();
+                current_scene_mut.handle_message(UiMessage::SetCounter(frame_counter));
+
                 current_scene_mut.update(
                     &mut zui.context_mut_typeface(),
                     render_state.device(),
@@ -233,6 +237,9 @@ fn main() {
                         Ok(_) => {}
                     }
                 }
+
+                // incrementing the frame counter for testing
+                frame_counter += 1;
             }
             Event::RedrawEventsCleared => {}
             Event::LoopDestroyed => {}
