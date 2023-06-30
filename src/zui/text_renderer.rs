@@ -178,9 +178,14 @@ impl TextRenderer {
         render_pass: &mut wgpu::RenderPass<'a>,
         texture_atlas: &'a TextureAtlas,
     ) {
+        let texture_atlas_bind_group = match texture_atlas.bind_group().as_ref() {
+            Some(tabg) => tabg,
+            None => return,
+        };
+
         // drawing
         render_pass.set_pipeline(&self.render_pipeline);
-        render_pass.set_bind_group(0, &texture_atlas.bind_group(), &[]);
+        render_pass.set_bind_group(0, texture_atlas_bind_group, &[]);
         render_pass.set_vertex_buffer(0, self.vertices_buffer.slice(..));
         render_pass.draw(0..self.vertices_used as u32, 0..1);
     }

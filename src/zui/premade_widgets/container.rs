@@ -175,12 +175,6 @@ where
         &mut self.children
     }
 
-    fn collect_text(&self, symbol_keys: &mut rustc_hash::FxHashSet<crate::zui::font::SymbolKey>) {
-        for child in self.children.iter() {
-            child.collect_text(symbol_keys);
-        }
-    }
-
     fn to_vertices(
         &self,
         context: &Context,

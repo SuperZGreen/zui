@@ -44,7 +44,7 @@ where
             Some(scene_handle) => {
                 self.current_scene_identifier = Some(scene_identifier);
                 // scene_handle.queue_widget_recreation();
-                scene_handle.rebuild_scene(context);
+                scene_handle.queue_rebuild_scene();
                 Ok(())
             }
             None => {

@@ -2,8 +2,6 @@ mod glyph_origin;
 mod text_configuration;
 mod text_line;
 
-use std::u128::MAX;
-
 use glyph_origin::GlyphOrigin;
 use rustc_hash::FxHashSet;
 use text_line::TextLines;
@@ -117,18 +115,12 @@ impl Text {
     /// Adds all the used symbolkeys to the provided FxHashSet<SymbolKey>. Used to determine what
     /// symbols need to be rasterised by the font rasterising system
     pub fn collect_symbol_keys(&self, symbol_keys: &mut FxHashSet<SymbolKey>) {
-        let size_px = match self.size_px {
-            Some(spx) => spx as u32,
-            None => {
-                error!("text size not yet calculated!");
-                return;
-            }
-        };
+        let size_px = self.configuration.size_px;
 
         for segment in self.segments.iter() {
             for character in segment.string.chars() {
                 let symbol_key = SymbolKey {
-                    character: character,
+                    character,
                     font_style: segment.style,
                     size_px,
                 };

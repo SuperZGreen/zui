@@ -1,7 +1,8 @@
 use crate::{
     zui::{
+        font::FontStyle,
         premade_widgets::{Container, TextContainer},
-        Axis, Colour, Scene, Span, Text, TextSegment, Widget,
+        Axis, Colour, Scene, Span, Text, TextConfiguration, TextSegment, Widget,
     },
     UiMessage,
 };
@@ -46,13 +47,11 @@ impl Scene for MainScene {
             .with_name("h1")
             .with_span(Span::Pixels(64f32))
             .with_background(Some(Colour::CYAN));
-        let h2_text = TextContainer::new()
-            .with_text(
-                Text::new().push_segment(TextSegment::new(
-                    "This is the h2 text, it goes and goes and keeps on going on and on and on",
-                    // "This is the h2 text",
-                    Colour::ORANGE
-            )));
+        let h2_text = TextContainer::new().with_text(Text::new().push_segment(TextSegment::new(
+            "This is the h2 text, it goes and goes and keeps on going on and on and on",
+            // "This is the h2 text",
+            Colour::ORANGE,
+        )));
         let h2 = Container::new()
             .with_name("h2")
             .with_span(Span::Pixels(128f32))
@@ -88,10 +87,18 @@ impl Scene for MainScene {
             )
             .with_background_colour(Some(Colour::LIGHT_RED));
         let th2 = TextContainer::new()
-            .with_text(Text::new().push_segment(TextSegment::new(
-                " This is the second text!  ",
-                Colour::BLACK,
-            )))
+            .with_text(
+                Text::new()
+                    .with_configuration(TextConfiguration {
+                        size_px: 18,
+                        ..Default::default()
+                    })
+                    .push_segment(TextSegment {
+                        string: String::from(" This is the second text!  "),
+                        colour: Colour::BLACK,
+                        style: FontStyle::Bold,
+                    }),
+            )
             .with_background_colour(Some(Colour::LIGHT_GREEN));
         let th3 = TextContainer::new()
             .with_text(Text::new().push_segment(TextSegment::new(
@@ -134,8 +141,8 @@ impl Scene for MainScene {
             .with_name("expandable_2_1")
             .with_span(Span::ParentWeight(1f32))
             .with_background(Some(Colour::WHITE));
-        let expandable_2_2_text = TextContainer::new()
-            .with_text(Text::new().push_segment(TextSegment::new(
+        let expandable_2_2_text =
+            TextContainer::new().with_text(Text::new().push_segment(TextSegment::new(
                 "This is my long test text for the expandable_2_2, I want to make it pretty long \
                 so that I can see it wrap around for a bit. I think that might be pretty useful to \
                 check out my formatting.",
@@ -159,7 +166,6 @@ impl Scene for MainScene {
             .push(expandable_2_1)
             .push(expandable_2_2)
             .push(expandable_2_3);
-
 
         Container::new()
             .with_name("root_widget")

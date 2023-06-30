@@ -86,7 +86,7 @@ where
             let boundary_width = layout_boundaries.horizontal.span_px;
 
             text.update_layout(
-                context.font,
+                context.typeface,
                 Bounds {
                     span: boundary_width,
                 },
@@ -110,8 +110,17 @@ where
     fn try_fit_rectangle(&mut self, clip_rectangle: &Rectangle<f32>, context: &Context) {
         self.clip_rectangle = Some(*clip_rectangle);
         if let Some(text) = self.text.as_mut() {
-            text.place_symbols(context.font, clip_rectangle);
+            text.place_symbols(context.typeface, clip_rectangle);
         }
+    }
+
+    fn collect_text(&self, symbol_keys: &mut rustc_hash::FxHashSet<crate::zui::font::SymbolKey>) {
+        let text = match self.text.as_ref() {
+            Some(text) => text,
+            None => return,
+        };
+
+        text.collect_symbol_keys(symbol_keys);
     }
 }
 

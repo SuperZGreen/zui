@@ -32,8 +32,6 @@ use winit::dpi::{PhysicalPosition, PhysicalSize};
 
 use crate::render_state::RenderState;
 
-use self::font::FontStyle;
-
 pub struct Zui {
     typeface: Typeface,
 
@@ -56,24 +54,17 @@ impl Zui {
             Some("resources/zui/fonts/Roboto-Regular.ttf"),
             Some("resources/zui/fonts/Roboto-Bold.ttf"),
             Some("resources/zui/fonts/Roboto-Italic.ttf"),
+            device,
+            queue,
         ) {
             Ok(f) => f,
             Err(_) => return Err(()),
         };
 
-        typeface.queue_rasterise(FontStyle::Regular, 32);
-        // typeface.queue_rasterise(FontStyle::Bold, 32);
-        // typeface.queue_rasterise(FontStyle::Italic, 32);
-
-        // typeface.queue_rasterise(FontStyle::Regular, 64);
-        // typeface.queue_rasterise(FontStyle::Bold, 64);
-
-        typeface.rasterise(device, queue);
-
         let text_renderer = TextRenderer::new(
             device,
             surface_configuration,
-            typeface.texture_atlas.as_ref().unwrap().bind_group_layout(),
+            typeface.texture_atlas.bind_group_layout(),
         );
 
         Ok(Self {
@@ -98,7 +89,10 @@ impl Zui {
     }
 
     /// Returns a rectangle that gives the intersection of the y-up rectangle with the viewport
-    fn rectangle_viewport_intersection(rect: &Rectangle<u32>, viewport_dimensions_px: PhysicalSize<u32>) -> Option<Rectangle<u32>> {
+    fn rectangle_viewport_intersection(
+        rect: &Rectangle<u32>,
+        viewport_dimensions_px: PhysicalSize<u32>,
+    ) -> Option<Rectangle<u32>> {
         let viewport_rect_px = Rectangle::new(
             0u32,
             viewport_dimensions_px.width,
@@ -110,7 +104,10 @@ impl Zui {
     }
 
     /// Converts a rectangle from y-up pixel coordinates to y-down framebuffer coordinates
-    fn rectangle_pixel_to_framebuffer(rect: &Rectangle<u32>, viewport_dimensions_px: PhysicalSize<u32>) -> Rectangle<u32> {
+    fn rectangle_pixel_to_framebuffer(
+        rect: &Rectangle<u32>,
+        viewport_dimensions_px: PhysicalSize<u32>,
+    ) -> Rectangle<u32> {
         Rectangle::new(
             rect.x_min,
             rect.x_max,
@@ -130,7 +127,7 @@ impl Zui {
             Some(mut rp) => {
                 self.renderer.render(&mut rp);
                 self.text_renderer
-                    .render(&mut rp, &self.typeface.texture_atlas.as_ref().unwrap());
+                    .render(&mut rp, &self.typeface.texture_atlas);
             }
             None => {}
         };
@@ -149,14 +146,13 @@ impl Zui {
         enum RenderLayerBehaviour {
             WithFramebufferClipRectangle(Rectangle<u32>),
             WithoutClipRectangle,
-            DoNotRender
+            DoNotRender,
         }
 
         let render_layers = scene_handle.to_render_layers(&self.context());
 
         // rendering each of the render layers
         for render_layer in render_layers {
-
             // determining whether the layer should be rendered or not
             let render_layer_behaviour = match render_layer.clip_rectangle {
                 Some(clip_rect) => {
@@ -168,25 +164,19 @@ impl Zui {
                         &clip_rect,
                         self.viewport_dimensions_px,
                     ) {
-
                         // if in viewport render with clip rectangle
-                        Some(clip_rect) => {
-                            match Self::rectangle_has_no_area(&clip_rect) {
-                                false => {
-                                    RenderLayerBehaviour::WithFramebufferClipRectangle(
-                                        Self::rectangle_pixel_to_framebuffer(
-                                            &clip_rect,
-                                            self.viewport_dimensions_px,
-                                        )
-                                    )
-                                }
-                                true => RenderLayerBehaviour::DoNotRender,
-                            }
+                        Some(clip_rect) => match Self::rectangle_has_no_area(&clip_rect) {
+                            false => RenderLayerBehaviour::WithFramebufferClipRectangle(
+                                Self::rectangle_pixel_to_framebuffer(
+                                    &clip_rect,
+                                    self.viewport_dimensions_px,
+                                ),
+                            ),
+                            true => RenderLayerBehaviour::DoNotRender,
                         },
 
                         // if not intersecting with viewport, render nothing
                         None => RenderLayerBehaviour::DoNotRender,
-
                     }
                 }
 
@@ -201,9 +191,10 @@ impl Zui {
                     self.text_renderer
                         .upload(render_state.device(), &render_layer.text_vertices);
 
-                    let render_pass_opt = render_state.try_render_pass_with_clip_rectangle(Some(fcr));
+                    let render_pass_opt =
+                        render_state.try_render_pass_with_clip_rectangle(Some(fcr));
                     self.try_render_pass_draw(render_pass_opt);
-                },
+                }
                 RenderLayerBehaviour::WithoutClipRectangle => {
                     self.renderer
                         .upload(render_state.device(), &render_layer.simple_vertices);
@@ -212,12 +203,11 @@ impl Zui {
 
                     let render_pass_opt = render_state.try_render_pass_with_clip_rectangle(None);
                     self.try_render_pass_draw(render_pass_opt);
-                },
+                }
                 RenderLayerBehaviour::DoNotRender => {
                     // Do nothing!
                 }
             };
-
         }
 
         // submitting the command encoder
@@ -265,25 +255,48 @@ impl Zui {
         self.cursor_position = None;
     }
 
-    pub fn cursor_position(&self) -> Option<PhysicalPosition<f64>> {
-        self.cursor_position
-    }
-
     /// Gets the context for an event
     pub fn context<'a>(&self) -> Context {
         Context {
-            font: &self.typeface,
+            typeface: &self.typeface,
             aspect_ratio: self.aspect_ratio,
             cursor_position: self.cursor_position,
             viewport_dimensions_px: self.viewport_dimensions_px,
         }
+    }
+
+    /// Gets the context for rebuilding widgets with a mutable typeface
+    pub fn context_mut_typeface<'a>(&mut self) -> ContextMutTypeface {
+        ContextMutTypeface {
+            typeface: &mut self.typeface,
+            aspect_ratio: self.aspect_ratio,
+            cursor_position: self.cursor_position,
+            viewport_dimensions_px: self.viewport_dimensions_px,
+        }
+    }
+
+    pub fn cursor_position(&self) -> Option<PhysicalPosition<f64>> {
+        self.cursor_position
+    }
+
+    /// tries to save the typeface texture atlas image to the provided path
+    pub fn debug_try_save_typeface_texture_atlas(&self, path: &str) {
+        _ = self.typeface.texture_atlas.save_texture_to_disk(path);
     }
 }
 
 /// The 'context' for zui. Intended to give a Widget everything it needs to know to rebuild itself
 /// correctly.
 pub struct Context<'a> {
-    pub font: &'a Typeface,
+    pub typeface: &'a Typeface,
+    pub aspect_ratio: f32,
+    pub cursor_position: Option<PhysicalPosition<f64>>,
+    pub viewport_dimensions_px: PhysicalSize<u32>,
+}
+
+/// Same as the previously declared context, but with a mutable TypeFace
+pub struct ContextMutTypeface<'a> {
+    pub typeface: &'a mut Typeface,
     pub aspect_ratio: f32,
     pub cursor_position: Option<PhysicalPosition<f64>>,
     pub viewport_dimensions_px: PhysicalSize<u32>,

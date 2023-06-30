@@ -49,8 +49,8 @@ pub enum OptionsMenuMessage {
     MasterVolumeChanged(f32),
     MusicVolumeChanged(f32),
     SoundEffectsVolumeChanged(f32),
-    
-    BackClicked
+
+    BackClicked,
 }
 
 fn main() {
@@ -105,10 +105,11 @@ fn main() {
 
                         render_state.resize(physical_size);
                         zui.resize(*physical_size);
-                        scene_store
-                            .current_scene_mut()
-                            .unwrap()
-                            .resize_scene(&zui.context());
+                        scene_store.current_scene_mut().unwrap().resize_scene(
+                            &mut zui.context_mut_typeface(),
+                            render_state.device(),
+                            render_state.queue(),
+                        );
                     }
                     WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
                         render_state.resize(*new_inner_size);
@@ -124,6 +125,9 @@ fn main() {
                     } => match virtual_key_code {
                         VirtualKeyCode::X => {
                             exit(control_flow);
+                        }
+                        VirtualKeyCode::F10 => {
+                            zui.debug_try_save_typeface_texture_atlas("out.png");
                         }
                         VirtualKeyCode::Escape => {
                             _ = scene_store
@@ -187,7 +191,11 @@ fn main() {
             Event::MainEventsCleared => {
                 // // TODO: Solving
                 let current_scene_mut = scene_store.current_scene_mut().unwrap();
-                current_scene_mut.update(&zui.context());
+                current_scene_mut.update(
+                    &mut zui.context_mut_typeface(),
+                    render_state.device(),
+                    render_state.queue(),
+                );
 
                 // solving user behaviour
                 let mut set_scene_destination = None;
@@ -212,7 +220,6 @@ fn main() {
             }
             Event::RedrawRequested(_) => {
                 if !render_state.skip_rendering() {
-
                     // clearing the screen, this is where the world render pass would go
                     _ = render_state.render_clear();
 
@@ -223,7 +230,7 @@ fn main() {
                     // presenting the final surface
                     match render_state.present() {
                         Err(e) => error!("wgpu::SurfaceError: {e}"),
-                        Ok(_) => {},
+                        Ok(_) => {}
                     }
                 }
             }

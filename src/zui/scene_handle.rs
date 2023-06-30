@@ -1,12 +1,12 @@
 use std::collections::VecDeque;
 
-use winit::dpi::PhysicalSize;
+use rustc_hash::FxHashSet;
 
 use super::{
     primitives::Rectangle,
     render_layer::RenderLayer,
     widget::{Boundary, BoundaryType, Event, EventResponse, LayoutBoundaries, Widget},
-    Context, Renderable, Scene,
+    Context, ContextMutTypeface, Renderable, Scene,
 };
 
 /// Allows for caching of the widgets produced by Scene::view
@@ -45,77 +45,100 @@ where
     }
 
     /// Handles external events and rebuilds widgets and rectangles if required
-    pub fn update(&mut self, context: &Context) {
+    pub fn update(
+        &mut self,
+        context_mut_typeface: &mut ContextMutTypeface,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+    ) {
         // self.solve_cursor_events(cursor_state);
 
         self.handle_messages();
 
         // lazy widget recreation
         if self.widget_recreation_required {
-            self.rebuild_scene(context);
+            self.rebuild_scene(context_mut_typeface, device, queue);
         }
     }
 
     /// Queues the recreation of widgets via calling view on the underlying scene
-    pub fn queue_widget_recreation(&mut self) {
+    pub fn queue_rebuild_scene(&mut self) {
         self.widget_recreation_required = true;
     }
 
     /// Rebuilds the scene using Scene::view, refits the Widgets to the Normalised Device
     /// Coordinates square
-    pub fn rebuild_scene(&mut self, context: &Context) {
+    fn rebuild_scene(
+        &mut self,
+        context_mut_typeface: &mut ContextMutTypeface,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+    ) {
         // recreating widgets
-        self.root_widget = Some(self.scene.view(context.aspect_ratio));
+        self.root_widget = Some(self.scene.view(context_mut_typeface.aspect_ratio));
 
         // getting the root widget
         let root_widget = self.root_widget.as_mut().unwrap();
+
+        // collecting text symbols for rasterisation
+        let mut symbol_keys = FxHashSet::default();
+        root_widget.collect_text(&mut symbol_keys);
+
+        // // debug printing collected symbol keys
+        // for symbol_key in symbol_keys.iter() {
+        //     info!("symbol_key: {symbol_key:?}");
+        // }
+        // info!("");
+
+        // rasterising the collected symbols and preparing the text atlas etc
+        context_mut_typeface
+            .typeface
+            .rasterise_symbol_keys(symbol_keys, device, queue);
 
         // creating the layout boundaries to pass to the root widget
         let layout_boundaries = &LayoutBoundaries::new(
             Boundary::new(
                 BoundaryType::Static,
-                context.viewport_dimensions_px.width as f32,
+                context_mut_typeface.viewport_dimensions_px.width as f32,
             ),
             Boundary::new(
                 BoundaryType::Static,
-                context.viewport_dimensions_px.height as f32,
+                context_mut_typeface.viewport_dimensions_px.height as f32,
             ),
         );
 
+        // creating the context
+        let context = Context {
+            typeface: &*context_mut_typeface.typeface,
+            aspect_ratio: context_mut_typeface.aspect_ratio,
+            cursor_position: context_mut_typeface.cursor_position,
+            viewport_dimensions_px: context_mut_typeface.viewport_dimensions_px,
+        };
+
         // updating the root widget's dimensions
-        let dims = root_widget.try_update_dimensions(layout_boundaries, context);
+        let dims = root_widget.try_update_dimensions(layout_boundaries, &context);
         let clip_rectangle = Rectangle::new(
             0f32,
             dims.width,
             context.viewport_dimensions_px.height as f32 - dims.height,
             context.viewport_dimensions_px.height as f32,
         );
-        root_widget.try_fit_rectangle(&clip_rectangle, context);
+        root_widget.try_fit_rectangle(&clip_rectangle, &context);
 
-        root_widget.place_children(context);
+        root_widget.place_children(&context);
 
         self.widget_recreation_required = false;
     }
 
     /// Queues resizing the root widget
-    pub fn resize_scene(&mut self, context: &Context) {
+    pub fn resize_scene(
+        &mut self,
+        context_mut_typeface: &mut ContextMutTypeface,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+    ) {
         // TODO: resize_scene might be defunct?
-        self.rebuild_scene(context);
-
-        // if let Some(root_widget) = &mut self.root_widget {
-        //     // root_widget.handle_event(
-        //     //     &mut Event::FitRectangle(Rectangle::new(
-        //     //         0f32,
-        //     //         context.viewport_dimensions_px.width as f32,
-        //     //         0f32,
-        //     //         context.viewport_dimensions_px.height as f32,
-        //     //     )),
-        //     //     &context,
-        //     // );
-        //     re
-        // } else {
-        //     warn!("no root widget to resize!");
-        // }
+        self.rebuild_scene(context_mut_typeface, device, queue);
     }
 
     /// Iterates through the self.messages queue and passes messages to the underlying scene one by
@@ -197,12 +220,11 @@ where
             context,
             &mut simple_vertices,
             &mut text_vertices,
-            &mut render_layers
+            &mut render_layers,
         );
 
         render_layers.push_front(
-            RenderLayer::new(simple_vertices, text_vertices, None)
-                .with_name(Some("root_layer"))
+            RenderLayer::new(simple_vertices, text_vertices, None).with_name(Some("root_layer")),
         );
 
         // for (render_layer_index, render_layer) in render_layers.iter().enumerate() {
