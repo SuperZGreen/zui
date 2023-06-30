@@ -1,7 +1,5 @@
 use std::collections::VecDeque;
 
-use winit::dpi::PhysicalSize;
-
 use crate::zui::{
     primitives::{Dimensions, Rectangle},
     render_layer::RenderLayer,
@@ -31,9 +29,6 @@ where
     /// container to render vertices of that Colour in the region of its Layout's clip Rectangle
     pub background: Option<Colour>,
 
-    /// calculated screen space span
-    pub span_px: Option<f32>,
-
     /// Flag that describes whether the container is overflowing or not
     pub overflowing: bool,
 
@@ -52,7 +47,6 @@ where
             axis: Axis::Vertical,
             span: Span::ParentWeight(1f32),
             background: None,
-            span_px: None,
             overflowing: false,
             layout: Layout::new(),
         }
@@ -85,6 +79,7 @@ where
     }
 
     /// Gives the name of the widget as a string or "N/A"
+    #[allow(dead_code)]
     fn name_as_str<'a>(name: &'a Option<String>) -> &'a str {
         match name {
             Some(name) => name.as_str(),
@@ -325,7 +320,7 @@ where
 
         if let Some(self_clip_rectangle) = self.layout.clip_rectangle_px {
             // name for diagnostics later
-            let self_name_str = Self::name_as_str(&self.name);
+            // let self_name_str = Self::name_as_str(&self.name);
 
             // determining the LayoutBoundaries for the children
             let layout_boundaries = LayoutBoundaries::new(
