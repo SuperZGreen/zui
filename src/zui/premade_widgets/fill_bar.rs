@@ -1,15 +1,12 @@
-use std::{collections::VecDeque, ops::RangeInclusive};
+use std::ops::RangeInclusive;
 
-use winit::dpi::{PhysicalPosition, PhysicalSize};
+use winit::dpi::PhysicalPosition;
 
 use crate::zui::{
-    self,
     primitives::{Rectangle, Dimensions},
-    render_layer::RenderLayer,
-    simple_renderer::SimpleVertex,
     text::{TextAlignmentHorizontal, TextAlignmentVertical},
     widget::{EventResponse, LayoutBoundaries, Layout}, Colour, Context, LineWrapping, MouseEvent, Span, Text,
-    TextConfiguration, TextSegment, TextSize, Widget, Event,
+    TextConfiguration, TextSegment, Widget, Event,
 };
 
 pub struct FillBar<'a, T, Message> {
@@ -175,10 +172,13 @@ where
         context: &Context,
     ) -> crate::zui::widget::EventResponse<Message> {
         match event {
-            crate::zui::Event::MouseEvent(MouseEvent::CursorMoved(cursor_position_px)) => {
+            crate::zui::Event::MouseEvent(MouseEvent::CursorMoved) => {
+                // should be Some
+                let cursor_position_px = context.cursor_position.unwrap();
+
                 if let Some(clip_rectangle) = self.clip_rectangle {
                     if self.is_grabbed {
-                        let value = Self::determine_value(clip_rectangle, *cursor_position_px);
+                        let value = Self::determine_value(clip_rectangle, cursor_position_px);
                         return if self.try_update_value(value, context) {
                             EventResponse::Message((self.on_change)(&self.value))
                         } else {

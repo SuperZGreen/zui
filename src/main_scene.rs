@@ -1,7 +1,7 @@
 use crate::{
     zui::{
         font::FontStyle,
-        premade_widgets::{Container, TextContainer},
+        premade_widgets::{Container, TextContainer, Button},
         Axis, Colour, Scene, Span, Text, TextConfiguration, TextSegment, Widget,
     },
     UiMessage,
@@ -24,6 +24,10 @@ impl Scene for MainScene {
         match message {
             UiMessage::SetCounter(count) => {
                 self.count = count;
+                (None, true)
+            },
+            UiMessage::IncrementCounter(increment) => {
+                self.count += increment;
                 (None, true)
             },
             _ => (Some(message), false),
@@ -178,10 +182,21 @@ impl Scene for MainScene {
             .push(fish_text)
             .push(money_text)
             .push(people_text);
+
+        let expandable_2_3_button = Button::new(
+                UiMessage::SetCounter(0),
+                Colour::DARK_BLUE,
+                Colour::BLUE,
+            ).with_text(
+                Text::new()
+                    .push_segment(TextSegment::new("Reset counter", Colour::WHITE))
+            );
+
         let expandable_2_3 = Container::new()
             .with_name("expandable_2_3")
             .with_span(Span::ParentWeight(1f32))
-            .with_background(Some(Colour::GREY));
+            .with_background(Some(Colour::GREY))
+            .push(expandable_2_3_button);
 
         let expandable_2 = Container::new()
             .with_name("expandable_2")
@@ -206,98 +221,4 @@ impl Scene for MainScene {
             .push(expandable_2)
             .into()
     }
-
-    // fn view(&self, aspect_ratio: f32) -> Box<dyn Widget<Self::Message>> {
-    //     let button_off_colour = Colour::rgb(0.2f32, 0.3f32, 0.4f32);
-    //     let button_on_colour = Colour::rgb(0.3f32, 0.4f32, 0.6f32);
-
-    //     let button_text_configuration = TextConfiguration {
-    //         size_px: 64,
-    //         horizontal_alignment: TextAlignmentHorizontal::Centre,
-    //         vertical_alignment: TextAlignmentVertical::Centre,
-    //         ..Default::default()
-    //     };
-
-    //     let central_content = Container::new()
-    //         .with_axis(Axis::Vertical)
-    //         .with_background(Some(Colour::rgb(1f32, 0f32, 0.5f32)))
-    //         .push(Container::new())
-    //         .push(
-    //             Container::new()
-    //                 .with_span(Span::ParentWeight(3f32))
-    //                 .with_background(Some(Colour::rgb(0.2f32, 0.6f32, 0.1f32)))
-    //                 .with_text(
-    //                     Text::new()
-    //                         .with_configuration(TextConfiguration {
-    //                             size_px: 64,
-    //                             vertical_alignment: TextAlignmentVertical::Bottom,
-    //                             horizontal_alignment: TextAlignmentHorizontal::Right,
-    //                             ..Default::default()
-    //                         })
-    //                         .push_segment(TextSegment::new("Welcome! :^)", Colour::WHITE)),
-    //                 ),
-    //         )
-    //         .push(Container::new())
-    //         .push(
-    //             Button::new(
-    //                 UiMessage::GoToScene(SceneIdentifier::GameScene),
-    //                 button_off_colour,
-    //                 button_on_colour,
-    //             )
-    //             .with_span(Span::ParentWeight(2f32))
-    //             .with_text(
-    //                 Text::new()
-    //                     .with_configuration(button_text_configuration.clone())
-    //                     .push_segment(TextSegment::new("Start", Colour::WHITE)),
-    //             ),
-    //         )
-    //         .push(Container::new())
-    //         .push(
-    //             Button::new(
-    //                 UiMessage::GoToScene(SceneIdentifier::OptionsMenu),
-    //                 button_off_colour,
-    //                 button_on_colour,
-    //             )
-    //             .with_span(Span::ParentWeight(2f32))
-    //             .with_text(
-    //                 Text::new()
-    //                     .with_configuration(button_text_configuration.clone())
-    //                     .push_segment(TextSegment::new("Tests/Options", Colour::WHITE)),
-    //             ),
-    //         )
-    //         .push(Container::new())
-    //         .push(
-    //             Button::new(UiMessage::Exit, button_off_colour, button_on_colour)
-    //                 .with_span(Span::ParentWeight(2f32))
-    //                 .with_text(
-    //                     Text::new()
-    //                         .with_configuration(button_text_configuration.clone())
-    //                         .push_segment(TextSegment::new("Exit", Colour::WHITE)),
-    //                 ),
-    //         )
-    //         .push(Container::new());
-
-    //     // let central_container_span = if aspect_ratio <= 1.1f32 {
-    //     //     Span::ParentWeight(20f32)
-    //     // } else {
-    //     //     Span::ViewMin(1f32)
-    //     // };
-    //     let central_container_span = Span::ViewMin(1f32);
-
-    //     // let central_container = Widget::new()
-    //     //     .with_axis(Axis::Horizontal)
-    //     //     .with_span(Span::ViewMin(1f32))
-    //     //     .push(Widget::new().with_span(Span::ParentWeight(1f32)))
-    //     //     .push(central_content.with_span(central_container_span))
-    //     //     .push(Widget::new().with_span(Span::ParentWeight(1f32)));
-
-    //     // root widget
-    //     Container::new()
-    //         .with_background(Some(Colour::rgb(0.1f32, 0.1f32, 0.1f32)))
-    //         .with_axis(Axis::Horizontal)
-    //         .push(Container::new())
-    //         .push(central_content.with_span(central_container_span))
-    //         .push(Container::new())
-    //         .into()
-    // }
 }

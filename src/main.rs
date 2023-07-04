@@ -37,6 +37,7 @@ pub enum UiMessage {
     OptionsMenuMessage(OptionsMenuMessage),
     GoToScene(SceneIdentifier),
     SetCounter(u64),
+    IncrementCounter(u64),
     Exit,
 }
 
@@ -106,7 +107,6 @@ fn main() {
                         info!("resized to: {physical_size:?}");
 
                         render_state.resize(physical_size);
-                        zui.resize(*physical_size);
                         scene_store.current_scene_mut().unwrap().resize_scene(
                             &mut zui.context_mut_typeface(),
                             render_state.device(),
@@ -138,53 +138,32 @@ fn main() {
                         _ => {}
                     },
                     WindowEvent::CursorMoved {
-                        position: cursor_physical_position,
                         ..
                     } => {
-                        zui.update_cursor_position(*cursor_physical_position);
-
-                        let current_scene_mut = scene_store.current_scene_mut().unwrap();
-                        current_scene_mut.handle_event(
-                            zui::Event::MouseEvent(zui::MouseEvent::CursorMoved(
-                                zui.cursor_position().unwrap(),
-                            )),
-                            &zui.context(),
-                        );
+                        // Do nothing, handled in Zui::handle_winit_window_event
                     }
                     WindowEvent::ModifiersChanged(_) => {
                         // TODO
                     }
                     WindowEvent::CursorEntered { .. } => {}
                     WindowEvent::CursorLeft { .. } => {
-                        zui.cursor_left();
-                        let current_scene_mut = scene_store.current_scene_mut().unwrap();
-                        current_scene_mut.handle_event(
-                            zui::Event::MouseEvent(zui::MouseEvent::CursorExitedWindow),
-                            &zui.context(),
-                        );
+                        // Do nothing, handled in Zui::handle_winit_window_event
                     }
                     WindowEvent::MouseWheel { .. } => {}
                     WindowEvent::MouseInput {
-                        button: _button,
-                        state,
                         ..
                     } => {
-                        let current_scene_mut = scene_store.current_scene_mut().unwrap();
-                        let event = match state {
-                            winit::event::ElementState::Pressed => {
-                                zui::Event::MouseEvent(zui::MouseEvent::ButtonPressed)
-                            }
-                            winit::event::ElementState::Released => {
-                                zui::Event::MouseEvent(zui::MouseEvent::ButtonReleased)
-                            }
-                        };
-                        current_scene_mut.handle_event(event, &zui.context());
-                        // zui.mouse_input(*button, *state);
+                        // Do nothing, handled in Zui::handle_winit_window_event
                     }
                     _ => {}
                 }
 
-                // TODO: Event passthrough
+                // event passthrough
+                let current_scene_mut = scene_store.current_scene_mut();
+                zui.handle_winit_window_event(
+                    event,
+                    current_scene_mut,
+                );
             }
             Event::NewEvents(_) => {}
             Event::UserEvent(_) => {}
@@ -193,7 +172,7 @@ fn main() {
             Event::MainEventsCleared => {
                 // // TODO: Solving
                 let current_scene_mut = scene_store.current_scene_mut().unwrap();
-                current_scene_mut.handle_message(UiMessage::SetCounter(frame_counter));
+                current_scene_mut.handle_message(UiMessage::IncrementCounter(1));
 
                 current_scene_mut.update(
                     &mut zui.context_mut_typeface(),

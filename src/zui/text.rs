@@ -279,7 +279,7 @@ impl Text {
                 let symbol_info = match font.get_symbol(symbol_key) {
                     Some(res) => res,
                     None => {
-                        error!("could not find glyph for character: {}!", character);
+                        error!("could not find glyph for character: '{}'!", character);
                         continue;
                     }
                 };

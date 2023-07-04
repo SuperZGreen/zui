@@ -160,19 +160,12 @@ impl Span {
 pub enum MouseEvent {
     ButtonPressed,
     ButtonReleased,
-    CursorEnteredWindow,
+    _CursorEnteredWindow,
     CursorExitedWindow,
-    CursorMoved(PhysicalPosition<f64>),
-}
 
-#[derive(Debug)]
-pub enum WindowEvent {
-    // Resized {
-    //     /// Width in pixels
-    //     width: u32,
-    //     /// Height in pixels
-    //     height: u32,
-    // },
+    /// Event for when the mouse cursor is moved, the position of the cursor is provided in the
+    /// provided context
+    CursorMoved,
 }
 
 #[derive(Debug)]
@@ -276,7 +269,7 @@ pub enum BoundaryType {
     /// causing clipping of the contents of the child Widget
     Static,
     /// Indicates that the parent Widget will flexibly extend in this direction if overflown
-    Dynamic,
+    _Dynamic,
 }
 
 pub struct Boundary {

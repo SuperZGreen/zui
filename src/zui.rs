@@ -28,7 +28,10 @@ pub use text::{
 use text_renderer::TextRenderer;
 pub use widget::{Axis, Event, MouseEvent, Span, Widget};
 
-use winit::dpi::{PhysicalPosition, PhysicalSize};
+use winit::{
+    dpi::{PhysicalPosition, PhysicalSize},
+    event::{WindowEvent, ElementState},
+};
 
 use crate::render_state::RenderState;
 
@@ -214,33 +217,15 @@ impl Zui {
         render_state.submit_command_encoder();
     }
 
-    // /// Turns the Widget's rectangles into vertices, uploads them to the GPU
-    // pub fn upload_vertices(&mut self, device: &wgpu::Device, renderable: &dyn Renderable) {
-    //     let (simple_vertices, text_vertices) = renderable.to_vertices(glam::Vec2::new(
-    //         self.viewport_dimensions_px.width as f32,
-    //         self.viewport_dimensions_px.height as f32,
-    //     ));
-
-    //     self.renderer.upload(device, &simple_vertices);
-    //     self.text_renderer.upload(device, &text_vertices);
-    // }
-
-    // /// Tells the Zui Renderer to draw the UI
-    // pub fn render<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) {
-    //     self.renderer.render(render_pass);
-    //     self.text_renderer
-    //         .render(render_pass, &self.font.texture_atlas);
-    // }
-
     /// Resizes the zui context
-    pub fn resize(&mut self, viewport_dimensions_px: PhysicalSize<u32>) {
+    fn handle_winit_resized(&mut self, viewport_dimensions_px: PhysicalSize<u32>) {
         self.viewport_dimensions_px = viewport_dimensions_px;
         self.aspect_ratio =
             viewport_dimensions_px.width as f32 / viewport_dimensions_px.height as f32;
     }
 
     /// Updates the cursor state tracked by zui, will only ever be called when cursor is over viewport
-    pub fn update_cursor_position(&mut self, cursor_physical_position: PhysicalPosition<f64>) {
+    fn handle_winit_cursor_moved(&mut self, cursor_physical_position: PhysicalPosition<f64>) {
         // NOTE: the cursor can be out of the window if clicked, held and dragged out of the window
         let position = PhysicalPosition::new(
             cursor_physical_position.x,
@@ -251,11 +236,11 @@ impl Zui {
     }
 
     /// Called when the cursor leaves the screen
-    pub fn cursor_left(&mut self) {
+    fn handle_winit_cursor_left(&mut self) {
         self.cursor_position = None;
     }
 
-    /// Gets the context for an event
+    /// Gets the context for a Widget event
     pub fn context<'a>(&self) -> Context {
         Context {
             typeface: &self.typeface,
@@ -275,13 +260,47 @@ impl Zui {
         }
     }
 
-    pub fn cursor_position(&self) -> Option<PhysicalPosition<f64>> {
-        self.cursor_position
-    }
-
     /// tries to save the typeface texture atlas image to the provided path
     pub fn debug_try_save_typeface_texture_atlas(&self, path: &str) {
         _ = self.typeface.texture_atlas.save_texture_to_disk(path);
+    }
+
+    /// Handles a winit event, can pass the relevant zui::Event onto a SceneHandle if suitable
+    pub fn handle_winit_window_event<Message>(
+        &mut self,
+        event: &winit::event::WindowEvent<'_>,
+        scene_handle: Option<&mut SceneHandle<Message>>,
+    ) where
+        Message: Copy,
+    {
+        match event {
+            WindowEvent::CursorMoved {
+                position: cursor_physical_position,
+                ..
+            } => {
+                self.handle_winit_cursor_moved(*cursor_physical_position);
+                scene_handle.map(|sh| sh.handle_event(Event::MouseEvent(MouseEvent::CursorMoved), &self.context()));
+            }
+            WindowEvent::CursorLeft { .. } => {
+                self.handle_winit_cursor_left();
+                scene_handle.map(|sh| sh.handle_event(Event::MouseEvent(MouseEvent::CursorExitedWindow), &self.context()));
+            }
+            WindowEvent::Resized(physical_size) => {
+                self.handle_winit_resized(*physical_size);
+            }
+            WindowEvent::MouseInput { state, .. } => {
+                let event = match state {
+                    ElementState::Pressed => {
+                        Event::MouseEvent(MouseEvent::ButtonPressed)
+                    }
+                    ElementState::Released => {
+                        Event::MouseEvent(MouseEvent::ButtonReleased)
+                    }
+                };
+                scene_handle.map(|sh| sh.handle_event(event, &self.context()));
+            }
+            _ => {}
+        }
     }
 }
 
