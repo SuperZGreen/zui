@@ -93,7 +93,7 @@ impl RenderState {
             width: window_size.width,
             height: window_size.height,
             alpha_mode: wgpu::CompositeAlphaMode::Auto, // TODO
-            present_mode: wgpu::PresentMode::AutoVsync,
+            present_mode: wgpu::PresentMode::Fifo,
             view_formats: vec![],
         };
         surface.configure(&device, &surface_configuration);

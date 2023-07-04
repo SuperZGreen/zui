@@ -152,14 +152,32 @@ impl Scene for MainScene {
                 check out my formatting.",
                 Colour::LIGHT_BLUE,
             ))
-            .push_segment(TextSegment::new(" count: ", Colour::MAGENTA))
-            .push_segment(TextSegment::new(&format!("{}", self.count), Colour::DARK_MAGENTA))
+            .push_segment(TextSegment::new(" \u{f023a}", Colour::CYAN))
+            .push_segment(TextSegment::new(&format!(" {}", self.count), Colour::WHITE))
+        );
+        let fish_text = TextContainer::new().with_text(
+            Text::new()
+                .push_segment(TextSegment::new(" \u{f023a}", Colour::CYAN))
+                .push_segment(TextSegment::new(&format!(" {}", self.count), Colour::WHITE))
+        );
+        let money_text = TextContainer::new().with_text(
+            Text::new()
+                .push_segment(TextSegment::new(" \u{f0d6}", Colour::YELLOW))
+                .push_segment(TextSegment::new(&format!(" {}", self.count), Colour::WHITE))
+        );
+        let people_text = TextContainer::new().with_text(
+            Text::new()
+                .push_segment(TextSegment::new(" \u{f4fd}", Colour::ORANGE))
+                .push_segment(TextSegment::new(&format!(" {}", self.count), Colour::WHITE))
         );
         let expandable_2_2 = Container::new()
             .with_name("expandable_2_2")
             .with_span(Span::ParentWeight(2f32))
             .with_background(Some(Colour::BLACK))
-            .push(expandable_2_2_text);
+            .push(expandable_2_2_text)
+            .push(fish_text)
+            .push(money_text)
+            .push(people_text);
         let expandable_2_3 = Container::new()
             .with_name("expandable_2_3")
             .with_span(Span::ParentWeight(1f32))

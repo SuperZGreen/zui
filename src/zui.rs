@@ -50,8 +50,8 @@ impl Zui {
         surface_configuration: &wgpu::SurfaceConfiguration,
         viewport_dimensions_px: PhysicalSize<u32>,
     ) -> Result<Self, ()> {
-        let mut typeface = match Typeface::new(
-            Some("resources/zui/fonts/Roboto-Regular.ttf"),
+        let typeface = match Typeface::new(
+            Some("resources/zui/fonts/ArimoNerdFont-Regular.ttf"),
             Some("resources/zui/fonts/Roboto-Bold.ttf"),
             Some("resources/zui/fonts/Roboto-Italic.ttf"),
             device,
