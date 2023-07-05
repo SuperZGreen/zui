@@ -10,6 +10,7 @@
 
 # generally allowed files
 !/src/**/*.rs
+!/examples/**/*.rs
 !/*.toml
 
 !Cargo.lock

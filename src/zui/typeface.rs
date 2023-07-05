@@ -75,12 +75,6 @@ impl SymbolMetrics {
     }
 }
 
-/// A font that is available and rasterised in the TextureAtlas
-struct RasterisedFont {
-    style: FontStyle,
-    size_px: u32,
-}
-
 /// Contains the fonts and rasterised glyphs for a typeface, useful in rendering text to the screen
 pub struct Typeface {
     /// A map of symbol keys to symbol infos, which provides the metrics and uv coordinates for a
@@ -141,7 +135,6 @@ impl Typeface {
         font_bold_file_path: Option<&str>,
         font_italic_file_path: Option<&str>,
         device: &wgpu::Device,
-        queue: &wgpu::Queue,
     ) -> Result<Self, ()> {
         // getting all fonts from files
         let font_regular =
@@ -149,7 +142,7 @@ impl Typeface {
         let font_bold = font_bold_file_path.map(|fp| Self::fontdue_font_from_file(fp).unwrap());
         let font_italic = font_italic_file_path.map(|fp| Self::fontdue_font_from_file(fp).unwrap());
 
-        let texture_atlas = TextureAtlas::new(device, queue);
+        let texture_atlas = TextureAtlas::new(device);
 
         Ok(Self {
             symbols: FxHashMap::default(),

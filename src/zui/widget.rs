@@ -1,8 +1,8 @@
 use rustc_hash::FxHashSet;
-use winit::dpi::{PhysicalPosition, PhysicalSize};
+use winit::dpi::PhysicalSize;
 
 use super::{
-    font::SymbolKey, primitives::Dimensions, render_layer::RenderLayer,
+    typeface::SymbolKey, primitives::Dimensions, render_layer::RenderLayer,
     simple_renderer::SimpleVertex, text_renderer::TextVertex, Rectangle,
 };
 use std::collections::VecDeque;

@@ -62,18 +62,6 @@ impl GlyphOrigin {
         }
     }
 
-    /// Returns true iff the Presymbol will fit in the provided clipping Rectangle
-    pub fn presymbol_fits_in_rect(
-        &self,
-        clip_rectangle: &Rectangle<f32>,
-        presymbol: &Presymbol,
-    ) -> bool {
-        ((self.viewport_px_position.x
-            + presymbol.symbol_info.symbol_metrics.width
-            + presymbol.symbol_info.symbol_metrics.x_shift) as f32)
-            < clip_rectangle.x_max
-    }
-
     /// Moves the GlyphOrigin by the Presymbol, as though placing the symbol
     pub fn increment_by_presymbol(&mut self, presymbol: &Presymbol) {
         self.viewport_px_position.x += presymbol.symbol_info.symbol_metrics.advance_width;

@@ -1,19 +1,17 @@
 use wgpu::{CommandEncoder, RenderPass, SurfaceTexture, TextureView};
 
-use crate::zui::Rectangle;
-
 pub struct RenderState {
     _adapter: wgpu::Adapter,
     surface: wgpu::Surface,
     _surface_format: wgpu::TextureFormat,
     surface_configuration: wgpu::SurfaceConfiguration,
-    device: wgpu::Device,
-    queue: wgpu::Queue,
+    pub device: wgpu::Device,
+    pub queue: wgpu::Queue,
     window_size: winit::dpi::PhysicalSize<u32>,
     skip_rendering: bool,
 
-    surface_texture_view: Option<TextureView>,
-    command_encoder: Option<CommandEncoder>,
+    pub surface_texture_view: Option<TextureView>,
+    pub command_encoder: Option<CommandEncoder>,
     surface_texture: Option<SurfaceTexture>,
 }
 
@@ -134,10 +132,6 @@ impl RenderState {
 
     /// Gives the RenderPass that does the initial clear of the screen
     pub fn render_clear(&mut self) -> Option<RenderPass> {
-        if self.skip_rendering {
-            return None;
-        }
-
         self.surface_texture = match self.surface.get_current_texture() {
             Ok(t) => Some(t),
             Err(_) => {
@@ -193,38 +187,6 @@ impl RenderState {
         // self.surface_texture.take().unwrap().present();
     }
 
-    /// Gives a RenderPass, with a clip rectangle set if provided
-    pub fn try_render_pass_with_clip_rectangle(&mut self, clip_rectangle: Option<Rectangle<u32>>) -> Option<RenderPass> {
-        if self.skip_rendering {
-            return None;
-        }
-
-        let mut render_pass = self.command_encoder.as_mut().unwrap().begin_render_pass(
-            &wgpu::RenderPassDescriptor {
-                label: Some("world_render_pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &self.surface_texture_view.as_ref().unwrap(),
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Load,
-                        store: true,
-                    },
-                })],
-                depth_stencil_attachment: None,
-        });
-
-        if let Some(clip_rectangle) = clip_rectangle {
-            render_pass.set_scissor_rect(
-                clip_rectangle.x_min,
-                clip_rectangle.y_min,
-                clip_rectangle.width(),
-                clip_rectangle.height(),
-            );
-        }
-
-        // Do rendering
-        return Some(render_pass);
-    }
 
     /// Submits the previously created RenderPass/Command encoder, must be done before presenting
     pub fn submit_command_encoder(&mut self) {
@@ -304,10 +266,6 @@ impl RenderState {
 
     fn update_skip_rendering(&mut self) {
         self.skip_rendering = !(self.window_size.width > 0 || self.window_size.height > 0);
-    }
-
-    pub fn window_size(&self) -> winit::dpi::PhysicalSize<u32> {
-        self.window_size
     }
 
     pub fn device(&self) -> &wgpu::Device {

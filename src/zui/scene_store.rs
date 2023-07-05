@@ -2,7 +2,7 @@ use rustc_hash::FxHashMap;
 use std::fmt::Debug;
 use std::hash::Hash;
 
-use super::{Scene, SceneHandle, Context};
+use super::{Context, Scene, SceneHandle};
 
 /// A registry of all scenes identified by SceneIdentifiers, as well as containing the previous scene
 pub struct SceneStore<SceneIdentifier, Message>
@@ -39,7 +39,11 @@ where
     }
 
     /// Changes the current scene of the SceneStore
-    pub fn change_scene(&mut self, scene_identifier: SceneIdentifier, context: &Context) -> Result<(), ()> {
+    pub fn change_scene(
+        &mut self,
+        scene_identifier: SceneIdentifier,
+        _context: &Context,
+    ) -> Result<(), ()> {
         match self.scenes.get_mut(&scene_identifier) {
             Some(scene_handle) => {
                 self.current_scene_identifier = Some(scene_identifier);

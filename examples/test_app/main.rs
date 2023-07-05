@@ -9,20 +9,15 @@ extern crate log;
 
 use env_logger::Env;
 
+use zui::{
+    Zui, SceneHandle,
+};
+
 mod render_state;
 use render_state::RenderState;
 
-mod zui;
-use zui::Zui;
-
 mod main_scene;
 use main_scene::MainScene;
-mod options_scene;
-use options_scene::OptionsScene;
-mod game_scene;
-use game_scene::GameScene;
-
-use crate::zui::SceneStore;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum SceneIdentifier {
@@ -56,13 +51,12 @@ pub enum OptionsMenuMessage {
 }
 
 fn main() {
-    info!("starting!");
-    let mut frame_counter = 0u64;
-
     // configuring log
     std::env::set_var("RUST_BACKTRACE", "1");
     let env = Env::default().filter_or("MY_LOG_LEVEL", "zui=trace");
     env_logger::init_from_env(env);
+
+    info!("starting!");
 
     // winit init
     let event_loop = EventLoop::new();
@@ -78,18 +72,13 @@ fn main() {
     let viewport_dimensions_px = window.inner_size();
     let mut zui = Zui::new(
         render_state.device(),
-        render_state.queue(),
         render_state.surface_configuration(),
         viewport_dimensions_px,
     )
     .unwrap();
 
     // setting up the scenes
-    let mut scene_store = SceneStore::new();
-    scene_store.add_scene(SceneIdentifier::StartMenu, Box::new(MainScene::new()));
-    scene_store.add_scene(SceneIdentifier::OptionsMenu, Box::new(OptionsScene::new()));
-    scene_store.add_scene(SceneIdentifier::GameScene, Box::new(GameScene::new()));
-    _ = scene_store.change_scene(SceneIdentifier::StartMenu, &zui.context());
+    let mut scene_handle = SceneHandle::new(Box::new(MainScene::new()));
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
@@ -105,13 +94,7 @@ fn main() {
                     }
                     WindowEvent::Resized(physical_size) => {
                         info!("resized to: {physical_size:?}");
-
                         render_state.resize(physical_size);
-                        scene_store.current_scene_mut().unwrap().resize_scene(
-                            &mut zui.context_mut_typeface(),
-                            render_state.device(),
-                            render_state.queue(),
-                        );
                     }
                     WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
                         render_state.resize(*new_inner_size);
@@ -132,8 +115,7 @@ fn main() {
                             zui.debug_try_save_typeface_texture_atlas("out.png");
                         }
                         VirtualKeyCode::Escape => {
-                            _ = scene_store
-                                .change_scene(SceneIdentifier::StartMenu, &zui.context());
+                            // Do nothing
                         }
                         _ => {}
                     },
@@ -159,10 +141,9 @@ fn main() {
                 }
 
                 // event passthrough
-                let current_scene_mut = scene_store.current_scene_mut();
                 zui.handle_winit_window_event(
                     event,
-                    current_scene_mut,
+                    Some(&mut scene_handle),
                 );
             }
             Event::NewEvents(_) => {}
@@ -171,32 +152,22 @@ fn main() {
             Event::Resumed => {}
             Event::MainEventsCleared => {
                 // // TODO: Solving
-                let current_scene_mut = scene_store.current_scene_mut().unwrap();
-                current_scene_mut.handle_message(UiMessage::IncrementCounter(1));
+                scene_handle.handle_message(UiMessage::IncrementCounter(1));
 
-                current_scene_mut.update(
+                scene_handle.update(
                     &mut zui.context_mut_typeface(),
                     render_state.device(),
                     render_state.queue(),
                 );
 
                 // solving user behaviour
-                let mut set_scene_destination = None;
-                while let Some(message) = current_scene_mut.pop_external_message() {
+                while let Some(message) = scene_handle.pop_external_message() {
                     match message {
-                        UiMessage::GoToScene(scene_identifier) => {
-                            println!("going to scene: {:?}", scene_identifier);
-                            set_scene_destination = Some(scene_identifier);
-                        }
                         UiMessage::Exit => exit(control_flow),
                         _ => {
                             println!("unhandled message!")
                         }
                     }
-                }
-
-                if let Some(scene_identifier) = set_scene_destination {
-                    _ = scene_store.change_scene(scene_identifier, &zui.context());
                 }
 
                 window.request_redraw();
@@ -207,8 +178,14 @@ fn main() {
                     _ = render_state.render_clear();
 
                     // rendering the current scene, submits its own command encoder
-                    let current_scene = scene_store.current_scene().unwrap();
-                    zui.render_scene_handle(current_scene, &mut render_state);
+                    zui.render_scene_handle(
+                        &scene_handle, 
+                        &render_state.device,
+                        &render_state.surface_texture_view.as_ref().unwrap(),
+                        &mut render_state.command_encoder.as_mut().unwrap(),
+                    );
+
+                    render_state.submit_command_encoder();
 
                     // presenting the final surface
                     match render_state.present() {
@@ -216,9 +193,6 @@ fn main() {
                         Ok(_) => {}
                     }
                 }
-
-                // incrementing the frame counter for testing
-                frame_counter += 1;
             }
             Event::RedrawEventsCleared => {}
             Event::LoopDestroyed => {}

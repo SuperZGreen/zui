@@ -3,15 +3,16 @@ use std::ops::RangeInclusive;
 use winit::dpi::PhysicalPosition;
 
 use crate::zui::{
-    primitives::{Rectangle, Dimensions},
+    primitives::{Dimensions, Rectangle},
     text::{TextAlignmentHorizontal, TextAlignmentVertical},
-    widget::{EventResponse, LayoutBoundaries, Layout}, Colour, Context, LineWrapping, MouseEvent, Span, Text,
-    TextConfiguration, TextSegment, Widget, Event,
+    widget::{EventResponse, Layout, LayoutBoundaries},
+    Colour, Context, Event, LineWrapping, MouseEvent, Span, Text, TextConfiguration, TextSegment,
+    Widget,
 };
 
 pub struct FillBar<'a, T, Message> {
-    front_colour: Colour,
-    back_colour: Colour,
+    _front_colour: Colour,
+    _back_colour: Colour,
 
     /// The range of the bar
     range: RangeInclusive<T>,
@@ -29,15 +30,14 @@ pub struct FillBar<'a, T, Message> {
 
     /// Acts as both the clip rectangle and the background rectangle of the FillBar
     clip_rectangle: Option<Rectangle<f32>>,
-    
+
     /// The foreground of the FillBar, used to render the foreground colour of the bar
     bar_foreground_rectangle: Option<Rectangle<f32>>,
 
     span: Span,
-    span_px: Option<f32>,
 
     text: Text,
-    
+
     layout: Layout,
 }
 
@@ -52,8 +52,8 @@ where
     {
         let text = Self::format_text(&value, range.end());
         Self {
-            front_colour: Colour::rgb(0.3f32, 0.3f32, 0.3f32),
-            back_colour: Colour::rgb(0.05f32, 0.05f32, 0.05f32),
+            _front_colour: Colour::rgb(0.3f32, 0.3f32, 0.3f32),
+            _back_colour: Colour::rgb(0.05f32, 0.05f32, 0.05f32),
             range,
             value,
             _interactable: interactable,
@@ -63,7 +63,6 @@ where
             clip_rectangle: None,
             bar_foreground_rectangle: None,
             span: Span::ParentWeight(1f32),
-            span_px: None,
             text,
             layout: Layout::new(),
         }
@@ -103,7 +102,7 @@ where
     }
 
     /// Sets the value if not already equal to current value, returns true if updated
-    fn try_update_value(&mut self, value: T, context: &Context) -> bool {
+    fn try_update_value(&mut self, value: T, _context: &Context) -> bool {
         if value == self.value {
             false
         } else {
@@ -121,11 +120,8 @@ where
                 // );
 
                 if let Some(foreground_rectangle) = &mut self.bar_foreground_rectangle {
-                    let bar_position = Self::viewport_px_position_from_value(
-                        &self.range,
-                        *clip_rectangle,
-                        &value,
-                    );
+                    let bar_position =
+                        Self::viewport_px_position_from_value(&self.range, *clip_rectangle, &value);
                     foreground_rectangle.x_max = bar_position;
                 }
             }
@@ -246,7 +242,6 @@ where
 
             //     crate::zui::widget::EventResponse::Consumed
             // }
-
             _ => EventResponse::Consumed,
         }
     }
@@ -287,7 +282,11 @@ where
     //     (simple_vertices, text_vertices)
     // }
 
-    fn try_update_dimensions(&mut self, layout_boundaries: &LayoutBoundaries, context: &Context) -> Dimensions<f32> {
+    fn try_update_dimensions(
+        &mut self,
+        _layout_boundaries: &LayoutBoundaries,
+        _context: &Context,
+    ) -> Dimensions<f32> {
         Dimensions::new(128f32, 64f32)
     }
 
@@ -295,12 +294,7 @@ where
         &self.layout
     }
 
-    fn try_fit_rectangle(
-        &mut self,
-        clip_rectangle: &Rectangle<f32>,
-        _context: &Context,
-    ) {
+    fn try_fit_rectangle(&mut self, clip_rectangle: &Rectangle<f32>, _context: &Context) {
         self.clip_rectangle = Some(*clip_rectangle);
     }
-    
 }

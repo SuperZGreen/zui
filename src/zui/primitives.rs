@@ -1,8 +1,6 @@
-use std::ops::Sub;
-
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 
-use super::{simple_renderer::SimpleVertex, util, Axis, Colour};
+use super::{util, Axis};
 
 #[derive(Debug, Copy, Clone)]
 pub struct ScreenSpacePosition {

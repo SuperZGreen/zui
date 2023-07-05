@@ -23,7 +23,7 @@ pub struct PackedSprite {
     pub uv_region: Rectangle<f32>,
 
     /// The dimensions of the final packed region, not including padding
-    dimensions_px: glam::UVec2,
+    _dimensions_px: glam::UVec2,
 }
 
 impl TextureAtlasBuilder {
@@ -169,7 +169,7 @@ impl TextureAtlasBuilder {
 
             packed_sprites.push(PackedSprite {
                 name: String::from("TODO"),
-                dimensions_px: glam::UVec2::new(rect.rect.w as u32, rect.rect.h as u32),
+                _dimensions_px: glam::UVec2::new(rect.rect.w as u32, rect.rect.h as u32),
                 // uv_region: Rectangle::new(x_min, x_max, y_min, y_max),
                 uv_region,
             });
@@ -338,7 +338,7 @@ pub struct TextureAtlas {
 impl TextureAtlas {
     /// Creates a new texture atlas, with a GPU side layout descriptor, that will be common between
     /// calls to build the texture atlas
-    pub fn new(device: &wgpu::Device, queue: &wgpu::Queue) -> Self {
+    pub fn new(device: &wgpu::Device) -> Self {
         // the sampler for the texture
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             address_mode_u: wgpu::AddressMode::ClampToEdge,

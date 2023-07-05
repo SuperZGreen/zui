@@ -141,16 +141,16 @@ where
         self.widget_recreation_required = false;
     }
 
-    /// Queues resizing the root widget
-    pub fn resize_scene(
-        &mut self,
-        context_mut_typeface: &mut ContextMutTypeface,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-    ) {
-        // TODO: resize_scene might be defunct?
-        self.rebuild_scene(context_mut_typeface, device, queue);
-    }
+    // /// Queues resizing the root widget
+    // pub fn resize_scene(
+    //     &mut self,
+    //     context_mut_typeface: &mut ContextMutTypeface,
+    //     device: &wgpu::Device,
+    //     queue: &wgpu::Queue,
+    // ) {
+    //     // TODO: resize_scene might be defunct?
+    //     self.rebuild_scene(context_mut_typeface, device, queue);
+    // }
 
     /// Iterates through the self.messages queue and passes messages to the underlying scene one by
     /// one

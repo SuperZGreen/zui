@@ -108,7 +108,7 @@ where
         &self.layout
     }
 
-    fn collect_text(&self, symbol_keys: &mut rustc_hash::FxHashSet<zui::font::SymbolKey>) {
+    fn collect_text(&self, symbol_keys: &mut rustc_hash::FxHashSet<zui::typeface::SymbolKey>) {
         self.text.as_ref().map(|t| t.collect_symbol_keys(symbol_keys));
     }
 

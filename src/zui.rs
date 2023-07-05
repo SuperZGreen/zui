@@ -1,5 +1,5 @@
 mod colour;
-pub mod font;
+pub mod typeface;
 pub mod premade_widgets;
 mod primitives;
 mod render_layer;
@@ -15,7 +15,7 @@ pub mod util;
 mod widget;
 
 pub use colour::Colour;
-pub use font::Typeface;
+pub use typeface::Typeface;
 pub use primitives::{Rectangle, ScreenSpacePosition};
 pub use renderable::Renderable;
 pub use scene::Scene;
@@ -30,10 +30,8 @@ pub use widget::{Axis, Event, MouseEvent, Span, Widget};
 
 use winit::{
     dpi::{PhysicalPosition, PhysicalSize},
-    event::{WindowEvent, ElementState},
+    event::{ElementState, WindowEvent},
 };
-
-use crate::render_state::RenderState;
 
 pub struct Zui {
     typeface: Typeface,
@@ -49,7 +47,6 @@ pub struct Zui {
 impl Zui {
     pub fn new(
         device: &wgpu::Device,
-        queue: &wgpu::Queue,
         surface_configuration: &wgpu::SurfaceConfiguration,
         viewport_dimensions_px: PhysicalSize<u32>,
     ) -> Result<Self, ()> {
@@ -58,7 +55,6 @@ impl Zui {
             Some("resources/zui/fonts/Roboto-Bold.ttf"),
             Some("resources/zui/fonts/Roboto-Italic.ttf"),
             device,
-            queue,
         ) {
             Ok(f) => f,
             Err(_) => return Err(()),
@@ -140,7 +136,9 @@ impl Zui {
     pub fn render_scene_handle<Message>(
         &mut self,
         scene_handle: &SceneHandle<Message>,
-        render_state: &mut RenderState,
+        device: &wgpu::Device,
+        output_texture_view: &wgpu::TextureView,
+        command_encoder: &mut wgpu::CommandEncoder,
     ) where
         Message: Copy + Clone,
     {
@@ -189,22 +187,27 @@ impl Zui {
 
             match render_layer_behaviour {
                 RenderLayerBehaviour::WithFramebufferClipRectangle(fcr) => {
-                    self.renderer
-                        .upload(render_state.device(), &render_layer.simple_vertices);
+                    self.renderer.upload(device, &render_layer.simple_vertices);
                     self.text_renderer
-                        .upload(render_state.device(), &render_layer.text_vertices);
+                        .upload(device, &render_layer.text_vertices);
 
-                    let render_pass_opt =
-                        render_state.try_render_pass_with_clip_rectangle(Some(fcr));
+                    let render_pass_opt = Self::try_render_pass_with_clip_rectangle(
+                        command_encoder,
+                        output_texture_view,
+                        Some(fcr),
+                    );
                     self.try_render_pass_draw(render_pass_opt);
                 }
                 RenderLayerBehaviour::WithoutClipRectangle => {
-                    self.renderer
-                        .upload(render_state.device(), &render_layer.simple_vertices);
+                    self.renderer.upload(device, &render_layer.simple_vertices);
                     self.text_renderer
-                        .upload(render_state.device(), &render_layer.text_vertices);
+                        .upload(device, &render_layer.text_vertices);
 
-                    let render_pass_opt = render_state.try_render_pass_with_clip_rectangle(None);
+                    let render_pass_opt = Self::try_render_pass_with_clip_rectangle(
+                        command_encoder,
+                        output_texture_view,
+                        None,
+                    );
                     self.try_render_pass_draw(render_pass_opt);
                 }
                 RenderLayerBehaviour::DoNotRender => {
@@ -213,8 +216,42 @@ impl Zui {
             };
         }
 
+        // Note: command encoder should be submitted by the end user!
+
         // submitting the command encoder
-        render_state.submit_command_encoder();
+        // render_state.submit_command_encoder();
+    }
+
+    /// Gives a RenderPass, with a clip rectangle set if provided
+    fn try_render_pass_with_clip_rectangle<'a>(
+        command_encoder: &'a mut wgpu::CommandEncoder,
+        viewport_texture_view: &'a wgpu::TextureView,
+        clip_rectangle: Option<Rectangle<u32>>,
+    ) -> Option<wgpu::RenderPass<'a>> {
+        let mut render_pass = command_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some("zui_render_pass"),
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view: viewport_texture_view,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Load,
+                    store: true,
+                },
+            })],
+            depth_stencil_attachment: None,
+        });
+
+        if let Some(clip_rectangle) = clip_rectangle {
+            render_pass.set_scissor_rect(
+                clip_rectangle.x_min,
+                clip_rectangle.y_min,
+                clip_rectangle.width(),
+                clip_rectangle.height(),
+            );
+        }
+
+        // Do rendering
+        return Some(render_pass);
     }
 
     /// Resizes the zui context
@@ -279,23 +316,27 @@ impl Zui {
                 ..
             } => {
                 self.handle_winit_cursor_moved(*cursor_physical_position);
-                scene_handle.map(|sh| sh.handle_event(Event::MouseEvent(MouseEvent::CursorMoved), &self.context()));
+                scene_handle.map(|sh| {
+                    sh.handle_event(Event::MouseEvent(MouseEvent::CursorMoved), &self.context())
+                });
             }
             WindowEvent::CursorLeft { .. } => {
                 self.handle_winit_cursor_left();
-                scene_handle.map(|sh| sh.handle_event(Event::MouseEvent(MouseEvent::CursorExitedWindow), &self.context()));
+                scene_handle.map(|sh| {
+                    sh.handle_event(
+                        Event::MouseEvent(MouseEvent::CursorExitedWindow),
+                        &self.context(),
+                    )
+                });
             }
             WindowEvent::Resized(physical_size) => {
                 self.handle_winit_resized(*physical_size);
+                scene_handle.map(|sh| sh.queue_rebuild_scene());
             }
             WindowEvent::MouseInput { state, .. } => {
                 let event = match state {
-                    ElementState::Pressed => {
-                        Event::MouseEvent(MouseEvent::ButtonPressed)
-                    }
-                    ElementState::Released => {
-                        Event::MouseEvent(MouseEvent::ButtonReleased)
-                    }
+                    ElementState::Pressed => Event::MouseEvent(MouseEvent::ButtonPressed),
+                    ElementState::Released => Event::MouseEvent(MouseEvent::ButtonReleased),
                 };
                 scene_handle.map(|sh| sh.handle_event(event, &self.context()));
             }

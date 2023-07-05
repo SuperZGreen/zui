@@ -114,7 +114,10 @@ where
         }
     }
 
-    fn collect_text(&self, symbol_keys: &mut rustc_hash::FxHashSet<crate::zui::font::SymbolKey>) {
+    fn collect_text(
+        &self,
+        symbol_keys: &mut rustc_hash::FxHashSet<crate::zui::typeface::SymbolKey>,
+    ) {
         let text = match self.text.as_ref() {
             Some(text) => text,
             None => return,

@@ -9,7 +9,7 @@ use text_line::TextLines;
 use winit::dpi::PhysicalSize;
 
 use super::{
-    font::{FontStyle, SymbolInfo, SymbolKey},
+    typeface::{FontStyle, SymbolInfo, SymbolKey},
     primitives::{Dimensions, Rectangle},
     text_renderer::TextVertex,
     widget::Bounds,
@@ -81,9 +81,6 @@ pub struct Text {
     /// Includes alignment and styling information for the text
     pub configuration: TextConfiguration,
 
-    /// The size of the text in pixels, calculated from configuration.size in Self::udpate_size_px
-    size_px: Option<i32>,
-
     /// The layout of the text, including the lines, presymbols and viewport pixel dimensions
     layout: Option<TextLayout>,
 }
@@ -95,7 +92,6 @@ impl Text {
             segments: Vec::new(),
             symbols: Vec::new(),
             configuration: TextConfiguration::default(),
-            size_px: None,
             layout: None,
         }
     }
@@ -135,13 +131,13 @@ impl Text {
     // TODO: Note that this hits twice due to containers Span::FitContents behaviour
     pub fn update_layout(
         &mut self,
-        font: &Typeface,
+        typeface: &Typeface,
         bounds: Bounds<f32>,
         _viewport_dimensions_px: PhysicalSize<u32>, // TODO: will be used for other text heigh calculations (?)
     ) {
         // converting the line metrics of Fontdue to screen space
         let font_metrics_px = PixelFontMetrics::new(
-            &font
+            &typeface
                 .font_regular // TODO: this shouldn't just be regular, but what the TextStyle of the Text actually is
                 .as_ref()
                 .unwrap()
@@ -150,7 +146,7 @@ impl Text {
         );
 
         // calculating the screen space metrics of all symbols
-        let presymbols = Self::generate_presymbols(&self, font, self.configuration.size_px);
+        let presymbols = Self::generate_presymbols(&self, typeface, self.configuration.size_px);
 
         // TODOW
         let max_width_px = bounds.span;
@@ -171,7 +167,7 @@ impl Text {
 
     /// Updates/places/caluclates the symbol dimensions and locations from the Text's TextSegments,
     /// performing line wrapping, alignment etc
-    pub fn place_symbols(&mut self, font: &Typeface, clip_rectangle: &Rectangle<f32>) {
+    pub fn place_symbols(&mut self, typeface: &Typeface, clip_rectangle: &Rectangle<f32>) {
         let layout = match &mut self.layout {
             Some(layout) => layout,
             None => return,
@@ -179,7 +175,7 @@ impl Text {
 
         // converting the line metrics of Fontdue to screen space
         let font_metrics_px = PixelFontMetrics::new(
-            &font
+            &typeface
                 .font_regular
                 .as_ref() // TODO: this shouldn't just be regular, but what the TextStyle of the Text actually is
                 .unwrap()
@@ -268,7 +264,7 @@ impl Text {
         vertices
     }
 
-    fn generate_presymbols(&self, font: &Typeface, size_px: u32) -> Vec<Presymbol> {
+    fn generate_presymbols(&self, typeface: &Typeface, size_px: u32) -> Vec<Presymbol> {
         let mut ps = Vec::new();
         for segment in self.segments.iter() {
             let style = segment.style;
@@ -276,7 +272,7 @@ impl Text {
             for character in segment.string.chars() {
                 let symbol_key = SymbolKey::new(character, style, size_px);
 
-                let symbol_info = match font.get_symbol(symbol_key) {
+                let symbol_info = match typeface.get_symbol(symbol_key) {
                     Some(res) => res,
                     None => {
                         error!("could not find glyph for character: '{}'!", character);

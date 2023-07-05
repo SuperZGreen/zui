@@ -1,11 +1,10 @@
-use crate::{
-    zui::{
-        font::FontStyle,
-        premade_widgets::{Container, TextContainer, Button},
-        Axis, Colour, Scene, Span, Text, TextConfiguration, TextSegment, Widget,
-    },
-    UiMessage,
+use zui::{
+    typeface::FontStyle,
+    premade_widgets::{Button, Container, TextContainer},
+    Axis, Colour, Scene, Span, Text, TextConfiguration, TextSegment, Widget,
 };
+
+use crate::UiMessage;
 
 pub struct MainScene {
     count: u64,
@@ -25,11 +24,11 @@ impl Scene for MainScene {
             UiMessage::SetCounter(count) => {
                 self.count = count;
                 (None, true)
-            },
+            }
             UiMessage::IncrementCounter(increment) => {
                 self.count += increment;
                 (None, true)
-            },
+            }
             _ => (Some(message), false),
         }
     }
@@ -162,17 +161,17 @@ impl Scene for MainScene {
         let fish_text = TextContainer::new().with_text(
             Text::new()
                 .push_segment(TextSegment::new(" \u{f023a}", Colour::CYAN))
-                .push_segment(TextSegment::new(&format!(" {}", self.count), Colour::WHITE))
+                .push_segment(TextSegment::new(&format!(" {}", self.count), Colour::WHITE)),
         );
         let money_text = TextContainer::new().with_text(
             Text::new()
                 .push_segment(TextSegment::new(" \u{f0d6}", Colour::YELLOW))
-                .push_segment(TextSegment::new(&format!(" {}", self.count), Colour::WHITE))
+                .push_segment(TextSegment::new(&format!(" {}", self.count), Colour::WHITE)),
         );
         let people_text = TextContainer::new().with_text(
             Text::new()
                 .push_segment(TextSegment::new(" \u{f4fd}", Colour::ORANGE))
-                .push_segment(TextSegment::new(&format!(" {}", self.count), Colour::WHITE))
+                .push_segment(TextSegment::new(&format!(" {}", self.count), Colour::WHITE)),
         );
         let expandable_2_2 = Container::new()
             .with_name("expandable_2_2")
@@ -183,13 +182,9 @@ impl Scene for MainScene {
             .push(money_text)
             .push(people_text);
 
-        let expandable_2_3_button = Button::new(
-                UiMessage::SetCounter(0),
-                Colour::DARK_BLUE,
-                Colour::BLUE,
-            ).with_text(
-                Text::new()
-                    .push_segment(TextSegment::new("Reset counter", Colour::WHITE))
+        let expandable_2_3_button =
+            Button::new(UiMessage::SetCounter(0), Colour::DARK_BLUE, Colour::BLUE).with_text(
+                Text::new().push_segment(TextSegment::new("Reset counter", Colour::WHITE)),
             );
 
         let expandable_2_3 = Container::new()
