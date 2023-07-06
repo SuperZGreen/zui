@@ -30,9 +30,9 @@ impl TextureAtlasBuilder {
     /// The number of pixels a sprite is padded by
     const PADDING: u32 = 1u32;
 
-    pub fn new() -> Self {
+    pub fn new(reserved_sprites_length: usize) -> Self {
         Self {
-            unpacked_sprites: Vec::new(),
+            unpacked_sprites: Vec::with_capacity(reserved_sprites_length),
         }
     }
 
@@ -104,6 +104,7 @@ impl TextureAtlasBuilder {
         };
 
         // creating a relevant handle to our texture
+        // TODO: this causes a severe memory leak if run while window is minimised?
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             size: texture_size,
             mip_level_count: 1,
@@ -182,134 +183,6 @@ impl TextureAtlasBuilder {
 
         packed_sprites
     }
-
-    ///// Builds the atlas
-    //pub fn build_atlas(&self, device: &wgpu::Device, queue: &wgpu::Queue) -> TextureAtlas {
-    //    // preparing rectangles to be packed
-    //    let items_to_place = self.prepare_crunch_items();
-
-    //    // getting the packed rectangles
-    //    let packed_items = match crunch::pack_into_po2(1024 * 10, items_to_place) {
-    //        Ok(res) => res,
-    //        Err(_) => {
-    //            error!("failed to pack items!");
-    //            panic!();
-    //        }
-    //    };
-
-    //    // copying sprite info images into new atlas image
-    //    let atlas_image = self.packed_items_to_image(packed_items);
-
-    //    // _ = atlas_image.save("output.png");
-
-    //    //
-    //    //  Creating texture and wgpu related structs
-    //    //
-
-    //    // creating and uploading the wgpu texture
-
-    //    let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-
-    //    let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-    //        address_mode_u: wgpu::AddressMode::ClampToEdge,
-    //        address_mode_v: wgpu::AddressMode::ClampToEdge,
-    //        address_mode_w: wgpu::AddressMode::ClampToEdge,
-    //        mag_filter: wgpu::FilterMode::Linear,
-    //        min_filter: wgpu::FilterMode::Linear,
-    //        mipmap_filter: wgpu::FilterMode::Linear,
-    //        ..Default::default()
-    //    });
-
-    //    let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-    //        entries: &[
-    //            wgpu::BindGroupLayoutEntry {
-    //                binding: 0,
-    //                visibility: wgpu::ShaderStages::FRAGMENT,
-    //                ty: wgpu::BindingType::Texture {
-    //                    multisampled: false,
-    //                    view_dimension: wgpu::TextureViewDimension::D2,
-    //                    sample_type: wgpu::TextureSampleType::Float { filterable: true },
-    //                },
-    //                count: None,
-    //            },
-    //            wgpu::BindGroupLayoutEntry {
-    //                binding: 1,
-    //                visibility: wgpu::ShaderStages::FRAGMENT,
-    //                ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-    //                count: None,
-    //            },
-    //        ],
-    //        label: Some("texture_atlas_bind_group_layout"),
-    //    });
-
-    //    let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-    //        layout: &bind_group_layout,
-    //        entries: &[
-    //            wgpu::BindGroupEntry {
-    //                binding: 0,
-    //                resource: wgpu::BindingResource::TextureView(&texture_view),
-    //            },
-    //            wgpu::BindGroupEntry {
-    //                binding: 1,
-    //                resource: wgpu::BindingResource::Sampler(&sampler),
-    //            },
-    //        ],
-    //        label: Some("texture_atlas_bind_group"),
-    //    });
-
-    //    // saving to disk
-    //    // atlas_image.save_with_format("out.png", image::ImageFormat::Png).expect("failed to save!");
-
-    //    //
-    //    //  Preparing final sprite list
-    //    //
-
-    //    // adding to sprites list
-    //    let mut packed_sprites = Vec::new();
-    //    let indices_used = self.unpacked_sprites.len();
-    //    for index in 0..indices_used {
-    //        let rect = packed_items
-    //            .items
-    //            .iter()
-    //            .find(|item| item.data == index)
-    //            .expect(&format!("could not find pack result with id = {}", index));
-
-    //        // The uv region in rust-image pixel coordinates
-    //        let uv_region_px = Rectangle::new(
-    //            rect.rect.x as u32 + Self::PADDING,
-    //            rect.rect.x as u32 + rect.rect.w as u32 - Self::PADDING,
-    //            rect.rect.y as u32 + Self::PADDING,
-    //            rect.rect.y as u32 + rect.rect.h as u32 - Self::PADDING,
-    //        );
-
-    //        // The uv region in wgpu UV coordinates
-    //        let uv_region = Rectangle::new(
-    //            uv_region_px.x_min as f32 / atlas_width as f32,
-    //            uv_region_px.x_max as f32 / atlas_width as f32,
-    //            uv_region_px.y_min as f32 / atlas_height as f32,
-    //            uv_region_px.y_max as f32 / atlas_height as f32,
-    //        );
-
-    //        packed_sprites.push(PackedSprite {
-    //            name: String::from("TODO"),
-    //            dimensions_px: glam::UVec2::new(rect.rect.w as u32, rect.rect.h as u32),
-    //            // uv_region: Rectangle::new(x_min, x_max, y_min, y_max),
-    //            uv_region,
-    //        });
-    //    }
-
-    //    // printing sprites
-    //    // for sprite in &packed_sprites {
-    //    //     sprite.print();
-    //    // }
-
-    //    TextureAtlas {
-    //        _texture: texture,
-    //        bind_group_layout,
-    //        bind_group,
-    //        packed_sprites,
-    //    }
-    //}
 }
 
 pub struct TextureAtlas {

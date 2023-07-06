@@ -62,13 +62,18 @@ where
         device: &wgpu::Device,
         queue: &wgpu::Queue,
     ) {
-        // self.solve_cursor_events(cursor_state);
-
         self.handle_messages();
 
         // lazy widget recreation
         if self.widget_recreation_required {
-            self.rebuild_scene(context_mut_typeface, device, queue);
+
+            // IMPORTANT: prevents scene from rebuilding if viewport is zero, as this causes a
+            // severe memory leak
+            let viewport_is_zero = context_mut_typeface.viewport_dimensions_px.width == 0
+                || context_mut_typeface.viewport_dimensions_px.height == 0;
+            if !viewport_is_zero {
+                self.rebuild_scene(context_mut_typeface, device, queue);
+            }
         }
     }
 

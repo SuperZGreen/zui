@@ -7,11 +7,7 @@ use winit::{
 #[macro_use]
 extern crate log;
 
-use env_logger::Env;
-
-use zui::{
-    Zui, SceneHandle,
-};
+use zui::{SceneHandle, Zui};
 
 mod render_state;
 use render_state::RenderState;
@@ -19,42 +15,21 @@ use render_state::RenderState;
 mod main_scene;
 use main_scene::MainScene;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum SceneIdentifier {
-    StartMenu,
-    OptionsMenu,
-    GameScene,
-}
-
 #[derive(Clone, Copy)]
 pub enum UiMessage {
-    StartMenuMessage(StartMenuMessage),
-    OptionsMenuMessage(OptionsMenuMessage),
-    GoToScene(SceneIdentifier),
     SetCounter(u64),
     IncrementCounter(u64),
     Exit,
 }
 
-#[derive(Clone, Copy)]
-pub enum StartMenuMessage {
-    StartClicked,
-}
-
-#[derive(Clone, Copy)]
-pub enum OptionsMenuMessage {
-    MasterVolumeChanged(f32),
-    MusicVolumeChanged(f32),
-    SoundEffectsVolumeChanged(f32),
-
-    BackClicked,
-}
-
 fn main() {
     // configuring log
     std::env::set_var("RUST_BACKTRACE", "1");
-    let env = Env::default().filter_or("MY_LOG_LEVEL", "zui=trace");
-    env_logger::init_from_env(env);
+    env_logger::Builder::new()
+        // .filter_level(log::LevelFilter::Trace)
+        .filter_module("wgpu", log::LevelFilter::Warn)
+        .filter_module("zui", log::LevelFilter::Trace)
+        .init();
 
     info!("starting!");
 
@@ -119,9 +94,7 @@ fn main() {
                         }
                         _ => {}
                     },
-                    WindowEvent::CursorMoved {
-                        ..
-                    } => {
+                    WindowEvent::CursorMoved { .. } => {
                         // Do nothing, handled in Zui::handle_winit_window_event
                     }
                     WindowEvent::ModifiersChanged(_) => {
@@ -132,19 +105,14 @@ fn main() {
                         // Do nothing, handled in Zui::handle_winit_window_event
                     }
                     WindowEvent::MouseWheel { .. } => {}
-                    WindowEvent::MouseInput {
-                        ..
-                    } => {
+                    WindowEvent::MouseInput { .. } => {
                         // Do nothing, handled in Zui::handle_winit_window_event
                     }
                     _ => {}
                 }
 
                 // event passthrough
-                zui.handle_winit_window_event(
-                    event,
-                    Some(&mut scene_handle),
-                );
+                zui.handle_winit_window_event(event, Some(&mut scene_handle));
             }
             Event::NewEvents(_) => {}
             Event::UserEvent(_) => {}
@@ -179,7 +147,7 @@ fn main() {
 
                     // rendering the current scene, submits its own command encoder
                     zui.render_scene_handle(
-                        &scene_handle, 
+                        &scene_handle,
                         &render_state.device,
                         &render_state.surface_texture_view.as_ref().unwrap(),
                         &mut render_state.command_encoder.as_mut().unwrap(),

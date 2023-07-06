@@ -189,15 +189,12 @@ impl Typeface {
             return;
         }
 
-        let mut texture_atlas_builder = TextureAtlasBuilder::new();
+        let mut texture_atlas_builder = TextureAtlasBuilder::new(symbol_keys.len());
 
         // rasterising all characters and putting into texture atlas, contains the atlas index,
         // SymbolKey and SymbolMetrics of a symbol, where the SymbolMetrics and atlas_index will
         // later be combined into a public SymbolInfo struct
-        let mut rasterisation_info = Vec::new();
-
-        // reserving space for the new characters
-        rasterisation_info.reserve(symbol_keys.len());
+        let mut rasterisation_info = Vec::with_capacity(symbol_keys.len());
 
         // adding the font's characters to rasterisation_info and the texture atlas builder
         for symbol_key in symbol_keys.iter() {
@@ -244,6 +241,10 @@ impl Typeface {
         for (texture_atlas_index, symbol_key, symbol_metrics) in rasterisation_info {
             let symbol_info = SymbolInfo {
                 symbol_metrics,
+                // uv_region: Rectangle::new(
+                //     0f32, 1f32,
+                //     0f32, 1f32,
+                // ),
                 uv_region: self
                     .texture_atlas
                     .get(texture_atlas_index)
