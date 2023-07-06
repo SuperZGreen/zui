@@ -16,7 +16,7 @@ mod widget;
 
 pub use colour::Colour;
 pub use typeface::Typeface;
-pub use primitives::{Rectangle, ScreenSpacePosition};
+pub use primitives::Rectangle;
 pub use renderable::Renderable;
 pub use scene::Scene;
 pub use scene_handle::SceneHandle;

@@ -2,34 +2,6 @@ use winit::dpi::{PhysicalPosition, PhysicalSize};
 
 use super::{util, Axis};
 
-#[derive(Debug, Copy, Clone)]
-pub struct ScreenSpacePosition {
-    pub x: f32,
-    pub y: f32,
-}
-
-impl ScreenSpacePosition {
-    pub fn _new(x: f32, y: f32) -> Self {
-        Self { x, y }
-    }
-
-    pub fn from_cursor_physical_position(
-        cursor_position: PhysicalPosition<f64>,
-        viewport_dimensions_px: PhysicalSize<u32>,
-    ) -> Self {
-        Self {
-            x: cursor_position.x as f32 / viewport_dimensions_px.width as f32 * 2f32 - 1f32,
-            y: -(cursor_position.y as f32 / viewport_dimensions_px.height as f32 * 2f32 - 1f32),
-        }
-    }
-
-    // TODO: check equality edge cases
-    /// Returns true if in the range -1 to 1 for x and y axis
-    pub fn is_in_viewport_bounds(&self) -> bool {
-        self.x >= -1f32 && self.x <= 1f32 && self.y >= -1f32 && self.y <= 1f32
-    }
-}
-
 /// A rectangular region, often representing screen-space using WGPU coordinates, where top left:
 /// (-1, 1), and bottom right: (1, -1)
 #[derive(Debug, Clone, Copy)]
