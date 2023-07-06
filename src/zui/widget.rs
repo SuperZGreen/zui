@@ -32,6 +32,8 @@ impl Axis {
     }
 }
 
+/// A span defines a distance in the viewport, this is converted to pixels when the layout is
+/// calculated, and exists for ease of design - ie to allow resolution-independent designs
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
 pub enum Span {
@@ -168,6 +170,8 @@ pub enum MouseEvent {
     CursorMoved,
 }
 
+/// An event that is passed to a Widget from the outside context, for the widget to deal with and/or
+/// to pass on to its children
 #[derive(Debug)]
 pub enum Event {
     /// An event that involves mouse interaction
@@ -233,7 +237,8 @@ pub trait Widget<Message> {
         // Do nothing by default
     }
 
-    /// Gives the Span::ParentWeight value of the widget, if any
+    /// Gives the Span::ParentWeight value of the widget, if any. This is required for Containers to
+    /// determine and provide any child with Span::ParentWeight's dimensions
     fn span_weight(&self) -> Option<f32> {
         None
     }
