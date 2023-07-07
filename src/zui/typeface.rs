@@ -1,4 +1,7 @@
-use std::path::PathBuf;
+mod font;
+pub mod coverage_image;
+
+use font::Font;
 
 use image::{DynamicImage, ImageBuffer, Luma};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -27,8 +30,8 @@ impl SymbolKey {
     }
 }
 
-#[derive(Copy, Clone)]
 /// The information used externally to draw the Symbol to the screen
+#[derive(Copy, Clone)]
 pub struct SymbolInfo {
     /// The pixel metrics of the symbol
     pub symbol_metrics: SymbolMetrics,
@@ -37,9 +40,9 @@ pub struct SymbolInfo {
     pub uv_region: Rectangle<f32>,
 }
 
+/// Describes the style of a typeface
 #[derive(Copy, Clone, Hash, Eq, PartialEq, Debug)]
 #[allow(dead_code)]
-/// Describes the style of a typeface
 pub enum FontStyle {
     Regular,
     Bold,
@@ -85,13 +88,13 @@ pub struct Typeface {
     pub texture_atlas: TextureAtlas,
 
     /// The normal font, must exist
-    pub font_regular: Option<fontdue::Font>,
+    pub font_regular: Option<Font>,
 
     /// The bold font, optional
-    pub font_bold: Option<fontdue::Font>,
+    pub font_bold: Option<Font>,
 
     /// The bold font, optional
-    pub font_italic: Option<fontdue::Font>,
+    pub font_italic: Option<Font>,
 }
 
 impl Typeface {
@@ -106,29 +109,6 @@ impl Typeface {
         DynamicImage::ImageLuma8(buffer)
     }
 
-    /// Loads a fontdue::Font from a file path &str
-    fn fontdue_font_from_file(path: &str) -> Option<fontdue::Font> {
-        let font_path = PathBuf::from(path);
-
-        // reading in font file data
-        let font_bytes = match std::fs::read(&font_path) {
-            Ok(bytes) => bytes,
-            Err(_) => {
-                error!("Could not load font file: {}", font_path.display());
-                return None;
-            }
-        };
-
-        // decoding font file data to fontdue font
-        match fontdue::Font::from_bytes(font_bytes, fontdue::FontSettings::default()) {
-            Ok(f) => Some(f),
-            Err(_) => {
-                error!("fontdue::Font::from_bytes failed!");
-                None
-            }
-        }
-    }
-
     /// Creates a new Typeface
     pub fn new(
         font_regular_file_path: Option<&str>,
@@ -136,11 +116,10 @@ impl Typeface {
         font_italic_file_path: Option<&str>,
         device: &wgpu::Device,
     ) -> Result<Self, ()> {
-        // getting all fonts from files
-        let font_regular =
-            font_regular_file_path.map(|fp| Self::fontdue_font_from_file(fp).unwrap());
-        let font_bold = font_bold_file_path.map(|fp| Self::fontdue_font_from_file(fp).unwrap());
-        let font_italic = font_italic_file_path.map(|fp| Self::fontdue_font_from_file(fp).unwrap());
+        // loading all fonts from files
+        let font_regular = font_regular_file_path.and_then(|fp| Font::load(fp));
+        let font_bold = font_bold_file_path.and_then(|fp| Font::load(fp));
+        let font_italic = font_italic_file_path.and_then(|fp| Font::load(fp));
 
         let texture_atlas = TextureAtlas::new(device);
 
@@ -154,7 +133,7 @@ impl Typeface {
     }
 
     /// Gets the font from a FontStyle enum
-    fn font_from_font_style<'a>(&'a self, style: FontStyle) -> &'a Option<fontdue::Font> {
+    fn font_from_font_style<'a>(&'a self, style: FontStyle) -> &'a Option<Font> {
         match style {
             FontStyle::Regular => &self.font_regular,
             FontStyle::Bold => &self.font_bold,
@@ -162,7 +141,7 @@ impl Typeface {
         }
     }
 
-    /// Gets the SymbolInfo and top-left, bottom-right UVs for a symbol
+    /// Gets the SymbolInfo for a symbol
     pub fn get_symbol(&self, symbol_key: SymbolKey) -> Option<SymbolInfo> {
         let symbol_info = self.symbols.get(&symbol_key)?;
         Some(*symbol_info)
@@ -211,22 +190,20 @@ impl Typeface {
             };
 
             // rasterising the symbol and getting metrics
-            let (metrics, coverage) =
-                font.rasterize(symbol_key.character, symbol_key.size_px as f32);
-            let width_px = metrics.width as u32;
-            let height_px = metrics.height as u32;
+            let (symbol_metrics, symbol_coverage) =
+                font.rasterise(symbol_key.character, symbol_key.size_px);
 
             // converting to an image image
-            let image = Self::coverage_to_dynamic_image(coverage, width_px, height_px);
+            // let image = Self::coverage_to_dynamic_image(coverage, width_px, height_px);
 
             // queueing for packing in the texture atlas
-            let texture_atlas_index = texture_atlas_builder.add_sprite(image, width_px, height_px);
+            let texture_atlas_index = texture_atlas_builder.add_sprite(symbol_coverage);
 
             // adding the rasterisation information for constructing SymbolInfo after packing
             rasterisation_info.push((
                 texture_atlas_index,
                 *symbol_key,
-                SymbolMetrics::new(&metrics),
+                symbol_metrics,
             ))
         }
 

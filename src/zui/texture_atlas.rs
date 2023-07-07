@@ -1,14 +1,12 @@
 use crunch::{Item, Rotation};
-use image::{DynamicImage, GenericImage};
+
+use crate::typeface::coverage_image::CoverageImage;
 
 use super::primitives::Rectangle;
 
 struct UnpackedSprite {
     /// The image that is to be packed
-    image: DynamicImage,
-
-    /// The dimensions of the space to reserve when packing into the final atlas
-    dimensions_px: glam::UVec2,
+    image: CoverageImage,
 }
 
 pub struct TextureAtlasBuilder {
@@ -37,11 +35,10 @@ impl TextureAtlasBuilder {
     }
 
     /// Adds a sprite to be built into the texture atlas
-    pub fn add_sprite(&mut self, image: DynamicImage, width_px: u32, height_px: u32) -> usize {
+    pub fn add_sprite(&mut self, image: CoverageImage) -> usize {
         let index = self.unpacked_sprites.len();
         self.unpacked_sprites.push(UnpackedSprite {
             image,
-            dimensions_px: glam::UVec2::new(width_px, height_px),
         });
 
         index
@@ -53,8 +50,8 @@ impl TextureAtlasBuilder {
         for (index, unpacked_sprite) in self.unpacked_sprites.iter().enumerate() {
             items_to_place.push(Item::new(
                 index,
-                (unpacked_sprite.dimensions_px.x + Self::PADDING * 2) as usize,
-                (unpacked_sprite.dimensions_px.y + Self::PADDING * 2) as usize,
+                (unpacked_sprite.image.width + Self::PADDING * 2) as usize,
+                (unpacked_sprite.image.height + Self::PADDING * 2) as usize,
                 Rotation::None,
             ));
         }
@@ -66,10 +63,10 @@ impl TextureAtlasBuilder {
     fn image_from_packed_items(
         &self,
         packed_items: &crunch::PackedItems<usize>,
-    ) -> image::ImageBuffer<image::Luma<u8>, Vec<u8>> {
+    ) -> CoverageImage {
         let atlas_width = packed_items.w as u32;
         let atlas_height = packed_items.h as u32;
-        let mut atlas_image = image::GrayImage::new(atlas_width, atlas_height);
+        let mut atlas_image = CoverageImage::new(atlas_width, atlas_height);
 
         // copying all packed items
         for packed_item in packed_items.items.iter() {
@@ -78,13 +75,11 @@ impl TextureAtlasBuilder {
             let rect = packed_item.rect;
             let unpacked_sprite = &self.unpacked_sprites[index];
 
-            atlas_image
-                .copy_from(
-                    unpacked_sprite.image.as_luma8().unwrap(),
-                    rect.x as u32 + Self::PADDING,
-                    rect.y as u32 + Self::PADDING,
-                )
-                .expect("copy_from failed!");
+            atlas_image.copy_from(
+                &unpacked_sprite.image,
+                rect.x as u32 + Self::PADDING,
+                rect.y as u32 + Self::PADDING,
+            ).expect("failed to copy symbol coverage to atlas!");
         }
 
         atlas_image
@@ -93,13 +88,13 @@ impl TextureAtlasBuilder {
     /// Creates a texture from the atlas image
     fn texture_from_atlas_image(
         &self,
-        image: &image::ImageBuffer<image::Luma<u8>, Vec<u8>>,
+        image: &CoverageImage,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
     ) -> wgpu::Texture {
         let texture_size = wgpu::Extent3d {
-            width: image.width(),
-            height: image.height(),
+            width: image.width,
+            height: image.height,
             depth_or_array_layers: 1,
         };
 
@@ -124,11 +119,11 @@ impl TextureAtlasBuilder {
                 origin: wgpu::Origin3d::ZERO,
                 aspect: wgpu::TextureAspect::All,
             },
-            &image,
+            &image.coverage,
             wgpu::ImageDataLayout {
                 offset: 0,
-                bytes_per_row: Some(1 * image.width()),
-                rows_per_image: Some(image.height()),
+                bytes_per_row: Some(1 * image.width),
+                rows_per_image: Some(image.height),
             },
             texture_size,
         );
@@ -197,7 +192,7 @@ pub struct TextureAtlas {
     texture: Option<wgpu::Texture>,
 
     /// the cpu side version of the texture atlas image, used for debug saving as a file
-    image: Option<image::ImageBuffer<image::Luma<u8>, Vec<u8>>>,
+    image: Option<CoverageImage>,
 
     /// The bind group of the TextureAtlas, for use in other shaders. Will be recreated every time
     /// that the TextureAtlas is rebuilt
@@ -303,8 +298,8 @@ impl TextureAtlas {
         // creating packed sprites list
         let packed_sprites = builder.generate_packed_sprites(
             &packed_items,
-            atlas_image.width(),
-            atlas_image.height(),
+            atlas_image.width,
+            atlas_image.height,
         );
 
         // assignments
@@ -317,7 +312,11 @@ impl TextureAtlas {
     /// Saves the texture atlas image to disk, for debugging
     pub fn save_texture_to_disk(&self, path: &str) -> Result<(), ()> {
         if let Some(image) = self.image.as_ref() {
-            image
+            image::GrayImage::from_raw(
+                    image.width,
+                    image.height,
+                    image.coverage.to_vec(),
+                ).expect("failed to convert from CoverageImage to GrayImage")
                 .save_with_format(path, image::ImageFormat::Png)
                 .expect("failed to save!");
             Ok(())

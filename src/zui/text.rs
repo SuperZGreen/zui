@@ -9,9 +9,9 @@ use text_line::TextLines;
 use winit::dpi::PhysicalSize;
 
 use super::{
-    typeface::{FontStyle, SymbolInfo, SymbolKey},
     primitives::{Dimensions, Rectangle},
     text_renderer::TextVertex,
+    typeface::{FontStyle, SymbolInfo, SymbolKey},
     widget::Bounds,
     Axis, Colour, Typeface,
 };
@@ -133,17 +133,14 @@ impl Text {
         &mut self,
         typeface: &Typeface,
         bounds: Bounds<f32>,
-        _viewport_dimensions_px: PhysicalSize<u32>, // TODO: will be used for other text heigh calculations (?)
+        _viewport_dimensions_px: PhysicalSize<u32>, // TODO: will be used for other text height calculations (?)
     ) {
         // converting the line metrics of Fontdue to screen space
-        let font_metrics_px = PixelFontMetrics::new(
-            &typeface
-                .font_regular // TODO: this shouldn't just be regular, but what the TextStyle of the Text actually is
-                .as_ref()
-                .unwrap()
-                .horizontal_line_metrics(self.configuration.size_px as f32)
-                .unwrap(), // TODO?
-        );
+        let font_metrics_px = typeface
+            .font_regular // TODO: this shouldn't just be regular, but what the TextStyle of the Text actually is
+            .as_ref()
+            .unwrap()
+            .calculate_metrics(self.configuration.size_px);
 
         // calculating the screen space metrics of all symbols
         let presymbols = Self::generate_presymbols(&self, typeface, self.configuration.size_px);
@@ -174,14 +171,11 @@ impl Text {
         };
 
         // converting the line metrics of Fontdue to screen space
-        let font_metrics_px = PixelFontMetrics::new(
-            &typeface
-                .font_regular
-                .as_ref() // TODO: this shouldn't just be regular, but what the TextStyle of the Text actually is
-                .unwrap()
-                .horizontal_line_metrics(self.configuration.size_px as f32)
-                .unwrap(), // TODO ?
-        );
+        let font_metrics_px = &typeface
+            .font_regular
+            .as_ref()
+            .unwrap()
+            .calculate_metrics(self.configuration.size_px);
 
         // placing symbols
         self.symbols.clear();
