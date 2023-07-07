@@ -1,31 +1,31 @@
 mod colour;
-pub mod typeface;
 pub mod premade_widgets;
 mod primitives;
 mod render_layer;
 mod renderable;
 mod scene;
 mod scene_handle;
-mod scene_store;
 mod simple_renderer;
+mod state_store;
 pub mod text;
 mod text_renderer;
 mod texture_atlas;
+pub mod typeface;
 pub mod util;
 mod widget;
 
 pub use colour::Colour;
-pub use typeface::Typeface;
 pub use primitives::Rectangle;
 pub use renderable::Renderable;
 pub use scene::Scene;
 pub use scene_handle::SceneHandle;
-pub use scene_store::SceneStore;
 use simple_renderer::SimpleRenderer;
+pub use state_store::StateStore;
 pub use text::{
     LineWrapping, Text, TextAlignmentHorizontal, TextConfiguration, TextSegment, TextSize,
 };
 use text_renderer::TextRenderer;
+pub use typeface::Typeface;
 pub use widget::{Axis, Event, MouseEvent, Span, Widget};
 
 use winit::{
@@ -133,14 +133,15 @@ impl Zui {
     }
 
     /// Renders a scene handle
-    pub fn render_scene_handle<Message>(
+    pub fn render_scene_handle<Message, StateIdentifier>(
         &mut self,
-        scene_handle: &SceneHandle<Message>,
+        scene_handle: &SceneHandle<Message, StateIdentifier>,
         device: &wgpu::Device,
         output_texture_view: &wgpu::TextureView,
         command_encoder: &mut wgpu::CommandEncoder,
     ) where
         Message: Copy + Clone,
+        StateIdentifier: std::hash::Hash + Eq + std::fmt::Debug,
     {
         /// Describes how the RenderLayer should be rendered
         #[derive(Debug)]
@@ -303,12 +304,13 @@ impl Zui {
     }
 
     /// Handles a winit event, can pass the relevant zui::Event onto a SceneHandle if suitable
-    pub fn handle_winit_window_event<Message>(
+    pub fn handle_winit_window_event<Message, StateIdentifier>(
         &mut self,
         event: &winit::event::WindowEvent<'_>,
-        scene_handle: Option<&mut SceneHandle<Message>>,
+        scene_handle: Option<&mut SceneHandle<Message, StateIdentifier>>,
     ) where
         Message: Copy,
+        StateIdentifier: std::hash::Hash + Eq + std::fmt::Debug,
     {
         match event {
             WindowEvent::CursorMoved {

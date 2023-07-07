@@ -2,12 +2,12 @@ use rustc_hash::FxHashSet;
 use winit::dpi::PhysicalSize;
 
 use super::{
-    typeface::SymbolKey, primitives::Dimensions, render_layer::RenderLayer,
-    simple_renderer::SimpleVertex, text_renderer::TextVertex, Rectangle,
+    primitives::Dimensions, render_layer::RenderLayer, simple_renderer::SimpleVertex,
+    text_renderer::TextVertex, typeface::SymbolKey, Rectangle,
 };
 use std::collections::VecDeque;
 
-use crate::zui::Context;
+use crate::{zui::Context, StateStore};
 
 #[derive(Copy, Clone)]
 pub enum Axis {
@@ -176,7 +176,6 @@ pub enum MouseEvent {
 pub enum Event {
     /// An event that involves mouse interaction
     MouseEvent(MouseEvent),
-
     // /// The widget is commanded to fit the provided rectangle
     // FitRectangle(Rectangle<f32>),
 }
@@ -191,20 +190,31 @@ pub enum EventResponse<Message> {
 }
 
 #[allow(unused_variables)]
-pub trait Widget<Message> {
+pub trait Widget<Message, StateIdentifier>
+where
+    StateIdentifier: std::hash::Hash + Eq + std::fmt::Debug,
+{
     /// Handles interaction events, returning the EventResponse that determines whether events
     /// should be propagated to children
-    fn handle_event(&mut self, event: &Event, context: &Context) -> EventResponse<Message> {
+    fn handle_event(
+        &mut self,
+        event: &Event,
+        context: &Context,
+        state_store: &mut StateStore<StateIdentifier>,
+    ) -> EventResponse<Message>
+    where
+        StateIdentifier: std::fmt::Debug + Eq + std::hash::Hash,
+    {
         EventResponse::Propagate
     }
 
     /// Gives the children of the [`Widget`] as a slice
-    fn children(&self) -> &[Box<(dyn Widget<Message>)>] {
+    fn children(&self) -> &[Box<(dyn Widget<Message, StateIdentifier>)>] {
         &[]
     }
 
     /// Gives the children of the [`Widget`] as a mutable slice
-    fn children_mut(&mut self) -> &mut [Box<(dyn Widget<Message>)>] {
+    fn children_mut(&mut self) -> &mut [Box<(dyn Widget<Message, StateIdentifier>)>] {
         &mut []
     }
 
@@ -224,7 +234,7 @@ pub trait Widget<Message> {
         layout_boundaries: &LayoutBoundaries,
         context: &Context,
     ) -> Dimensions<f32>;
-    
+
     /// Gives the Layout struct of self, containing the internal minimum dimensions of the Widget,
     /// and the clip rectangle that has possibly been assigned to the Widget
     fn layout<'a>(&'a self) -> &'a Layout;
@@ -261,6 +271,7 @@ pub trait Widget<Message> {
     fn to_vertices(
         &self,
         context: &Context,
+        state_store: &StateStore<StateIdentifier>,
         simple_vertices: &mut Vec<SimpleVertex>,
         text_vertices: &mut Vec<TextVertex>,
         render_layers: &mut VecDeque<RenderLayer>,
@@ -324,7 +335,7 @@ pub struct Bounds<T> {
 pub struct Layout {
     /// The minimum dimensions of the contents of the Widget
     pub dimensions_px: Option<Dimensions<f32>>,
-    
+
     /// The rectangle that has been given to the widget by its parents to be placed in
     pub clip_rectangle_px: Option<Rectangle<f32>>,
 }

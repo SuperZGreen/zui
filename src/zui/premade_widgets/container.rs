@@ -1,20 +1,23 @@
 use std::collections::VecDeque;
 
-use crate::zui::{
-    primitives::{Dimensions, Rectangle},
-    render_layer::RenderLayer,
-    simple_renderer::SimpleVertex,
-    text_renderer::TextVertex,
-    widget::{Boundary, BoundaryType, EventResponse, Layout, LayoutBoundaries},
-    Axis, Colour, Context, Event, Span, Widget,
+use crate::{
+    zui::{
+        primitives::{Dimensions, Rectangle},
+        render_layer::RenderLayer,
+        simple_renderer::SimpleVertex,
+        text_renderer::TextVertex,
+        widget::{Boundary, BoundaryType, EventResponse, Layout, LayoutBoundaries},
+        Axis, Colour, Context, Event, Span, Widget,
+    },
+    StateStore,
 };
 
-pub struct Container<Message>
+pub struct Container<Message, StateIdentifier>
 where
     Message: Clone + Copy,
 {
     /// The children of the Container
-    children: Vec<Box<dyn Widget<Message>>>,
+    children: Vec<Box<dyn Widget<Message, StateIdentifier>>>,
 
     /// The axis that the children of the Container are placed along within the Container
     pub axis: Axis,
@@ -36,9 +39,10 @@ where
     pub layout: Layout,
 }
 
-impl<Message> Container<Message>
+impl<Message, StateIdentifier> Container<Message, StateIdentifier>
 where
     Message: Clone + Copy,
+    StateIdentifier: std::hash::Hash + Eq + std::fmt::Debug,
 {
     pub fn new() -> Self {
         Self {
@@ -73,7 +77,7 @@ where
         self
     }
 
-    pub fn push(mut self, child: impl Into<Box<dyn Widget<Message>>>) -> Self {
+    pub fn push(mut self, child: impl Into<Box<dyn Widget<Message, StateIdentifier>>>) -> Self {
         self.children.push(child.into());
         self
     }
@@ -147,11 +151,18 @@ where
     }
 }
 
-impl<Message> Widget<Message> for Container<Message>
+impl<Message, StateIdentifier> Widget<Message, StateIdentifier>
+    for Container<Message, StateIdentifier>
 where
     Message: Clone + Copy,
+    StateIdentifier: std::fmt::Debug + Eq + std::hash::Hash,
 {
-    fn handle_event(&mut self, event: &Event, _context: &Context) -> EventResponse<Message> {
+    fn handle_event(
+        &mut self,
+        event: &Event,
+        _context: &Context,
+        _state_store: &mut StateStore<StateIdentifier>,
+    ) -> EventResponse<Message> {
         match event {
             Event::MouseEvent(_) => EventResponse::Propagate,
             // _ => EventResponse::Propagate,
@@ -162,22 +173,22 @@ where
         &self.layout
     }
 
-    fn children(&self) -> &[Box<(dyn Widget<Message>)>] {
+    fn children(&self) -> &[Box<(dyn Widget<Message, StateIdentifier>)>] {
         &self.children
     }
 
-    fn children_mut(&mut self) -> &mut [Box<(dyn Widget<Message>)>] {
+    fn children_mut(&mut self) -> &mut [Box<(dyn Widget<Message, StateIdentifier>)>] {
         &mut self.children
     }
 
     fn to_vertices(
         &self,
         context: &Context,
+        state_store: &StateStore<StateIdentifier>,
         simple_vertices: &mut Vec<SimpleVertex>,
         text_vertices: &mut Vec<TextVertex>,
         render_layers: &mut VecDeque<RenderLayer>,
     ) {
-
         // adding own rectangle/simple vertices
         if let Some(rectangle) = self.layout.clip_rectangle_px {
             if let Some(colour) = self.background {
@@ -191,7 +202,6 @@ where
 
         // adding children's vertices
         if self.overflowing {
-
             // creating new layer if overflowing
             let mut simple_vertices = Vec::new();
             let mut text_vertices = Vec::new();
@@ -199,6 +209,7 @@ where
             for child in self.children.iter() {
                 child.to_vertices(
                     context,
+                    state_store,
                     &mut simple_vertices,
                     &mut text_vertices,
                     render_layers,
@@ -209,21 +220,21 @@ where
                 simple_vertices,
                 text_vertices,
                 self.layout.clip_rectangle_px,
-            ).with_name(self.name.as_ref().map(|n| n.as_str()));
+            )
+            .with_name(self.name.as_ref().map(|n| n.as_str()));
 
             render_layers.push_front(render_layer);
         } else {
             for child in self.children.iter() {
                 child.to_vertices(
                     context,
+                    state_store,
                     simple_vertices,
                     text_vertices,
                     render_layers,
                 );
             }
         }
-
-
     }
 
     fn span_weight(&self) -> Option<f32> {
@@ -288,12 +299,14 @@ where
                 let available_height_px = layout_boundaries.vertical.span_px;
 
                 match self.axis {
-                    Axis::Horizontal => {
-                        Some(Dimensions::new(available_width_px * pr, available_height_px))
-                    },
-                    Axis::Vertical => {
-                        Some(Dimensions::new(available_width_px, available_height_px * pr))
-                    },
+                    Axis::Horizontal => Some(Dimensions::new(
+                        available_width_px * pr,
+                        available_height_px,
+                    )),
+                    Axis::Vertical => Some(Dimensions::new(
+                        available_width_px,
+                        available_height_px * pr,
+                    )),
                 }
             }
             _ => None,
@@ -370,14 +383,13 @@ where
 
                         // info!("container {self_name_str} child_dimensions: {child_dimensions:?}");
                     }
-                    _ => {},
+                    _ => {}
                 };
             }
 
             // placing the children
             let mut span_accumulator_px = 0f32;
             for child in self.children.iter_mut() {
-
                 // getting the child dimensions if they have been generated, otherwise continuing
                 let child_dimensions = match child.layout().dimensions_px {
                     Some(dims) => dims,
@@ -420,11 +432,13 @@ where
     }
 }
 
-impl<'a, Message> Into<Box<dyn Widget<Message> + 'a>> for Container<Message>
+impl<'a, Message, StateIdentifier> Into<Box<dyn Widget<Message, StateIdentifier> + 'a>>
+    for Container<Message, StateIdentifier>
 where
     Message: Clone + Copy + 'a,
+    StateIdentifier: std::fmt::Debug + Eq + std::hash::Hash + 'a,
 {
-    fn into(self) -> Box<dyn Widget<Message> + 'a> {
+    fn into(self) -> Box<dyn Widget<Message, StateIdentifier> + 'a> {
         Box::new(self)
     }
 }
