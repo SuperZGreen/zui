@@ -1,30 +1,36 @@
 use zui::{
     premade_widgets::{Button, Container, TextContainer},
     typeface::FontStyle,
-    Axis, Colour, Scene, Span, Text, TextConfiguration, TextSegment, Widget, StateStore,
+    Axis, Colour, Scene, Span, StateStore, Text, TextConfiguration, TextSegment, Widget,
 };
 
 use crate::UiMessage;
 
 pub struct MainScene {
-    count: u64,
+    frame_counter: u64,
+    custom_counter: u64,
 }
 
 impl MainScene {
     pub fn new() -> Self {
-        Self { count: 0u64 }
+        Self {
+            frame_counter: 0u64,
+            custom_counter: 0u64,
+        }
     }
 }
 
 #[derive(PartialEq, Eq, std::hash::Hash, std::fmt::Debug, Copy, Clone)]
 pub enum Identifier {
     ResetCounterButton,
+    IncrementCounterButton,
     HelloTextContainer,
     H2TextContainer,
     Th1TextContainer,
     Th2TextContainer,
     Th3TextContainer,
     Ex2_2TextContainer,
+    FrameCounterTextContainer,
     FishTextContainer,
     MoneyTextContainer,
     PeopleTextContainer,
@@ -36,19 +42,27 @@ impl Scene for MainScene {
 
     fn handle_message(&mut self, message: Self::Message) -> (Option<Self::Message>, bool) {
         match message {
-            UiMessage::SetCounter(count) => {
-                self.count = count;
+            UiMessage::IncrementFrameCounter(increment) => {
+                self.frame_counter += increment;
                 (None, true)
             }
-            UiMessage::IncrementCounter(increment) => {
-                self.count += increment;
+            UiMessage::SetCustomCounter(count) => {
+                self.custom_counter = count;
+                (None, true)
+            }
+            UiMessage::IncrementCustomCounter(increment) => {
+                self.custom_counter += increment;
                 (None, true)
             }
             _ => (Some(message), false),
         }
     }
 
-    fn view(&self, state_store: &mut StateStore<Self::StateIdentifier>, _aspect_ratio: f32) -> Box<dyn Widget<Self::Message, Self::StateIdentifier>> {
+    fn view(
+        &self,
+        state_store: &mut StateStore<Self::StateIdentifier>,
+        _aspect_ratio: f32,
+    ) -> Box<dyn Widget<Self::Message, Self::StateIdentifier>> {
         let v1 = Container::new()
             .with_name("v1")
             .with_span(Span::Pixels(64f32))
@@ -174,38 +188,58 @@ impl Scene for MainScene {
                 Colour::LIGHT_BLUE,
             ))
             .push_segment(TextSegment::new(" \u{f023a}", Colour::CYAN))
-            .push_segment(TextSegment::new(&format!(" {}", self.count), Colour::WHITE))
+            .push_segment(TextSegment::new(&format!(" {}", self.frame_counter), Colour::WHITE))
             .with_configuration(TextConfiguration {
                 line_wrapping: zui::LineWrapping::Word,
+                size_px: 18,
                 ..Default::default()
             })
         );
+        let frame_counter_text = TextContainer::new(Identifier::FrameCounterTextContainer)
+            .with_text(
+                Text::new()
+                    .push_segment(TextSegment::new(" \u{f03e} no.", Colour::ORANGE))
+                    .push_segment(TextSegment::new(
+                        &format!(" {}", self.frame_counter),
+                        Colour::WHITE,
+                    )),
+            );
         let fish_text = TextContainer::new(Identifier::FishTextContainer).with_text(
             Text::new()
                 .push_segment(TextSegment::new(" \u{f023a}", Colour::CYAN))
-                .push_segment(TextSegment::new(&format!(" {}", self.count), Colour::WHITE)),
+                .push_segment(TextSegment::new(
+                    &format!(" {}", self.custom_counter),
+                    Colour::WHITE,
+                )),
         );
         let money_text = TextContainer::new(Identifier::MoneyTextContainer).with_text(
             Text::new()
                 .push_segment(TextSegment::new(" \u{f0d6}", Colour::YELLOW))
-                .push_segment(TextSegment::new(&format!(" {}", self.count), Colour::WHITE)),
+                .push_segment(TextSegment::new(
+                    &format!(" {}", self.custom_counter),
+                    Colour::WHITE,
+                )),
         );
         let people_text = TextContainer::new(Identifier::PeopleTextContainer).with_text(
             Text::new()
                 .push_segment(TextSegment::new(" \u{f4fd}", Colour::ORANGE))
-                .push_segment(TextSegment::new(&format!(" {}", self.count), Colour::WHITE)),
+                .push_segment(TextSegment::new(
+                    &format!(" {}", self.custom_counter),
+                    Colour::WHITE,
+                )),
         );
         let expandable_2_2 = Container::new()
             .with_name("expandable_2_2")
             .with_span(Span::ParentWeight(2f32))
             .with_background(Some(Colour::BLACK))
             .push(expandable_2_2_text)
+            .push(frame_counter_text)
             .push(fish_text)
             .push(money_text)
             .push(people_text);
 
-        let expandable_2_3_button = Button::new(
-            UiMessage::SetCounter(0),
+        let reset_counter_button = Button::new(
+            UiMessage::SetCustomCounter(0),
             Colour::DARK_BLUE,
             Colour::DARK_CYAN,
             state_store,
@@ -213,11 +247,21 @@ impl Scene for MainScene {
         )
         .with_text(Text::new().push_segment(TextSegment::new("Reset counter", Colour::WHITE)));
 
+        let increment_counter_button = Button::new(
+            UiMessage::IncrementCustomCounter(1),
+            Colour::DARK_BLUE,
+            Colour::DARK_CYAN,
+            state_store,
+            Identifier::IncrementCounterButton,
+        )
+        .with_text(Text::new().push_segment(TextSegment::new("Increment counter", Colour::WHITE)));
+
         let expandable_2_3 = Container::new()
             .with_name("expandable_2_3")
             .with_span(Span::ParentWeight(1f32))
             .with_background(Some(Colour::GREY))
-            .push(expandable_2_3_button);
+            .push(reset_counter_button)
+            .push(increment_counter_button);
 
         let expandable_2 = Container::new()
             .with_name("expandable_2")

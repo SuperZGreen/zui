@@ -17,8 +17,9 @@ use main_scene::MainScene;
 
 #[derive(Clone, Copy)]
 pub enum UiMessage {
-    SetCounter(u64),
-    IncrementCounter(u64),
+    IncrementFrameCounter(u64),
+    SetCustomCounter(u64),
+    IncrementCustomCounter(u64),
     Exit,
 }
 
@@ -120,7 +121,7 @@ fn main() {
             Event::Resumed => {}
             Event::MainEventsCleared => {
                 // // TODO: Solving
-                scene_handle.handle_message(UiMessage::IncrementCounter(1));
+                scene_handle.handle_message(UiMessage::IncrementFrameCounter(1));
 
                 scene_handle.update(
                     &mut zui.context_mut_typeface(),
