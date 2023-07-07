@@ -1,5 +1,6 @@
 /// A reimplementation of a greyscale, u8 coverage image to allow for faster copying than image-rs
 /// allows
+#[derive(Clone)]
 pub struct CoverageImage {
     /// The raw bytes of the image in along-row-first order
     pub coverage: Box<[u8]>,

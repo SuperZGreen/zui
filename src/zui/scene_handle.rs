@@ -8,7 +8,7 @@ use super::{
     primitives::Rectangle,
     render_layer::RenderLayer,
     widget::{Boundary, BoundaryType, Event, EventResponse, LayoutBoundaries, Widget},
-    Context, ContextMutTypeface, Renderable, Scene,
+    Context, ContextMutTypeface, Renderable, Scene, stopwatch::Stopwatch,
 };
 
 /// Allows for caching of the widgets produced by Scene::view
@@ -108,6 +108,7 @@ where
         // getting the root widget
         let root_widget = self.root_widget.as_mut().unwrap();
 
+        let rasterisation_stopwatch = Stopwatch::start();
         // collecting text symbols for rasterisation
         let mut symbol_keys = FxHashSet::default();
         root_widget.collect_text(&mut symbol_keys);
@@ -122,6 +123,7 @@ where
         context_mut_typeface
             .typeface
             .rasterise_symbol_keys(symbol_keys, device, queue);
+        // trace!("text rasterisation took: {:.2}ms", rasterisation_stopwatch.elapsed() * 1000f32);
 
         // creating the layout boundaries to pass to the root widget
         let layout_boundaries = &LayoutBoundaries::new(

@@ -13,6 +13,7 @@ mod texture_atlas;
 pub mod typeface;
 pub mod util;
 mod widget;
+mod stopwatch;
 
 pub use colour::Colour;
 pub use primitives::Rectangle;

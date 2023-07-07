@@ -6,8 +6,10 @@ use font::Font;
 use image::{DynamicImage, ImageBuffer, Luma};
 use rustc_hash::{FxHashMap, FxHashSet};
 
+use self::coverage_image::CoverageImage;
+
 use super::{primitives::Rectangle, texture_atlas::TextureAtlas};
-use crate::zui::texture_atlas::TextureAtlasBuilder;
+use crate::zui::{texture_atlas::TextureAtlasBuilder, stopwatch::Stopwatch};
 
 /// The identifying information for a character rasterised at a specific size
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
@@ -31,10 +33,14 @@ impl SymbolKey {
 }
 
 /// The information used externally to draw the Symbol to the screen
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct SymbolInfo {
     /// The pixel metrics of the symbol
     pub symbol_metrics: SymbolMetrics,
+
+    /// The coverage image of the symbol, to be reusued when re-rasterising symbols
+    pub coverage_image: CoverageImage,
+
     /// The region that the symbol uses on the Typeface's texture atlas, using UV coordinates where
     /// (0, 0) is top left, (1, 1) is bottom right
     pub uv_region: Rectangle<f32>,
@@ -142,9 +148,9 @@ impl Typeface {
     }
 
     /// Gets the SymbolInfo for a symbol
-    pub fn get_symbol(&self, symbol_key: SymbolKey) -> Option<SymbolInfo> {
-        let symbol_info = self.symbols.get(&symbol_key)?;
-        Some(*symbol_info)
+    pub fn get_symbol<'a>(&'a self, symbol_key: &SymbolKey) -> Option<&'a SymbolInfo> {
+        let symbol_info = self.symbols.get(symbol_key)?;
+        Some(symbol_info)
     }
 
     /// Rasterises symbols in the provided hashset
@@ -177,6 +183,8 @@ impl Typeface {
 
         // adding the font's characters to rasterisation_info and the texture atlas builder
         for symbol_key in symbol_keys.iter() {
+
+            
             // getting the font specified in the SymbolKey
             let font = match self.font_from_font_style(symbol_key.font_style) {
                 Some(f) => f,
@@ -189,33 +197,44 @@ impl Typeface {
                 }
             };
 
-            // rasterising the symbol and getting metrics
-            let (symbol_metrics, symbol_coverage) =
-                font.rasterise(symbol_key.character, symbol_key.size_px);
+            // Preventing rasterisation if the symbol already exists, reusing symbol metrics and
+            // info instead
+            let (symbol_metrics, symbol_coverage) = match self.symbols.get(symbol_key) {
+                Some(si) => {
+                    (si.symbol_metrics, si.coverage_image.clone())
+                },
+                None => {
+                    // rasterising the symbol and getting metrics
+                    font.rasterise(symbol_key.character, symbol_key.size_px)
+                }
+            };
 
             // converting to an image image
             // let image = Self::coverage_to_dynamic_image(coverage, width_px, height_px);
 
             // queueing for packing in the texture atlas
-            let texture_atlas_index = texture_atlas_builder.add_sprite(symbol_coverage);
+            let texture_atlas_index = texture_atlas_builder.add_sprite(symbol_coverage.clone());
 
             // adding the rasterisation information for constructing SymbolInfo after packing
             rasterisation_info.push((
                 texture_atlas_index,
                 *symbol_key,
                 symbol_metrics,
+                symbol_coverage,
             ))
         }
 
+        let build_stopwatch = Stopwatch::start();
         // rebuilding the texture atlas and uploading texture
         self.texture_atlas
             .build(texture_atlas_builder, device, queue);
+        // trace!("building atlas took: {:.2}ms", build_stopwatch.elapsed() * 1000f32);
 
         // clearing self symbols as the information will be out of date with the new TextureAtlas
         self.symbols.clear();
 
         // getting uv coordinates from TextureAtlas for all characters, inserting into symbols
-        for (texture_atlas_index, symbol_key, symbol_metrics) in rasterisation_info {
+        for (texture_atlas_index, symbol_key, symbol_metrics, symbol_coverage) in rasterisation_info {
             let symbol_info = SymbolInfo {
                 symbol_metrics,
                 // uv_region: Rectangle::new(
@@ -227,6 +246,7 @@ impl Typeface {
                     .get(texture_atlas_index)
                     .unwrap()
                     .uv_region,
+                coverage_image: symbol_coverage
             };
 
             // adding to symbols

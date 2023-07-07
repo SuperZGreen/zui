@@ -266,7 +266,7 @@ impl Text {
             for character in segment.string.chars() {
                 let symbol_key = SymbolKey::new(character, style, size_px);
 
-                let symbol_info = match typeface.get_symbol(symbol_key) {
+                let symbol_info = match typeface.get_symbol(&symbol_key) {
                     Some(res) => res,
                     None => {
                         error!("could not find glyph for character: '{}'!", character);
@@ -277,7 +277,7 @@ impl Text {
                 ps.push(Presymbol {
                     character,
                     colour: segment.colour,
-                    symbol_info,
+                    symbol_info: symbol_info.clone(),
                 })
             }
         }
