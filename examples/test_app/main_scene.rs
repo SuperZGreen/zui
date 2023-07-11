@@ -157,15 +157,15 @@ impl Scene for MainScene {
         let expandable_child_1 = Container::new()
             .with_name("expandable_child_1")
             .with_span(Span::Pixels(128f32))
-            .with_background(Some(Colour::DARK_RED));
+            .with_background(Some(zui::named_colours::Yoshi));
         let expandable_child_2 = Container::new()
             .with_name("expandable_child_2")
             .with_span(Span::Pixels(256f32))
-            .with_background(Some(Colour::DARK_GREEN));
+            .with_background(Some(zui::named_colours::Yucca));
         let expandable_child_3 = Container::new()
             .with_name("expandable_child_3")
             .with_span(Span::Pixels(64f32))
-            .with_background(Some(Colour::DARK_BLUE));
+            .with_background(Some(zui::named_colours::YoungCrab));
 
         let expandable_1 = Container::new()
             .with_name("expandable_1")

@@ -1,3 +1,5 @@
+pub mod named;
+
 #[derive(Debug, Copy, Clone)]
 pub struct Colour {
     pub r: f32,

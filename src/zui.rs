@@ -15,6 +15,7 @@ pub mod util;
 mod widget;
 mod stopwatch;
 
+pub use colour::named as named_colours;
 pub use colour::Colour;
 pub use primitives::Rectangle;
 pub use renderable::Renderable;
