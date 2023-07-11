@@ -1,15 +1,14 @@
-mod font;
 pub mod coverage_image;
+mod font;
 
 use font::Font;
 
-use image::{DynamicImage, ImageBuffer, Luma};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use self::coverage_image::CoverageImage;
 
 use super::{primitives::Rectangle, texture_atlas::TextureAtlas};
-use crate::zui::{texture_atlas::TextureAtlasBuilder, stopwatch::Stopwatch};
+use crate::zui::texture_atlas::TextureAtlasBuilder;
 
 /// The identifying information for a character rasterised at a specific size
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
@@ -104,17 +103,6 @@ pub struct Typeface {
 }
 
 impl Typeface {
-    /// Converts fontue's rasterised coverage to a dynamic image containing a Luma (greyscale) value
-    fn coverage_to_dynamic_image(coverage: Vec<u8>, width_px: u32, height_px: u32) -> DynamicImage {
-        let buffer: ImageBuffer<Luma<u8>, Vec<u8>> =
-            match ImageBuffer::from_raw(width_px, height_px, coverage) {
-                Some(res) => res,
-                None => todo!(),
-            };
-
-        DynamicImage::ImageLuma8(buffer)
-    }
-
     /// Creates a new Typeface
     pub fn new(
         font_regular_file_path: Option<&str>,
@@ -183,8 +171,6 @@ impl Typeface {
 
         // adding the font's characters to rasterisation_info and the texture atlas builder
         for symbol_key in symbol_keys.iter() {
-
-            
             // getting the font specified in the SymbolKey
             let font = match self.font_from_font_style(symbol_key.font_style) {
                 Some(f) => f,
@@ -200,17 +186,12 @@ impl Typeface {
             // Preventing rasterisation if the symbol already exists, reusing symbol metrics and
             // info instead
             let (symbol_metrics, symbol_coverage) = match self.symbols.get(symbol_key) {
-                Some(si) => {
-                    (si.symbol_metrics, si.coverage_image.clone())
-                },
+                Some(si) => (si.symbol_metrics, si.coverage_image.clone()),
                 None => {
                     // rasterising the symbol and getting metrics
                     font.rasterise(symbol_key.character, symbol_key.size_px)
                 }
             };
-
-            // converting to an image image
-            // let image = Self::coverage_to_dynamic_image(coverage, width_px, height_px);
 
             // queueing for packing in the texture atlas
             let texture_atlas_index = texture_atlas_builder.add_sprite(symbol_coverage.clone());
@@ -224,7 +205,7 @@ impl Typeface {
             ))
         }
 
-        let build_stopwatch = Stopwatch::start();
+        // let build_stopwatch = Stopwatch::start();
         // rebuilding the texture atlas and uploading texture
         self.texture_atlas
             .build(texture_atlas_builder, device, queue);
@@ -234,7 +215,8 @@ impl Typeface {
         self.symbols.clear();
 
         // getting uv coordinates from TextureAtlas for all characters, inserting into symbols
-        for (texture_atlas_index, symbol_key, symbol_metrics, symbol_coverage) in rasterisation_info {
+        for (texture_atlas_index, symbol_key, symbol_metrics, symbol_coverage) in rasterisation_info
+        {
             let symbol_info = SymbolInfo {
                 symbol_metrics,
                 // uv_region: Rectangle::new(
@@ -246,7 +228,7 @@ impl Typeface {
                     .get(texture_atlas_index)
                     .unwrap()
                     .uv_region,
-                coverage_image: symbol_coverage
+                coverage_image: symbol_coverage,
             };
 
             // adding to symbols

@@ -28,7 +28,7 @@ pub struct FillBar<'a, T, Message, StateIdentifier> {
     cursor_is_over: bool,
     is_grabbed: bool,
 
-    state_identifier: StateIdentifier,
+    _state_identifier: StateIdentifier,
 
     /// Acts as both the clip rectangle and the background rectangle of the FillBar
     clip_rectangle: Option<Rectangle<f32>>,
@@ -62,7 +62,7 @@ where
             on_change: Box::new(on_change),
             cursor_is_over: false,
             is_grabbed: false,
-            state_identifier,
+            _state_identifier: state_identifier,
             clip_rectangle: None,
             bar_foreground_rectangle: None,
             span: Span::ParentWeight(1f32),

@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::time::Instant;
 
 /// A utility for profiling

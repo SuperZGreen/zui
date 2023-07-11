@@ -1,32 +1,35 @@
-use crunch::{Item, Rotation};
+mod packer;
 
 use crate::typeface::coverage_image::CoverageImage;
 
 use super::primitives::Rectangle;
 
+/// A sprite as input to the TextureAtlasBuilder
 struct UnpackedSprite {
     /// The image that is to be packed
     image: CoverageImage,
 }
 
+/// Used to build the TextureAtlas' texture, TODO: can be removed and simplified so that the
+/// TextureAtlas simply takes in an array of CoverageImages for it's build. This would be more
+/// memory efficient as the vec could be allocated to the length of the initial glyph buffer
 pub struct TextureAtlasBuilder {
     unpacked_sprites: Vec<UnpackedSprite>,
 }
 
+/// This is what is returned as a result of a 'get' for the TextureAtlas
 pub struct PackedSprite {
     /// The name of the packed sprite
     pub name: String,
 
     /// The UV region of the packed sprite
     pub uv_region: Rectangle<f32>,
-
-    /// The dimensions of the final packed region, not including padding
-    _dimensions_px: glam::UVec2,
 }
 
 impl TextureAtlasBuilder {
     /// The number of pixels a sprite is padded by
-    const PADDING: u32 = 1u32;
+    /// TODO: this isn't used, as text can render correctly without it as it is pixel aligned
+    const PADDING: u32 = 0u32;
 
     pub fn new(reserved_sprites_length: usize) -> Self {
         Self {
@@ -45,15 +48,14 @@ impl TextureAtlasBuilder {
     }
 
     /// Prepares the list of sprites for crunch to process
-    fn prepare_crunch_items(&self) -> Vec<Item<usize>> {
+    fn prepare_items_to_place(&self) -> Vec<packer::InputItem> {
         let mut items_to_place = Vec::new();
-        for (index, unpacked_sprite) in self.unpacked_sprites.iter().enumerate() {
-            items_to_place.push(Item::new(
-                index,
-                (unpacked_sprite.image.width + Self::PADDING * 2) as usize,
-                (unpacked_sprite.image.height + Self::PADDING * 2) as usize,
-                Rotation::None,
-            ));
+
+        for unpacked_sprite in self.unpacked_sprites.iter() {
+            items_to_place.push(packer::InputItem {
+                width: unpacked_sprite.image.width,
+                height: unpacked_sprite.image.height,
+            });
         }
 
         items_to_place
@@ -62,23 +64,21 @@ impl TextureAtlasBuilder {
     /// Copies all of the packed items into an image
     fn image_from_packed_items(
         &self,
-        packed_items: &crunch::PackedItems<usize>,
+        packer_output: &packer::Output,
     ) -> CoverageImage {
-        let atlas_width = packed_items.w as u32;
-        let atlas_height = packed_items.h as u32;
+        let atlas_width = packer_output.span;
+        let atlas_height = packer_output.span;
         let mut atlas_image = CoverageImage::new(atlas_width, atlas_height);
 
         // copying all packed items
-        for packed_item in packed_items.items.iter() {
+        for item in packer_output.items.iter() {
             // info!("rect id: {}", rect_id);
-            let index = packed_item.data;
-            let rect = packed_item.rect;
-            let unpacked_sprite = &self.unpacked_sprites[index];
+            let unpacked_sprite = &self.unpacked_sprites[item.input_item_index];
 
             atlas_image.copy_from(
                 &unpacked_sprite.image,
-                rect.x as u32 + Self::PADDING,
-                rect.y as u32 + Self::PADDING,
+                item.rectangle.x_min as u32 + Self::PADDING,
+                item.rectangle.y_min as u32 + Self::PADDING,
             ).expect("failed to copy symbol coverage to atlas!");
         }
 
@@ -134,26 +134,14 @@ impl TextureAtlasBuilder {
     /// Generates the packed sprites Vector
     fn generate_packed_sprites(
         &self,
-        packed_items: &crunch::PackedItems<usize>,
+        packer_output: &packer::Output,
         atlas_width: u32,
         atlas_height: u32,
     ) -> Vec<PackedSprite> {
-        let mut packed_sprites = Vec::new();
-        let indices_used = self.unpacked_sprites.len();
-        for index in 0..indices_used {
-            let rect = packed_items
-                .items
-                .iter()
-                .find(|item| item.data == index)
-                .expect(&format!("could not find pack result with id = {}", index));
-
+        let mut packed_sprites = Vec::with_capacity(packer_output.items.len());
+        for item in packer_output.items.iter() {
             // The uv region in rust-image pixel coordinates
-            let uv_region_px = Rectangle::new(
-                rect.rect.x as u32 + Self::PADDING,
-                rect.rect.x as u32 + rect.rect.w as u32 - Self::PADDING,
-                rect.rect.y as u32 + Self::PADDING,
-                rect.rect.y as u32 + rect.rect.h as u32 - Self::PADDING,
-            );
+            let uv_region_px = item.rectangle;
 
             // The uv region in wgpu UV coordinates
             let uv_region = Rectangle::new(
@@ -165,8 +153,6 @@ impl TextureAtlasBuilder {
 
             packed_sprites.push(PackedSprite {
                 name: String::from("TODO"),
-                _dimensions_px: glam::UVec2::new(rect.rect.w as u32, rect.rect.h as u32),
-                // uv_region: Rectangle::new(x_min, x_max, y_min, y_max),
                 uv_region,
             });
         }
@@ -258,20 +244,25 @@ impl TextureAtlas {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
     ) {
-        // getting the list of sprites to place in crunch
-        let items_to_place = builder.prepare_crunch_items();
+        // // getting the list of sprites to place in crunch
+        // let items_to_place = builder.prepare_crunch_items();
 
-        // packing the items in crunch
-        let packed_items = match crunch::pack_into_po2(1024 * 10, items_to_place) {
-            Ok(pi) => pi,
-            Err(e) => {
-                error!("failed to pack: {e:?}");
+        let input_items = builder.prepare_items_to_place();
+
+        // packing the items
+        let packer = packer::Packer::new(2048);
+
+        let packer_output = match packer.pack(&input_items) {
+            Some(output) => output,
+            None => {
+                // TODO: this should be fail safe
+                error!("failed to pack text atlas, panicing!");
                 panic!();
             }
         };
 
         // copying sprite info images into new atlas image
-        let atlas_image = builder.image_from_packed_items(&packed_items);
+        let atlas_image = builder.image_from_packed_items(&packer_output);
 
         // creating and uploading the wgpu texture
         let texture = builder.texture_from_atlas_image(&atlas_image, device, queue);
@@ -297,7 +288,7 @@ impl TextureAtlas {
 
         // creating packed sprites list
         let packed_sprites = builder.generate_packed_sprites(
-            &packed_items,
+            &packer_output,
             atlas_image.width,
             atlas_image.height,
         );

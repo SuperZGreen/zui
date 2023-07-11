@@ -15,7 +15,7 @@ use crate::{
 // A basic widget that contains text
 pub struct TextContainer<StateIdentifier> {
     text: Option<Text>,
-    state_identifier: StateIdentifier,
+    _state_identifier: StateIdentifier,
     background_colour: Option<Colour>,
     clip_rectangle: Option<Rectangle<f32>>,
     layout: Layout,
@@ -24,7 +24,7 @@ impl<StateIdentifier> TextContainer<StateIdentifier> {
     pub fn new(state_identifier: StateIdentifier) -> Self {
         Self {
             text: None,
-            state_identifier,
+            _state_identifier: state_identifier,
             background_colour: None,
             clip_rectangle: None,
             layout: Layout::new(),
