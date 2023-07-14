@@ -6,7 +6,6 @@ mod renderable;
 mod scene;
 mod scene_handle;
 mod simple_renderer;
-mod state_store;
 pub mod text;
 mod text_renderer;
 mod texture_atlas;
@@ -14,6 +13,7 @@ pub mod typeface;
 pub mod util;
 mod widget;
 mod stopwatch;
+mod widget_store;
 
 pub use colour::named as named_colours;
 pub use colour::Colour;
@@ -22,13 +22,13 @@ pub use renderable::Renderable;
 pub use scene::Scene;
 pub use scene_handle::SceneHandle;
 use simple_renderer::SimpleRenderer;
-pub use state_store::StateStore;
 pub use text::{
     LineWrapping, Text, TextAlignmentHorizontal, TextConfiguration, TextSegment, TextSize,
 };
 use text_renderer::TextRenderer;
 pub use typeface::Typeface;
 pub use widget::{Axis, Event, MouseEvent, Span, Widget};
+pub use widget_store::WidgetStore;
 
 use winit::{
     dpi::{PhysicalPosition, PhysicalSize},
@@ -135,15 +135,14 @@ impl Zui {
     }
 
     /// Renders a scene handle
-    pub fn render_scene_handle<Message, StateIdentifier>(
+    pub fn render_scene_handle<Message>(
         &mut self,
-        scene_handle: &SceneHandle<Message, StateIdentifier>,
+        scene_handle: &SceneHandle<Message>,
         device: &wgpu::Device,
         output_texture_view: &wgpu::TextureView,
         command_encoder: &mut wgpu::CommandEncoder,
     ) where
         Message: Copy + Clone,
-        StateIdentifier: std::hash::Hash + Eq + std::fmt::Debug,
     {
         /// Describes how the RenderLayer should be rendered
         #[derive(Debug)]
@@ -306,13 +305,12 @@ impl Zui {
     }
 
     /// Handles a winit event, can pass the relevant zui::Event onto a SceneHandle if suitable
-    pub fn handle_winit_window_event<Message, StateIdentifier>(
+    pub fn handle_winit_window_event<Message>(
         &mut self,
         event: &winit::event::WindowEvent<'_>,
-        scene_handle: Option<&mut SceneHandle<Message, StateIdentifier>>,
+        scene_handle: Option<&mut SceneHandle<Message>>,
     ) where
         Message: Copy,
-        StateIdentifier: std::hash::Hash + Eq + std::fmt::Debug,
     {
         match event {
             WindowEvent::CursorMoved {

@@ -2,15 +2,15 @@ use std::ops::RangeInclusive;
 
 use winit::dpi::PhysicalPosition;
 
-use crate::{zui::{
+use crate::zui::{
     primitives::{Dimensions, Rectangle},
     text::{TextAlignmentHorizontal, TextAlignmentVertical},
     widget::{EventResponse, Layout, LayoutBoundaries},
     Colour, Context, Event, LineWrapping, MouseEvent, Span, Text, TextConfiguration, TextSegment,
     Widget,
-}, StateStore};
+};
 
-pub struct FillBar<'a, T, Message, StateIdentifier> {
+pub struct FillBar<'a, T, Message> {
     _front_colour: Colour,
     _back_colour: Colour,
 
@@ -28,8 +28,6 @@ pub struct FillBar<'a, T, Message, StateIdentifier> {
     cursor_is_over: bool,
     is_grabbed: bool,
 
-    _state_identifier: StateIdentifier,
-
     /// Acts as both the clip rectangle and the background rectangle of the FillBar
     clip_rectangle: Option<Rectangle<f32>>,
 
@@ -43,12 +41,12 @@ pub struct FillBar<'a, T, Message, StateIdentifier> {
     layout: Layout,
 }
 
-impl<'a, T, Message, StateIdentifier> FillBar<'a, T, Message, StateIdentifier>
+impl<'a, T, Message> FillBar<'a, T, Message>
 where
     T: 'a + From<f32> + std::cmp::PartialEq + std::fmt::Display + Copy,
     f32: From<T>,
 {
-    pub fn new<F>(range: RangeInclusive<T>, value: T, interactable: bool, on_change: F, state_identifier: StateIdentifier) -> Self
+    pub fn new<F>(range: RangeInclusive<T>, value: T, interactable: bool, on_change: F) -> Self
     where
         F: Fn(&T) -> Message + 'a,
     {
@@ -62,7 +60,6 @@ where
             on_change: Box::new(on_change),
             cursor_is_over: false,
             is_grabbed: false,
-            _state_identifier: state_identifier,
             clip_rectangle: None,
             bar_foreground_rectangle: None,
             span: Span::ParentWeight(1f32),
@@ -148,30 +145,27 @@ where
     }
 }
 
-impl<'a, T, Message, StateIdentifier> Into<Box<dyn Widget<Message, StateIdentifier> + 'a>> for FillBar<'a, T, Message, StateIdentifier>
+impl<'a, T, Message> Into<Box<dyn Widget<Message> + 'a>> for FillBar<'a, T, Message>
 where
     Message: Clone + Copy + 'a,
     T: 'a + std::convert::From<f32> + std::cmp::PartialEq + std::fmt::Display + Copy,
     f32: From<T>,
-    StateIdentifier: std::fmt::Debug + Eq + std::hash::Hash + 'a,
 {
-    fn into(self) -> Box<dyn Widget<Message, StateIdentifier> + 'a> {
+    fn into(self) -> Box<dyn Widget<Message> + 'a> {
         Box::new(self)
     }
 }
 
-impl<'a, T, Message, StateIdentifier> Widget<Message, StateIdentifier> for FillBar<'a, T, Message, StateIdentifier>
+impl<'a, T, Message> Widget<Message> for FillBar<'a, T, Message>
 where
     Message: Copy + Clone,
     T: std::convert::From<f32> + std::cmp::PartialEq + std::fmt::Display + 'a + Copy,
     f32: From<T>,
-    StateIdentifier: std::fmt::Debug + Eq + std::hash::Hash,
 {
     fn handle_event(
         &mut self,
         event: &Event,
         context: &Context,
-        _state_store: &mut StateStore<StateIdentifier>,
     ) -> crate::zui::widget::EventResponse<Message> {
         match event {
             crate::zui::Event::MouseEvent(MouseEvent::CursorMoved) => {

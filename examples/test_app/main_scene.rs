@@ -1,7 +1,7 @@
 use zui::{
     premade_widgets::{Button, Container, TextContainer},
     typeface::FontStyle,
-    Axis, Colour, Scene, Span, StateStore, Text, TextConfiguration, TextSegment, Widget,
+    Axis, Colour, Scene, Span, Text, TextConfiguration, TextSegment, Widget,
 };
 
 use crate::UiMessage;
@@ -38,7 +38,6 @@ pub enum Identifier {
 
 impl Scene for MainScene {
     type Message = UiMessage;
-    type StateIdentifier = Identifier;
 
     fn handle_message(&mut self, message: Self::Message) -> (Option<Self::Message>, bool) {
         match message {
@@ -60,9 +59,8 @@ impl Scene for MainScene {
 
     fn view(
         &self,
-        state_store: &mut StateStore<Self::StateIdentifier>,
         _aspect_ratio: f32,
-    ) -> Box<dyn Widget<Self::Message, Self::StateIdentifier>> {
+    ) -> Box<dyn Widget<Self::Message>> {
         let v1 = Container::new()
             .with_name("v1")
             .with_span(Span::Pixels(64f32))
@@ -75,7 +73,7 @@ impl Scene for MainScene {
             .with_name("v3")
             .with_span(Span::Pixels(192f32))
             .with_background(Some(Colour::GREEN));
-        let v4_text = TextContainer::new(Identifier::HelloTextContainer)
+        let v4_text = TextContainer::new()
             .with_text(Text::new().push_segment(TextSegment::new("Hello!", Colour::WHITE)))
             .with_background_colour(Some(Colour::DARK_CYAN));
 
@@ -83,7 +81,7 @@ impl Scene for MainScene {
             .with_name("h1")
             .with_span(Span::Pixels(64f32))
             .with_background(Some(Colour::CYAN));
-        let h2_text = TextContainer::new(Identifier::H2TextContainer).with_text(
+        let h2_text = TextContainer::new().with_text(
             Text::new().push_segment(TextSegment::new(
                 "This is the h2 text, it goes and goes and keeps on going on and on and on",
                 // "This is the h2 text",
@@ -119,12 +117,12 @@ impl Scene for MainScene {
             .push(h4)
             .push(h5);
 
-        let th1 = TextContainer::new(Identifier::Th1TextContainer)
+        let th1 = TextContainer::new()
             .with_text(
                 Text::new().push_segment(TextSegment::new(" This is text 1!  ", Colour::BLACK)),
             )
             .with_background_colour(Some(Colour::LIGHT_RED));
-        let th2 = TextContainer::new(Identifier::Th2TextContainer)
+        let th2 = TextContainer::new()
             .with_text(
                 Text::new()
                     .with_configuration(TextConfiguration {
@@ -138,7 +136,7 @@ impl Scene for MainScene {
                     }),
             )
             .with_background_colour(Some(Colour::LIGHT_GREEN));
-        let th3 = TextContainer::new(Identifier::Th3TextContainer)
+        let th3 = TextContainer::new()
             .with_text(Text::new().push_segment(TextSegment::new(
                 " This is the third text!   ",
                 Colour::BLACK,
@@ -180,7 +178,7 @@ impl Scene for MainScene {
             .with_span(Span::ParentWeight(1f32))
             .with_background(Some(Colour::WHITE));
         let expandable_2_2_text =
-            TextContainer::new(Identifier::Ex2_2TextContainer)
+            TextContainer::new()
                 .with_text(Text::new().push_segment(TextSegment::new(
                 "This is my long test text for the expandable_2_2, I want to make it pretty long \
                 so that I can see it wrap around for a bit. I think that might be pretty useful to \
@@ -195,7 +193,7 @@ impl Scene for MainScene {
                 ..Default::default()
             })
         );
-        let frame_counter_text = TextContainer::new(Identifier::FrameCounterTextContainer)
+        let frame_counter_text = TextContainer::new()
             .with_text(
                 Text::new()
                     .push_segment(TextSegment::new(" \u{f03e} no.", Colour::ORANGE))
@@ -204,7 +202,7 @@ impl Scene for MainScene {
                         Colour::WHITE,
                     )),
             );
-        let fish_text = TextContainer::new(Identifier::FishTextContainer).with_text(
+        let fish_text = TextContainer::new().with_text(
             Text::new()
                 .push_segment(TextSegment::new(" \u{f023a}", Colour::CYAN))
                 .push_segment(TextSegment::new(
@@ -212,7 +210,7 @@ impl Scene for MainScene {
                     Colour::WHITE,
                 )),
         );
-        let money_text = TextContainer::new(Identifier::MoneyTextContainer).with_text(
+        let money_text = TextContainer::new().with_text(
             Text::new()
                 .push_segment(TextSegment::new(" \u{f0d6}", Colour::YELLOW))
                 .push_segment(TextSegment::new(
@@ -220,7 +218,7 @@ impl Scene for MainScene {
                     Colour::WHITE,
                 )),
         );
-        let people_text = TextContainer::new(Identifier::PeopleTextContainer).with_text(
+        let people_text = TextContainer::new().with_text(
             Text::new()
                 .push_segment(TextSegment::new(" \u{f4fd}", Colour::ORANGE))
                 .push_segment(TextSegment::new(
@@ -242,8 +240,6 @@ impl Scene for MainScene {
             UiMessage::SetCustomCounter(0),
             Colour::DARK_BLUE,
             Colour::DARK_CYAN,
-            state_store,
-            Identifier::ResetCounterButton,
         )
         .with_text(Text::new().push_segment(TextSegment::new("Reset counter", Colour::WHITE)));
 
@@ -251,8 +247,6 @@ impl Scene for MainScene {
             UiMessage::IncrementCustomCounter(1),
             Colour::DARK_BLUE,
             Colour::DARK_CYAN,
-            state_store,
-            Identifier::IncrementCounterButton,
         )
         .with_text(Text::new().push_segment(TextSegment::new("Increment counter", Colour::WHITE)));
 

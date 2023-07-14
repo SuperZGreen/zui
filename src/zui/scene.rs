@@ -1,10 +1,7 @@
-use crate::StateStore;
-
 use super::widget::Widget;
 
 pub trait Scene {
     type Message: Copy + Clone;
-    type StateIdentifier: std::fmt::Debug + Eq + std::hash::Hash;
 
     /// Implements the update logic when a new message is received from a widget,
     /// Returns an external message, ie a command that is to be handled by the external context
@@ -14,9 +11,8 @@ pub trait Scene {
     /// Returns the root widget of the scene, window's aspect ratio included for user conveninence
     fn view(
         &self,
-        state_store: &mut StateStore<Self::StateIdentifier>,
         aspect_ratio: f32,
-    ) -> Box<dyn Widget<Self::Message, Self::StateIdentifier>>
+    ) -> Box<dyn Widget<Self::Message>>
     where
         <Self as Scene>::Message: std::marker::Copy;
 }

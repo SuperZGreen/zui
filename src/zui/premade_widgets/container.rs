@@ -1,23 +1,20 @@
 use std::collections::VecDeque;
 
-use crate::{
-    zui::{
-        primitives::{Dimensions, Rectangle},
-        render_layer::RenderLayer,
-        simple_renderer::SimpleVertex,
-        text_renderer::TextVertex,
-        widget::{Boundary, BoundaryType, EventResponse, Layout, LayoutBoundaries},
-        Axis, Colour, Context, Event, Span, Widget,
-    },
-    StateStore,
+use crate::zui::{
+    primitives::{Dimensions, Rectangle},
+    render_layer::RenderLayer,
+    simple_renderer::SimpleVertex,
+    text_renderer::TextVertex,
+    widget::{Boundary, BoundaryType, EventResponse, Layout, LayoutBoundaries},
+    Axis, Colour, Context, Event, Span, Widget,
 };
 
-pub struct Container<Message, StateIdentifier>
+pub struct Container<Message>
 where
     Message: Clone + Copy,
 {
     /// The children of the Container
-    children: Vec<Box<dyn Widget<Message, StateIdentifier>>>,
+    children: Vec<Box<dyn Widget<Message>>>,
 
     /// The axis that the children of the Container are placed along within the Container
     pub axis: Axis,
@@ -39,10 +36,9 @@ where
     pub layout: Layout,
 }
 
-impl<Message, StateIdentifier> Container<Message, StateIdentifier>
+impl<Message> Container<Message>
 where
     Message: Clone + Copy,
-    StateIdentifier: std::hash::Hash + Eq + std::fmt::Debug,
 {
     pub fn new() -> Self {
         Self {
@@ -77,7 +73,7 @@ where
         self
     }
 
-    pub fn push(mut self, child: impl Into<Box<dyn Widget<Message, StateIdentifier>>>) -> Self {
+    pub fn push(mut self, child: impl Into<Box<dyn Widget<Message>>>) -> Self {
         self.children.push(child.into());
         self
     }
@@ -151,17 +147,14 @@ where
     }
 }
 
-impl<Message, StateIdentifier> Widget<Message, StateIdentifier>
-    for Container<Message, StateIdentifier>
+impl<Message> Widget<Message> for Container<Message>
 where
     Message: Clone + Copy,
-    StateIdentifier: std::fmt::Debug + Eq + std::hash::Hash,
 {
     fn handle_event(
         &mut self,
         event: &Event,
         _context: &Context,
-        _state_store: &mut StateStore<StateIdentifier>,
     ) -> EventResponse<Message> {
         match event {
             Event::MouseEvent(_) => EventResponse::Propagate,
@@ -173,18 +166,17 @@ where
         &self.layout
     }
 
-    fn children(&self) -> &[Box<(dyn Widget<Message, StateIdentifier>)>] {
+    fn children(&self) -> &[Box<(dyn Widget<Message>)>] {
         &self.children
     }
 
-    fn children_mut(&mut self) -> &mut [Box<(dyn Widget<Message, StateIdentifier>)>] {
+    fn children_mut(&mut self) -> &mut [Box<(dyn Widget<Message>)>] {
         &mut self.children
     }
 
     fn to_vertices(
         &self,
         context: &Context,
-        state_store: &StateStore<StateIdentifier>,
         simple_vertices: &mut Vec<SimpleVertex>,
         text_vertices: &mut Vec<TextVertex>,
         render_layers: &mut VecDeque<RenderLayer>,
@@ -209,7 +201,6 @@ where
             for child in self.children.iter() {
                 child.to_vertices(
                     context,
-                    state_store,
                     &mut simple_vertices,
                     &mut text_vertices,
                     render_layers,
@@ -226,13 +217,7 @@ where
             render_layers.push_front(render_layer);
         } else {
             for child in self.children.iter() {
-                child.to_vertices(
-                    context,
-                    state_store,
-                    simple_vertices,
-                    text_vertices,
-                    render_layers,
-                );
+                child.to_vertices(context, simple_vertices, text_vertices, render_layers);
             }
         }
     }
@@ -432,13 +417,12 @@ where
     }
 }
 
-impl<'a, Message, StateIdentifier> Into<Box<dyn Widget<Message, StateIdentifier> + 'a>>
-    for Container<Message, StateIdentifier>
+impl<'a, Message> Into<Box<dyn Widget<Message> + 'a>>
+    for Container<Message>
 where
     Message: Clone + Copy + 'a,
-    StateIdentifier: std::fmt::Debug + Eq + std::hash::Hash + 'a,
 {
-    fn into(self) -> Box<dyn Widget<Message, StateIdentifier> + 'a> {
+    fn into(self) -> Box<dyn Widget<Message> + 'a> {
         Box::new(self)
     }
 }

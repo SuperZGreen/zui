@@ -2,8 +2,6 @@ use std::collections::VecDeque;
 
 use rustc_hash::FxHashSet;
 
-use crate::StateStore;
-
 use super::{
     primitives::Rectangle,
     render_layer::RenderLayer,
@@ -12,16 +10,15 @@ use super::{
 };
 
 /// Allows for caching of the widgets produced by Scene::view
-pub struct SceneHandle<Message, StateIdentifier>
+pub struct SceneHandle<Message>
 where
     Message: Clone + Copy,
-    StateIdentifier: std::hash::Hash + Eq + std::fmt::Debug,
 {
     /// the root widget produced by the scene
-    root_widget: Option<Box<dyn Widget<Message, StateIdentifier>>>,
+    root_widget: Option<Box<dyn Widget<Message>>>,
 
     /// the scene implemented by the user
-    scene: Box<dyn Scene<Message = Message, StateIdentifier = StateIdentifier>>,
+    scene: Box<dyn Scene<Message = Message>>,
 
     /// flag checked in update, to rebuild the scene's widgets and rectangles
     widget_recreation_required: bool,
@@ -31,18 +28,14 @@ where
 
     /// messages to be processed by the user developer
     external_messages: VecDeque<Message>,
-
-    /// Holds the state for the scene's widgets to persist between 'rebuild_scene' calls
-    state_store: StateStore<StateIdentifier>,
 }
 
-impl<Message, StateIdentifier> SceneHandle<Message, StateIdentifier>
+impl<Message> SceneHandle<Message>
 where
     Message: Clone + Copy,
-    StateIdentifier: std::hash::Hash + Eq + std::fmt::Debug,
 {
     pub fn new(
-        scene: Box<dyn Scene<Message = Message, StateIdentifier = StateIdentifier>>,
+        scene: Box<dyn Scene<Message = Message>>,
     ) -> Self {
         Self {
             root_widget: None,
@@ -50,7 +43,6 @@ where
             widget_recreation_required: true,
             messages: VecDeque::new(),
             external_messages: VecDeque::new(),
-            state_store: StateStore::new(),
         }
     }
 
@@ -102,7 +94,7 @@ where
         // recreating widgets
         self.root_widget = Some(
             self.scene
-                .view(&mut self.state_store, context_mut_typeface.aspect_ratio),
+                .view(context_mut_typeface.aspect_ratio),
         );
 
         // getting the root widget
@@ -194,7 +186,6 @@ where
                 root_widget,
                 &mut event,
                 context,
-                &mut self.state_store,
                 &mut self.messages,
             );
         }
@@ -203,7 +194,7 @@ where
     /// Handles widget events recursively
     pub fn handle_event_recursively(
         // The Widget to handle the event
-        widget: &mut Box<dyn Widget<Message, StateIdentifier>>,
+        widget: &mut Box<dyn Widget<Message>>,
 
         // The event for the Widget to handle
         event: &mut Event,
@@ -211,13 +202,10 @@ where
         // The event Context (mouse position, aspect ratio, fonts, etc)
         context: &Context,
 
-        // the SceneHandle's state store
-        state_store: &mut StateStore<StateIdentifier>,
-
         // The message as a result of the Widget handling the event
         result_messages: &mut VecDeque<Message>,
     ) {
-        let event_response = widget.handle_event(event, context, state_store);
+        let event_response = widget.handle_event(event, context);
 
         match event_response {
             EventResponse::Consumed => {} // Do nothing
@@ -230,7 +218,6 @@ where
                         child,
                         event,
                         context,
-                        state_store,
                         result_messages,
                     );
                 }
@@ -244,10 +231,9 @@ where
     }
 }
 
-impl<Message, StateIdentifier> Renderable for SceneHandle<Message, StateIdentifier>
+impl<Message> Renderable for SceneHandle<Message>
 where
     Message: Clone + Copy,
-    StateIdentifier: std::hash::Hash + Eq + std::fmt::Debug,
 {
     fn to_render_layers(&self, context: &Context) -> VecDeque<RenderLayer> {
         let root_widget = match &self.root_widget {
@@ -264,7 +250,6 @@ where
 
         root_widget.to_vertices(
             context,
-            &self.state_store,
             &mut simple_vertices,
             &mut text_vertices,
             &mut render_layers,

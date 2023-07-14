@@ -1,16 +1,13 @@
 use std::collections::VecDeque;
 
-use crate::{
-    zui::{
-        self,
-        primitives::{Dimensions, Rectangle},
-        render_layer::RenderLayer,
-        simple_renderer::SimpleVertex,
-        text_renderer::TextVertex,
-        widget::{Bounds, Event, Layout, LayoutBoundaries, MouseEvent, Widget},
-        Colour, Context, Span, Text,
-    },
-    StateStore,
+use crate::zui::{
+    self,
+    primitives::{Dimensions, Rectangle},
+    render_layer::RenderLayer,
+    simple_renderer::SimpleVertex,
+    text_renderer::TextVertex,
+    widget::{Bounds, Event, Layout, LayoutBoundaries, MouseEvent, Widget},
+    Colour, Context, Span, Text, colour,
 };
 
 /// The internal state of the Button
@@ -22,18 +19,16 @@ pub struct ButtonState {
 impl Default for ButtonState {
     fn default() -> Self {
         Self {
-            cursor_is_over: false
+            cursor_is_over: false,
         }
     }
 }
 
-pub struct Button<Message, StateIdentifier> {
+pub struct Button<Message> {
     // configuration
     cursor_on_colour: Colour,
     cursor_off_colour: Colour,
     on_click_message: Message,
-
-    state_identifier: StateIdentifier,
 
     // standard widget state
     text: Option<Text>,
@@ -43,27 +38,19 @@ pub struct Button<Message, StateIdentifier> {
     layout: Layout,
 }
 
-impl<Message, StateIdentifier> Button<Message, StateIdentifier>
-where
-    StateIdentifier: std::hash::Hash + std::fmt::Debug + Eq + Copy,
-{
+impl<Message> Button<Message> {
     pub fn new(
         on_click_message: Message,
         cursor_off_colour: Colour,
         cursor_on_colour: Colour,
-        state_store: &mut StateStore<StateIdentifier>,
-        state_identifier: StateIdentifier,
-    ) -> Button<Message, StateIdentifier>
+    ) -> Button<Message>
     where
         Message: Copy,
     {
-        state_store.try_insert(state_identifier, Box::new(ButtonState::default()));
-
         Self {
             cursor_on_colour,
             cursor_off_colour,
             on_click_message,
-            state_identifier,
             text: None,
             span: Span::ParentWeight(1f32),
             clip_rectangle: None,
@@ -82,58 +69,56 @@ where
     }
 }
 
-impl<'a, Message, StateIdentifier> Into<Box<dyn Widget<Message, StateIdentifier> + 'a>>
-    for Button<Message, StateIdentifier>
+impl<'a, Message> Into<Box<dyn Widget<Message> + 'a>> for Button<Message>
 where
     Message: Clone + Copy + 'a,
-    StateIdentifier: std::hash::Hash + Eq + std::fmt::Debug + 'a,
 {
-    fn into(self) -> Box<dyn Widget<Message, StateIdentifier> + 'a> {
+    fn into(self) -> Box<dyn Widget<Message> + 'a> {
         Box::new(self)
     }
 }
 
-impl<Message, StateIdentifier> Widget<Message, StateIdentifier> for Button<Message, StateIdentifier>
+impl<Message> Widget<Message> for Button<Message>
 where
     Message: Copy + Clone,
-    StateIdentifier: std::hash::Hash + Eq + std::fmt::Debug,
 {
     fn handle_event(
         &mut self,
         event: &Event,
         context: &Context,
-        state_store: &mut StateStore<StateIdentifier>,
     ) -> zui::widget::EventResponse<Message> {
         match event {
             Event::MouseEvent(MouseEvent::CursorExitedWindow) => {
-                let state = state_store
-                    .get_as_mut::<ButtonState>(&self.state_identifier)
-                    .unwrap();
-                state.cursor_is_over = false;
+                // let state = state_store
+                //     .get_as_mut::<ButtonState>(&self.state_identifier)
+                //     .unwrap();
+                // state.cursor_is_over = false;
                 crate::zui::widget::EventResponse::Propagate
             }
             Event::MouseEvent(MouseEvent::CursorMoved) => {
                 // should be Some
                 let cursor_position = context.cursor_position.unwrap();
 
-                if let Some(clip_rectangle) = self.clip_rectangle {
-                    let state = state_store
-                        .get_as_mut::<ButtonState>(&self.state_identifier)
-                        .unwrap();
-                    state.cursor_is_over = clip_rectangle.is_in(&cursor_position);
-                }
+                // if let Some(clip_rectangle) = self.clip_rectangle {
+                //     let state = state_store
+                //         .get_as_mut::<ButtonState>(&self.state_identifier)
+                //         .unwrap();
+                //     state.cursor_is_over = clip_rectangle.is_in(&cursor_position);
+                // }
                 crate::zui::widget::EventResponse::Consumed
             }
 
             Event::MouseEvent(MouseEvent::ButtonReleased) => {
-                let state = state_store
-                    .get_as::<ButtonState>(&self.state_identifier)
-                    .unwrap();
-                if state.cursor_is_over {
-                    crate::zui::widget::EventResponse::Message(self.on_click_message)
-                } else {
-                    crate::zui::widget::EventResponse::Propagate
-                }
+                // let state = state_store
+                //     .get_as::<ButtonState>(&self.state_identifier)
+                //     .unwrap();
+                // if state.cursor_is_over {
+                //     crate::zui::widget::EventResponse::Message(self.on_click_message)
+                // } else {
+                //     crate::zui::widget::EventResponse::Propagate
+                // }
+
+                crate::zui::widget::EventResponse::Propagate
             }
 
             _ => crate::zui::widget::EventResponse::Propagate,
@@ -153,20 +138,21 @@ where
     fn to_vertices(
         &self,
         context: &Context,
-        state_store: &StateStore<StateIdentifier>,
         simple_vertices: &mut Vec<SimpleVertex>,
         text_vertices: &mut Vec<TextVertex>,
         _render_layers: &mut VecDeque<RenderLayer>,
     ) {
         if let Some(clip_rectangle) = self.clip_rectangle {
             // getting the colour of the button
-            let state = state_store
-                .get_as::<ButtonState>(&self.state_identifier)
-                .unwrap();
-            let button_colour = match state.cursor_is_over {
-                true => self.cursor_on_colour,
-                false => self.cursor_off_colour,
-            };
+            // let state = state_store
+            //     .get_as::<ButtonState>(&self.state_identifier)
+            //     .unwrap();
+            // let button_colour = match state.cursor_is_over {
+            //     true => self.cursor_on_colour,
+            //     false => self.cursor_off_colour,
+            // };
+
+            let button_colour = colour::named::Oil;
 
             simple_vertices.extend_from_slice(&SimpleVertex::from_rectangle(
                 clip_rectangle,

@@ -1,30 +1,25 @@
 use std::collections::VecDeque;
 
-use crate::{
-    zui::{
-        primitives::Dimensions,
-        render_layer::RenderLayer,
-        simple_renderer::SimpleVertex,
-        text_renderer::TextVertex,
-        widget::{Bounds, EventResponse, Layout, LayoutBoundaries},
-        Colour, Context, Rectangle, Text, Widget,
-    },
-    StateStore,
+use crate::zui::{
+    primitives::Dimensions,
+    render_layer::RenderLayer,
+    simple_renderer::SimpleVertex,
+    text_renderer::TextVertex,
+    widget::{Bounds, EventResponse, Layout, LayoutBoundaries},
+    Colour, Context, Rectangle, Text, Widget,
 };
 
 // A basic widget that contains text
-pub struct TextContainer<StateIdentifier> {
+pub struct TextContainer {
     text: Option<Text>,
-    _state_identifier: StateIdentifier,
     background_colour: Option<Colour>,
     clip_rectangle: Option<Rectangle<f32>>,
     layout: Layout,
 }
-impl<StateIdentifier> TextContainer<StateIdentifier> {
-    pub fn new(state_identifier: StateIdentifier) -> Self {
+impl TextContainer {
+    pub fn new() -> Self {
         Self {
             text: None,
-            _state_identifier: state_identifier,
             background_colour: None,
             clip_rectangle: None,
             layout: Layout::new(),
@@ -42,16 +37,14 @@ impl<StateIdentifier> TextContainer<StateIdentifier> {
     }
 }
 
-impl<Message, StateIdentifier> Widget<Message, StateIdentifier> for TextContainer<StateIdentifier>
+impl<Message> Widget<Message> for TextContainer
 where
     Message: Copy + Clone,
-    StateIdentifier: std::fmt::Debug + Eq + std::hash::Hash,
 {
     fn handle_event(
         &mut self,
         _event: &crate::zui::Event,
         _context: &crate::zui::Context,
-        _state_store: &mut StateStore<StateIdentifier>,
     ) -> crate::zui::widget::EventResponse<Message> {
         // responds to no input events
         EventResponse::Consumed
@@ -60,7 +53,6 @@ where
     fn to_vertices(
         &self,
         context: &Context,
-        _state_store: &StateStore<StateIdentifier>,
         simple_vertices: &mut Vec<SimpleVertex>,
         text_vertices: &mut Vec<TextVertex>,
         _render_layers: &mut VecDeque<RenderLayer>,
@@ -135,13 +127,11 @@ where
     }
 }
 
-impl<'a, Message, StateIdentifier> Into<Box<dyn Widget<Message, StateIdentifier> + 'a>>
-    for TextContainer<StateIdentifier>
+impl<'a, Message> Into<Box<dyn Widget<Message> + 'a>> for TextContainer
 where
     Message: Clone + Copy + 'a,
-    StateIdentifier: std::fmt::Debug + Eq + std::hash::Hash + 'a,
 {
-    fn into(self) -> Box<dyn Widget<Message, StateIdentifier> + 'a> {
+    fn into(self) -> Box<dyn Widget<Message> + 'a> {
         Box::new(self)
     }
 }

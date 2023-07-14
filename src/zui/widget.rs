@@ -7,7 +7,7 @@ use super::{
 };
 use std::collections::VecDeque;
 
-use crate::{zui::Context, StateStore};
+use crate::zui::Context;
 
 #[derive(Copy, Clone)]
 pub enum Axis {
@@ -190,9 +190,7 @@ pub enum EventResponse<Message> {
 }
 
 #[allow(unused_variables)]
-pub trait Widget<Message, StateIdentifier>
-where
-    StateIdentifier: std::hash::Hash + Eq + std::fmt::Debug,
+pub trait Widget<Message>
 {
     /// Handles interaction events, returning the EventResponse that determines whether events
     /// should be propagated to children
@@ -200,21 +198,18 @@ where
         &mut self,
         event: &Event,
         context: &Context,
-        state_store: &mut StateStore<StateIdentifier>,
     ) -> EventResponse<Message>
-    where
-        StateIdentifier: std::fmt::Debug + Eq + std::hash::Hash,
     {
         EventResponse::Propagate
     }
 
     /// Gives the children of the [`Widget`] as a slice
-    fn children(&self) -> &[Box<(dyn Widget<Message, StateIdentifier>)>] {
+    fn children(&self) -> &[Box<(dyn Widget<Message>)>] {
         &[]
     }
 
     /// Gives the children of the [`Widget`] as a mutable slice
-    fn children_mut(&mut self) -> &mut [Box<(dyn Widget<Message, StateIdentifier>)>] {
+    fn children_mut(&mut self) -> &mut [Box<(dyn Widget<Message>)>] {
         &mut []
     }
 
@@ -271,12 +266,11 @@ where
     fn to_vertices(
         &self,
         context: &Context,
-        state_store: &StateStore<StateIdentifier>,
         simple_vertices: &mut Vec<SimpleVertex>,
         text_vertices: &mut Vec<TextVertex>,
         render_layers: &mut VecDeque<RenderLayer>,
     ) {
-        // Do nothing
+        // Do nothing by default
     }
 }
 
