@@ -3,11 +3,11 @@ use winit::dpi::PhysicalSize;
 
 use super::{
     primitives::Dimensions, render_layer::RenderLayer, simple_renderer::SimpleVertex,
-    text_renderer::TextVertex, typeface::SymbolKey, Rectangle,
+    text_renderer::TextVertex, typeface::SymbolKey, widget_store::WidgetId, Rectangle,
 };
-use std::collections::VecDeque;
+use std::{any::Any, collections::VecDeque};
 
-use crate::zui::Context;
+use crate::{zui::Context, SpanConstraint, WidgetStore};
 
 #[derive(Copy, Clone)]
 pub enum Axis {
@@ -28,132 +28,6 @@ impl Axis {
         match self {
             Axis::Vertical => Axis::Horizontal,
             Axis::Horizontal => Axis::Vertical,
-        }
-    }
-}
-
-/// A span defines a distance in the viewport, this is converted to pixels when the layout is
-/// calculated, and exists for ease of design - ie to allow resolution-independent designs
-#[derive(Copy, Clone)]
-#[allow(dead_code)]
-pub enum Span {
-    //
-    //  Fixed Spans: can be calculated given some environmental constants (viewport dimensions),
-    //               and the Span value itself
-    //
-    /// Fixed Span, Size as a portion of the view height, ie. the height of the application window
-    /// surface is 1
-    ViewWidth(f32),
-
-    /// Fixed Span: Size as a portion of the view width, ie. the width of the application window
-    /// surface is 1
-    ViewHeight(f32),
-
-    /// Fixed Span: Relative size with respect to the minimum dimension of the wgpu viewport
-    ViewMin(f32),
-
-    /// Fixed Span: The length in pixels of the Span
-    Pixels(f32),
-
-    //
-    //  Contents based sizes, dynamically resizes based on the size of the contents. This is text in
-    //  the case of a Container.
-    //
-    FitContents,
-
-    // TODO: ViewMax?
-
-    //
-    //  Parent-based Sizes, dynamically resizes depending on the size of the parent widget
-    //
-    /// Weighted size with respect to the parent's size. Is summed up and divided amongst other
-    /// child's sizes to determine the actual screen-space size of the widget
-    ParentWeight(f32),
-
-    /// The size as a proportion of the parent's size
-    ParentRatio(f32),
-}
-
-impl Span {
-    pub fn view_min_to_span_px(view_min: f32, viewport_dimensions_px: PhysicalSize<u32>) -> f32 {
-        if viewport_dimensions_px.width < viewport_dimensions_px.height {
-            Self::view_width_to_span_px(view_min, viewport_dimensions_px.width)
-        } else {
-            Self::view_height_to_span_px(view_min, viewport_dimensions_px.height)
-        }
-    }
-
-    pub fn view_height_to_span_px(view_height: f32, viewport_height_px: u32) -> f32 {
-        view_height as f32 * viewport_height_px as f32
-    }
-
-    pub fn view_width_to_span_px(
-        view_width: f32,
-        // The width of the viewport in pixels
-        viewport_width_px: u32,
-    ) -> f32 {
-        view_width as f32 * viewport_width_px as f32
-    }
-
-    /// Converts the span into a pixel span value given context and parent widget region and axis
-    pub fn to_viewport_px(
-        &self,
-        parent_rectangle: &Rectangle<f32>,
-        parent_axis: Axis,
-        sum_of_parent_weights: Option<f32>,
-        // the amount of screen space not taken up by non-weighted widgets
-        parent_span_px_available: Option<u32>,
-        context: &Context,
-        fit_contents_span_px: f32,
-    ) -> f32 {
-        match self {
-            Span::ViewWidth(vw) => {
-                Self::view_width_to_span_px(*vw, context.viewport_dimensions_px.width)
-            }
-            Span::ViewHeight(vh) => {
-                Self::view_height_to_span_px(*vh, context.viewport_dimensions_px.height)
-            }
-            Span::ViewMin(vm) => Self::view_min_to_span_px(*vm, context.viewport_dimensions_px),
-            Span::Pixels(px) => *px,
-            Span::ParentWeight(pw) => {
-                if sum_of_parent_weights.is_none() || parent_span_px_available.is_none() {
-                    0f32
-                } else {
-                    *pw / sum_of_parent_weights.unwrap() * parent_span_px_available.unwrap() as f32
-                }
-            }
-            Span::ParentRatio(ratio) => *ratio * parent_rectangle.span_by_axis(parent_axis) as f32,
-            Span::FitContents => fit_contents_span_px,
-        }
-    }
-
-    /// Converts fixed type Spans to f32 viewport pixels
-    pub fn min_span_px(
-        &self,
-        axis: Axis,
-        region_dimensions_px: Dimensions<f32>,
-        viewport_dimensions_px: PhysicalSize<u32>,
-    ) -> Option<f32> {
-        match self {
-            Span::ViewWidth(vw) => Some(Self::view_width_to_span_px(
-                *vw,
-                viewport_dimensions_px.width,
-            )),
-            Span::ViewHeight(vh) => Some(Self::view_height_to_span_px(
-                *vh,
-                viewport_dimensions_px.height,
-            )),
-            Span::ViewMin(vm) => Some(Self::view_min_to_span_px(*vm, viewport_dimensions_px)),
-            Span::Pixels(p) => Some(*p),
-            Span::ParentRatio(pr) => {
-                let parent_span_px = region_dimensions_px.span_by_axis(axis);
-                Some(pr * parent_span_px)
-            }
-
-            // This is also potentially a 'fixed' type, but can not be calculated here, so returns
-            // None instead
-            Span::FitContents => None,
-            Span::ParentWeight(_) => None,
         }
     }
 }
@@ -180,83 +54,55 @@ pub enum Event {
     // FitRectangle(Rectangle<f32>),
 }
 
-pub enum EventResponse<Message> {
-    /// The [`Event`] is consumed by the widget and will not be propagated to its children
-    Consumed,
-    /// The [`Event`] is consumed by the widget and a message is produced
-    Message(Message),
-    /// The [`Event`] is not consumed by the widget and will be propagated to its children
-    Propagate,
+/// Error returned by Widget::calculate_dimensions
+#[derive(Debug)]
+pub enum DimensionsError {
+    /// Is given if the Widget contains a SpanConstraint::ParentWeight, where the dimensions of the
+    /// widget is unable to be calculated by the Widget in isolation or with its children, and
+    /// instead is determined by the Parent.
+    IsSetByParent,
+
+    /// This is returned if the Widget needs to fit its children, as the Widget object in isolation
+    /// has no concept of its children, this needs to be performed by the WidgetEntry, which is
+    /// made aware of the fact it needs to perform this calculation by this error value
+    FitsChildren,
+
+    /// A catch all error
+    Other,
+}
+
+pub struct ChildPlacementDescriptor {
+    /// The axis that the children will be placed along
+    pub axis: Axis,
 }
 
 #[allow(unused_variables)]
-pub trait Widget<Message>
-{
-    /// Handles interaction events, returning the EventResponse that determines whether events
-    /// should be propagated to children
-    fn handle_event(
-        &mut self,
-        event: &Event,
-        context: &Context,
-    ) -> EventResponse<Message>
-    {
-        EventResponse::Propagate
+pub trait Widget<Message> {
+    /// Handles an input event for the widget. Region is the region of the placed Widget
+    fn handle_event(&mut self, event: &Event, region: &Rectangle<i32>, context: &Context) {
+        // Do nothing
     }
 
-    /// Gives the children of the [`Widget`] as a slice
-    fn children(&self) -> &[Box<(dyn Widget<Message>)>] {
-        &[]
-    }
-
-    /// Gives the children of the [`Widget`] as a mutable slice
-    fn children_mut(&mut self) -> &mut [Box<(dyn Widget<Message>)>] {
-        &mut []
-    }
-
-    /// This allows the parent container to set a child's dimensions, this is useful in the case of
-    /// Span::ParentWeighted containers, who need their parent to tell them how much space to take
-    /// up
-    fn set_dimensions(&mut self, dimensions_px: Option<Dimensions<f32>>) {
-        // Do nothing by default
-    }
-
-    /// This tells the Widget to update its internal layout's minimum dimensions, IF the Widget has
-    /// not calculated this previously. The Widget must comply with the LayoutBoundaries provided
-    /// by its parents, and returns the minimum possible dimensions of itself - that will usually
-    /// be stored in the Widget in a Layout struct for later use.
-    fn try_update_dimensions(
-        &mut self,
+    /// Asks the widget to calculate its dimensions provided the LayoutBoundaries and width and
+    /// height SpanConstraints. The Widget will return a DimensionsError if it can not do this on
+    /// its own, and the dimensions calculation will then be performed by the parent
+    fn calculate_dimensions(
+        &self,
         layout_boundaries: &LayoutBoundaries,
+        width_contraint: SpanConstraint,
+        height_contraint: SpanConstraint,
         context: &Context,
-    ) -> Dimensions<f32>;
-
-    /// Gives the Layout struct of self, containing the internal minimum dimensions of the Widget,
-    /// and the clip rectangle that has possibly been assigned to the Widget
-    fn layout<'a>(&'a self) -> &'a Layout;
-
-    /// Tells the widget to place itself in the rectangle
-    fn try_fit_rectangle(&mut self, clip_rectangle: &Rectangle<f32>, context: &Context);
-
-    // calls update_contents_dimensions and fit_rectangle for children
-    fn place_children(&mut self, context: &Context) {
-        // Do nothing by default
-    }
-
-    /// Gives the Span::ParentWeight value of the widget, if any. This is required for Containers to
-    /// determine and provide any child with Span::ParentWeight's dimensions
-    fn span_weight(&self) -> Option<f32> {
-        None
-    }
+    ) -> Result<Dimensions<i32>, DimensionsError>;
 
     /// Widgets insert all characters (SymbolKeys) that they will need to render their Text, and
     /// propogates the call to their children. This is to ensure that the font system has the
     /// required characters rasterised and ready to render when text Presymbols are generated
-    fn collect_text(&self, symbol_keys: &mut FxHashSet<SymbolKey>) {
-        // Note: not collecting own text by default!
-
-        for child in self.children().iter() {
-            child.collect_text(symbol_keys);
-        }
+    fn collect_text(
+        &self,
+        widget_store: &WidgetStore<Message>,
+        symbol_keys: &mut FxHashSet<SymbolKey>,
+    ) {
+        // Do nothing
     }
 
     /// Returns the vertices necessary to render a widget, will append a new RenderLayer to
@@ -265,6 +111,8 @@ pub trait Widget<Message>
     /// overflow
     fn to_vertices(
         &self,
+        // the area that the widget must reside in
+        region: Rectangle<i32>,
         context: &Context,
         simple_vertices: &mut Vec<SimpleVertex>,
         text_vertices: &mut Vec<TextVertex>,
@@ -272,14 +120,21 @@ pub trait Widget<Message>
     ) {
         // Do nothing by default
     }
+
+    /// Describes how the WidgetStore should lay out the widget's children. Most Widgets will not
+    /// implement this
+    fn child_placement_descriptor(&self) -> Option<ChildPlacementDescriptor> {
+        None
+    }
+
+    fn as_any(&self) -> &dyn Any;
 }
 
 pub enum BoundaryType {
-    /// Indicates that the parent Widget will not flexibly extend if this boundary is overflown,
-    /// causing clipping of the contents of the child Widget
+    /// Indicates that the parent would not like this boundary overflown, if possible
     Static,
-    /// Indicates that the parent Widget will flexibly extend in this direction if overflown
-    _Dynamic,
+    /// Indicates that the parent doesn't mind if this boundary is overflown
+    Dynamic,
 }
 
 pub struct Boundary {
@@ -327,17 +182,19 @@ pub struct Bounds<T> {
 
 /// The layout of a widget
 pub struct Layout {
-    /// The minimum dimensions of the contents of the Widget
-    pub dimensions_px: Option<Dimensions<f32>>,
+    /// The minimum dimensions of the contents of the Widget, used for determining placement by a
+    /// parent Container.
+    pub minimum_dimensions_px: Option<Dimensions<i32>>,
 
-    /// The rectangle that has been given to the widget by its parents to be placed in
-    pub clip_rectangle_px: Option<Rectangle<f32>>,
+    /// The rectangle that has been given to the widget by its parents to be placed in. This
+    /// describes the widget's placement on the viewport/screen.
+    pub clip_rectangle_px: Option<Rectangle<i32>>,
 }
 
 impl Layout {
     pub fn new() -> Self {
         Self {
-            dimensions_px: None,
+            minimum_dimensions_px: None,
             clip_rectangle_px: None,
         }
     }

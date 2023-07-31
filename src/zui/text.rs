@@ -244,7 +244,7 @@ impl Text {
         parent_clip_region: Rectangle<f32>,
         // The viewport dimensions in pixels, used to calculate the clip bounds for the text
         // fragment shader
-        viewport_dimensions_px: PhysicalSize<u32>,
+        viewport_dimensions_px: Dimensions<u32>,
     ) -> Vec<TextVertex> {
         // the number of vertices produced by a symbol
         let vertices_per_symbol = 6usize;
@@ -304,13 +304,13 @@ impl Symbol {
     pub fn to_text_vertices(
         &self,
         parent_clip_region: Rectangle<f32>,
-        viewport_dimensions_px: PhysicalSize<u32>,
+        viewport_dimensions_px: Dimensions<u32>,
     ) -> [TextVertex; 6] {
         let symbol_rectangle = Rectangle::new(
-            self.region.x_min as f32,
-            self.region.x_max as f32,
-            self.region.y_min as f32,
-            self.region.y_max as f32,
+            self.region.x_min as i32,
+            self.region.x_max as i32,
+            self.region.y_min as i32,
+            self.region.y_max as i32,
         );
 
         let uv_top_left = glam::Vec2::new(self.uv_region.x_min, self.uv_region.y_min);

@@ -18,9 +18,7 @@ pub struct Rectangle<T> {
 
 impl<T> Rectangle<T>
 where
-    T: std::ops::Sub<Output = T> +
-       std::cmp::PartialOrd +
-       Copy,
+    T: std::ops::Sub<Output = T> + std::cmp::PartialOrd + Copy,
 {
     pub fn new(x_min: T, x_max: T, y_min: T, y_max: T) -> Self {
         Self {
@@ -50,7 +48,7 @@ where
     }
 
     fn max(a: T, b: T) -> T {
-        if a > b{
+        if a > b {
             a
         } else {
             b
@@ -58,7 +56,7 @@ where
     }
 
     fn min(a: T, b: T) -> T {
-        if a < b{
+        if a < b {
             a
         } else {
             b
@@ -67,7 +65,6 @@ where
 
     /// Returns the intersection of two rectangles
     pub fn intersection(&self, other: &Rectangle<T>) -> Option<Rectangle<T>> {
-
         let min_max_x = Self::min(self.x_max, other.x_max);
         let max_min_x = Self::max(self.x_min, other.x_min);
 
@@ -92,23 +89,6 @@ where
 }
 
 impl Rectangle<i32> {
-    pub fn is_in(&self, position: glam::IVec2) -> bool {
-        position.x >= self.x_min
-            && position.x <= self.x_max
-            && position.y >= self.y_min
-            && position.y <= self.y_max
-    }
-}
-
-impl Rectangle<f32> {
-    /// Returns true if the point is over this rectangle
-    pub fn is_in(&self, position: &PhysicalPosition<f64>) -> bool {
-        position.x as f32 >= self.x_min
-            && position.x as f32 <= self.x_max
-            && position.y as f32 >= self.y_min
-            && position.y as f32 <= self.y_max
-    }
-
     /// Returns the viewport pixel (y up, (0,0) in bottom left) position vertices that make up the
     /// rectangle in the following order:
     ///
@@ -118,49 +98,69 @@ impl Rectangle<f32> {
     ///      /
     ///    /
     ///   2 -----> 3
-    pub fn vertices(&self, viewport_dimensions_px: PhysicalSize<u32>) -> [glam::Vec2; 4] {
+    pub fn vertices(&self, viewport_dimensions_px: Dimensions<u32>) -> [glam::Vec2; 4] {
         let top_left = glam::Vec2::new(
             util::viewport_px_to_normalised_device_coordinates(
-                self.x_min,
+                self.x_min as f32,
                 viewport_dimensions_px.width,
             ),
             util::viewport_px_to_normalised_device_coordinates(
-                self.y_max,
+                self.y_max as f32,
                 viewport_dimensions_px.height,
             ),
         );
         let top_right = glam::Vec2::new(
             util::viewport_px_to_normalised_device_coordinates(
-                self.x_max,
+                self.x_max as f32,
                 viewport_dimensions_px.width,
             ),
             util::viewport_px_to_normalised_device_coordinates(
-                self.y_max,
+                self.y_max as f32,
                 viewport_dimensions_px.height,
             ),
         );
         let bottom_left = glam::Vec2::new(
             util::viewport_px_to_normalised_device_coordinates(
-                self.x_min,
+                self.x_min as f32,
                 viewport_dimensions_px.width,
             ),
             util::viewport_px_to_normalised_device_coordinates(
-                self.y_min,
+                self.y_min as f32,
                 viewport_dimensions_px.height,
             ),
         );
         let bottom_right = glam::Vec2::new(
             util::viewport_px_to_normalised_device_coordinates(
-                self.x_max,
+                self.x_max as f32,
                 viewport_dimensions_px.width,
             ),
             util::viewport_px_to_normalised_device_coordinates(
-                self.y_min,
+                self.y_min as f32,
                 viewport_dimensions_px.height,
             ),
         );
 
         [top_left, top_right, bottom_left, bottom_right]
+    }
+
+    /// Returns true if the PhysicalPosition is within the bounds of the Rectangle
+    /// TODO: this will not work correctly for negative values of position (?) Might not be strictly
+    /// necessary either, but something to look into for the future
+    pub fn is_in(&self, position: &PhysicalPosition<f64>) -> bool {
+        (position.x as i32) >= self.x_min
+            && (position.x as i32) < self.x_max
+            && (position.y as i32) >= self.y_min
+            && (position.y as i32) < self.y_max
+    }
+}
+
+impl Rectangle<f32> {
+    /// Returns true if the point is over this rectangle
+    pub fn is_in(&self, position: &PhysicalPosition<f64>) -> bool {
+        (position.x as f32) >= self.x_min
+            && (position.x as f32) < self.x_max
+            && (position.y as f32) >= self.y_min
+            && (position.y as f32) < self.y_max
     }
 
     /// Converts the rectangle from screen space to framebuffer coordinates
@@ -225,9 +225,7 @@ where
 
 impl<T> From<&Rectangle<T>> for Dimensions<T>
 where
-    T: std::ops::Sub<Output = T> +
-       std::cmp::PartialOrd +
-       Copy,
+    T: std::ops::Sub<Output = T> + std::cmp::PartialOrd + Copy,
 {
     fn from(value: &Rectangle<T>) -> Self {
         Dimensions {
@@ -239,14 +237,30 @@ where
 
 impl<T> From<Rectangle<T>> for Dimensions<T>
 where
-    T: std::ops::Sub<Output = T> +
-       std::cmp::PartialOrd +
-       Copy,
+    T: std::ops::Sub<Output = T> + std::cmp::PartialOrd + Copy,
 {
     fn from(value: Rectangle<T>) -> Self {
         Dimensions {
             width: value.width(),
             height: value.height(),
+        }
+    }
+}
+
+impl From<PhysicalSize<u32>> for Dimensions<u32> {
+    fn from(value: PhysicalSize<u32>) -> Self {
+        Self {
+            width: value.width,
+            height: value.height,
+        }
+    }
+}
+
+impl From<&PhysicalSize<u32>> for Dimensions<u32> {
+    fn from(value: &PhysicalSize<u32>) -> Self {
+        Self {
+            width: value.width,
+            height: value.height,
         }
     }
 }

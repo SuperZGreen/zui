@@ -77,7 +77,7 @@ where
         }
     }
 
-    fn try_update_dimensions(
+    fn calculate_dimensions(
         &mut self,
         layout_boundaries: &LayoutBoundaries,
         context: &crate::zui::Context,

@@ -1,7 +1,6 @@
 use zui::{
-    premade_widgets::{Button, Container, TextContainer},
-    typeface::FontStyle,
-    Axis, Colour, Scene, Span, Text, TextConfiguration, TextSegment, Widget,
+    premade_widgets::Container, PositionConstraint, Scene, SpanConstraint, WidgetEntryDescriptor,
+    WidgetId, WidgetStore,
 };
 
 use crate::UiMessage;
@@ -9,6 +8,7 @@ use crate::UiMessage;
 pub struct MainScene {
     frame_counter: u64,
     custom_counter: u64,
+    cursor_widget_id: Option<WidgetId>,
 }
 
 impl MainScene {
@@ -16,30 +16,19 @@ impl MainScene {
         Self {
             frame_counter: 0u64,
             custom_counter: 0u64,
+            cursor_widget_id: None,
         }
     }
-}
-
-#[derive(PartialEq, Eq, std::hash::Hash, std::fmt::Debug, Copy, Clone)]
-pub enum Identifier {
-    ResetCounterButton,
-    IncrementCounterButton,
-    HelloTextContainer,
-    H2TextContainer,
-    Th1TextContainer,
-    Th2TextContainer,
-    Th3TextContainer,
-    Ex2_2TextContainer,
-    FrameCounterTextContainer,
-    FishTextContainer,
-    MoneyTextContainer,
-    PeopleTextContainer,
 }
 
 impl Scene for MainScene {
     type Message = UiMessage;
 
-    fn handle_message(&mut self, message: Self::Message) -> (Option<Self::Message>, bool) {
+    fn handle_message(
+        &mut self,
+        widget_store: &mut WidgetStore<Self::Message>,
+        message: Self::Message,
+    ) -> (Option<Self::Message>, bool) {
         match message {
             UiMessage::IncrementFrameCounter(increment) => {
                 self.frame_counter += increment;
@@ -53,231 +42,99 @@ impl Scene for MainScene {
                 self.custom_counter += increment;
                 (None, true)
             }
+            UiMessage::MoveCursor(Some(physical_position)) => {
+                _ = widget_store.widget_set_position_constraint(
+                    &self.cursor_widget_id.unwrap(),
+                    PositionConstraint::Floating(
+                        physical_position.x as i32,
+                        physical_position.y as i32,
+                    ),
+                );
+                (None, true)
+            }
+            UiMessage::MoveCursor(None) => {
+                // TODO
+                (None, true)
+            }
             _ => (Some(message), false),
         }
     }
 
-    fn view(
-        &self,
-        _aspect_ratio: f32,
-    ) -> Box<dyn Widget<Self::Message>> {
-        let v1 = Container::new()
-            .with_name("v1")
-            .with_span(Span::Pixels(64f32))
-            .with_background(Some(Colour::RED));
-        let v2 = Container::new()
-            .with_name("v2")
-            .with_span(Span::Pixels(128f32))
-            .with_background(Some(Colour::YELLOW));
-        let v3 = Container::new()
-            .with_name("v3")
-            .with_span(Span::Pixels(192f32))
-            .with_background(Some(Colour::GREEN));
-        let v4_text = TextContainer::new()
-            .with_text(Text::new().push_segment(TextSegment::new("Hello!", Colour::WHITE)))
-            .with_background_colour(Some(Colour::DARK_CYAN));
+    fn init(&mut self, widget_store: &mut WidgetStore<Self::Message>) -> WidgetId {
+        // let box_aa = widget_store.add(Container::new().with_background(Some(zui::named_colours::Fox)));
+        // _ = widget_store.widget_set_width_contraint(&box_aa, SpanConstraint::Pixels(64f32));
+        // _ = widget_store.widget_set_height_contraint(&box_aa, SpanConstraint::Pixels(64f32));
 
-        let h1 = Container::new()
-            .with_name("h1")
-            .with_span(Span::Pixels(64f32))
-            .with_background(Some(Colour::CYAN));
-        let h2_text = TextContainer::new().with_text(
-            Text::new().push_segment(TextSegment::new(
-                "This is the h2 text, it goes and goes and keeps on going on and on and on",
-                // "This is the h2 text",
-                Colour::ORANGE,
-            )),
-        );
-        let h2 = Container::new()
-            .with_name("h2")
-            .with_span(Span::Pixels(128f32))
-            .with_background(Some(Colour::BLUE))
-            .push(h2_text);
-        let h3 = Container::new()
-            .with_name("h3")
-            .with_span(Span::Pixels(192f32))
-            .with_background(Some(Colour::MAGENTA));
-        let h4 = Container::new()
-            .with_name("h4")
-            .with_span(Span::Pixels(64f32))
-            .with_background(Some(Colour::CYAN));
-        let h5 = Container::new()
-            .with_name("h5")
-            .with_span(Span::Pixels(128f32))
-            .with_background(Some(Colour::BLUE));
+        // let box_aba = widget_store.add(Container::new().with_background(Some(zui::named_colours::NavalAdventures)));
+        // _ = widget_store.widget_set_width_contraint(&box_aba, SpanConstraint::Pixels(32f32));
+        // _ = widget_store.widget_set_height_contraint(&box_aba, SpanConstraint::Pixels(32f32));
 
-        let row = Container::new()
-            .with_name("row")
-            .with_background(Some(Colour::LIGHT_GREY))
-            .with_axis(Axis::Horizontal)
-            .with_span(Span::FitContents)
-            .push(h1)
-            .push(h2)
-            .push(h3)
-            .push(h4)
-            .push(h5);
+        // let box_abb = widget_store.add(Container::new().with_background(Some(zui::named_colours::Gold)));
+        // _ = widget_store.widget_set_width_contraint(&box_abb, SpanConstraint::Pixels(150f32));
+        // _ = widget_store.widget_set_height_contraint(&box_abb, SpanConstraint::Pixels(30f32));
 
-        let th1 = TextContainer::new()
-            .with_text(
-                Text::new().push_segment(TextSegment::new(" This is text 1!  ", Colour::BLACK)),
-            )
-            .with_background_colour(Some(Colour::LIGHT_RED));
-        let th2 = TextContainer::new()
-            .with_text(
-                Text::new()
-                    .with_configuration(TextConfiguration {
-                        size_px: 18,
-                        ..Default::default()
-                    })
-                    .push_segment(TextSegment {
-                        string: String::from(" This is the second text!  "),
-                        colour: Colour::BLACK,
-                        style: FontStyle::Bold,
-                    }),
-            )
-            .with_background_colour(Some(Colour::LIGHT_GREEN));
-        let th3 = TextContainer::new()
-            .with_text(Text::new().push_segment(TextSegment::new(
-                " This is the third text!   ",
-                Colour::BLACK,
-            )))
-            .with_background_colour(Some(Colour::LIGHT_BLUE));
+        // let box_ab = widget_store.add(Container::new().with_background(Some(zui::named_colours::BloodOrange)));
+        // _ = widget_store.widget_set_width_contraint(&box_ab, SpanConstraint::FitContents);
+        // _ = widget_store.widget_set_height_contraint(&box_ab, SpanConstraint::Pixels(128f32));
+        // _ = widget_store.widget_add_child(&box_ab, box_aba);
+        // _ = widget_store.widget_add_child(&box_ab, box_abb);
 
-        let text_row = Container::new()
-            .with_name("text_row")
-            .with_background(Some(Colour::LIGHT_GREY))
-            .with_axis(Axis::Horizontal)
-            .with_span(Span::FitContents)
-            .push(th1)
-            .push(th2)
-            .push(th3);
+        // let box_ac = widget_store.add(Container::new().with_background(Some(zui::named_colours::AhoyBlue)));
+        // _ = widget_store.widget_set_width_contraint(&box_ac, SpanConstraint::Pixels(100f32));
+        // _ = widget_store.widget_set_height_contraint(&box_ac, SpanConstraint::Pixels(50f32));
 
-        let expandable_child_1 = Container::new()
-            .with_name("expandable_child_1")
-            .with_span(Span::Pixels(128f32))
-            .with_background(Some(zui::named_colours::Yoshi));
-        let expandable_child_2 = Container::new()
-            .with_name("expandable_child_2")
-            .with_span(Span::Pixels(256f32))
-            .with_background(Some(zui::named_colours::Yucca));
-        let expandable_child_3 = Container::new()
-            .with_name("expandable_child_3")
-            .with_span(Span::Pixels(64f32))
-            .with_background(Some(zui::named_colours::YoungCrab));
+        // let box_a = widget_store.add(Container::new().with_background(Some(zui::named_colours::Frog)));
+        // _ = widget_store.widget_set_width_contraint(&box_a, SpanConstraint::ParentRatio(0.8f32));
+        // _ = widget_store.widget_set_height_contraint(&box_a, SpanConstraint::FitContents);
+        // _ = widget_store.widget_add_child(&box_a, box_aa);
+        // _ = widget_store.widget_add_child(&box_a, box_ab);
+        // _ = widget_store.widget_add_child(&box_a, box_ac);
 
-        let expandable_1 = Container::new()
-            .with_name("expandable_1")
-            .with_span(Span::ParentWeight(1f32))
-            .with_background(Some(Colour::YELLOW))
-            .push(expandable_child_1)
-            .push(expandable_child_2)
-            .push(expandable_child_3);
+        // box_a
 
-        let expandable_2_1 = Container::new()
-            .with_name("expandable_2_1")
-            .with_span(Span::ParentWeight(1f32))
-            .with_background(Some(Colour::WHITE));
-        let expandable_2_2_text =
-            TextContainer::new()
-                .with_text(Text::new().push_segment(TextSegment::new(
-                "This is my long test text for the expandable_2_2, I want to make it pretty long \
-                so that I can see it wrap around for a bit. I think that might be pretty useful to \
-                check out my formatting.",
-                Colour::LIGHT_BLUE,
-            ))
-            .push_segment(TextSegment::new(" \u{f023a}", Colour::CYAN))
-            .push_segment(TextSegment::new(&format!(" {}", self.frame_counter), Colour::WHITE))
-            .with_configuration(TextConfiguration {
-                line_wrapping: zui::LineWrapping::Word,
-                size_px: 18,
+        let main_container = widget_store.add(
+            Container::new().with_background(Some(zui::named_colours::StarryNight)),
+            WidgetEntryDescriptor {
+                width_constraint: SpanConstraint::ParentRatio(0.5f32),
+                height_constraint: SpanConstraint::ParentRatio(0.9f32),
                 ..Default::default()
-            })
+            },
         );
-        let frame_counter_text = TextContainer::new()
-            .with_text(
-                Text::new()
-                    .push_segment(TextSegment::new(" \u{f03e} no.", Colour::ORANGE))
-                    .push_segment(TextSegment::new(
-                        &format!(" {}", self.frame_counter),
-                        Colour::WHITE,
-                    )),
-            );
-        let fish_text = TextContainer::new().with_text(
-            Text::new()
-                .push_segment(TextSegment::new(" \u{f023a}", Colour::CYAN))
-                .push_segment(TextSegment::new(
-                    &format!(" {}", self.custom_counter),
-                    Colour::WHITE,
-                )),
+
+        let header = widget_store.add(
+            Container::new().with_background(Some(zui::named_colours::SolarFlare)),
+            WidgetEntryDescriptor {
+                width_constraint: SpanConstraint::ParentRatio(0.8f32),
+                height_constraint: SpanConstraint::Pixels(64f32),
+                ..Default::default()
+            },
         );
-        let money_text = TextContainer::new().with_text(
-            Text::new()
-                .push_segment(TextSegment::new(" \u{f0d6}", Colour::YELLOW))
-                .push_segment(TextSegment::new(
-                    &format!(" {}", self.custom_counter),
-                    Colour::WHITE,
-                )),
+
+        let body = widget_store
+            .add(Container::new().with_background(Some(zui::named_colours::StarshipTonic)),
+            WidgetEntryDescriptor {
+                width_constraint: SpanConstraint::ParentRatio(0.6f32),
+                height_constraint: SpanConstraint::ParentRatio(0.8f32),
+                ..Default::default()
+            },
         );
-        let people_text = TextContainer::new().with_text(
-            Text::new()
-                .push_segment(TextSegment::new(" \u{f4fd}", Colour::ORANGE))
-                .push_segment(TextSegment::new(
-                    &format!(" {}", self.custom_counter),
-                    Colour::WHITE,
-                )),
+
+        // widget that follows the cursor
+        let cursor = widget_store.add(Container::new().with_background(Some(zui::named_colours::ActiveVolcano)),
+            WidgetEntryDescriptor {
+                width_constraint: SpanConstraint::Pixels(32f32),
+                height_constraint: SpanConstraint::Pixels(32f32),
+                position_constraint: PositionConstraint::Floating(30, 30),
+                ..Default::default()
+            },
         );
-        let expandable_2_2 = Container::new()
-            .with_name("expandable_2_2")
-            .with_span(Span::ParentWeight(2f32))
-            .with_background(Some(Colour::BLACK))
-            .push(expandable_2_2_text)
-            .push(frame_counter_text)
-            .push(fish_text)
-            .push(money_text)
-            .push(people_text);
 
-        let reset_counter_button = Button::new(
-            UiMessage::SetCustomCounter(0),
-            Colour::DARK_BLUE,
-            Colour::DARK_CYAN,
-        )
-        .with_text(Text::new().push_segment(TextSegment::new("Reset counter", Colour::WHITE)));
+        self.cursor_widget_id = Some(cursor);
 
-        let increment_counter_button = Button::new(
-            UiMessage::IncrementCustomCounter(1),
-            Colour::DARK_BLUE,
-            Colour::DARK_CYAN,
-        )
-        .with_text(Text::new().push_segment(TextSegment::new("Increment counter", Colour::WHITE)));
+        _ = widget_store.widget_add_child(&main_container, header);
+        _ = widget_store.widget_add_child(&main_container, body);
+        _ = widget_store.widget_add_child(&main_container, cursor);
 
-        let expandable_2_3 = Container::new()
-            .with_name("expandable_2_3")
-            .with_span(Span::ParentWeight(1f32))
-            .with_background(Some(Colour::GREY))
-            .push(reset_counter_button)
-            .push(increment_counter_button);
-
-        let expandable_2 = Container::new()
-            .with_name("expandable_2")
-            .with_axis(Axis::Horizontal)
-            .with_span(Span::ParentWeight(1f32))
-            .with_background(Some(Colour::MAGENTA))
-            .push(expandable_2_1)
-            .push(expandable_2_2)
-            .push(expandable_2_3);
-
-        Container::new()
-            .with_name("root_widget")
-            .with_span(Span::ParentRatio(1f32))
-            .with_background(Some(Colour::DARK_GREY))
-            .push(v1)
-            .push(v2)
-            .push(row)
-            .push(v3)
-            .push(v4_text)
-            .push(text_row)
-            .push(expandable_1)
-            .push(expandable_2)
-            .into()
+        main_container
     }
 }

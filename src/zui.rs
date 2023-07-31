@@ -6,13 +6,15 @@ mod renderable;
 mod scene;
 mod scene_handle;
 mod simple_renderer;
+mod span_constraint;
+mod position_constraint;
+mod stopwatch;
 pub mod text;
 mod text_renderer;
 mod texture_atlas;
 pub mod typeface;
 pub mod util;
 mod widget;
-mod stopwatch;
 mod widget_store;
 
 pub use colour::named as named_colours;
@@ -22,18 +24,22 @@ pub use renderable::Renderable;
 pub use scene::Scene;
 pub use scene_handle::SceneHandle;
 use simple_renderer::SimpleRenderer;
+pub use span_constraint::SpanConstraint;
+pub use position_constraint::{PositionConstraint, PaddingWeights};
 pub use text::{
     LineWrapping, Text, TextAlignmentHorizontal, TextConfiguration, TextSegment, TextSize,
 };
 use text_renderer::TextRenderer;
 pub use typeface::Typeface;
-pub use widget::{Axis, Event, MouseEvent, Span, Widget};
-pub use widget_store::WidgetStore;
+pub use widget::{Axis, Event, MouseEvent, Widget};
+pub use widget_store::{WidgetStore, WidgetId, WidgetEntryDescriptor};
 
 use winit::{
-    dpi::{PhysicalPosition, PhysicalSize},
+    dpi::PhysicalPosition,
     event::{ElementState, WindowEvent},
 };
+
+use self::primitives::Dimensions;
 
 pub struct Zui {
     typeface: Typeface,
@@ -41,7 +47,7 @@ pub struct Zui {
     renderer: SimpleRenderer,
     text_renderer: TextRenderer,
 
-    viewport_dimensions_px: PhysicalSize<u32>,
+    viewport_dimensions_px: Dimensions<u32>,
     aspect_ratio: f32,
     cursor_position: Option<PhysicalPosition<f64>>,
 }
@@ -50,7 +56,7 @@ impl Zui {
     pub fn new(
         device: &wgpu::Device,
         surface_configuration: &wgpu::SurfaceConfiguration,
-        viewport_dimensions_px: PhysicalSize<u32>,
+        viewport_dimensions_px: Dimensions<u32>,
     ) -> Result<Self, ()> {
         let typeface = match Typeface::new(
             Some("resources/zui/fonts/ArimoNerdFont-Regular.ttf"),
@@ -92,7 +98,7 @@ impl Zui {
     /// Returns a rectangle that gives the intersection of the y-up rectangle with the viewport
     fn rectangle_viewport_intersection(
         rect: &Rectangle<u32>,
-        viewport_dimensions_px: PhysicalSize<u32>,
+        viewport_dimensions_px: Dimensions<u32>,
     ) -> Option<Rectangle<u32>> {
         let viewport_rect_px = Rectangle::new(
             0u32,
@@ -107,7 +113,7 @@ impl Zui {
     /// Converts a rectangle from y-up pixel coordinates to y-down framebuffer coordinates
     fn rectangle_pixel_to_framebuffer(
         rect: &Rectangle<u32>,
-        viewport_dimensions_px: PhysicalSize<u32>,
+        viewport_dimensions_px: Dimensions<u32>,
     ) -> Rectangle<u32> {
         Rectangle::new(
             rect.x_min,
@@ -257,7 +263,7 @@ impl Zui {
     }
 
     /// Resizes the zui context
-    fn handle_winit_resized(&mut self, viewport_dimensions_px: PhysicalSize<u32>) {
+    fn handle_winit_resized(&mut self, viewport_dimensions_px: Dimensions<u32>) {
         self.viewport_dimensions_px = viewport_dimensions_px;
         self.aspect_ratio =
             viewport_dimensions_px.width as f32 / viewport_dimensions_px.height as f32;
@@ -332,8 +338,9 @@ impl Zui {
                 });
             }
             WindowEvent::Resized(physical_size) => {
-                self.handle_winit_resized(*physical_size);
-                scene_handle.map(|sh| sh.queue_rebuild_scene());
+                self.handle_winit_resized(physical_size.into());
+                // TODOWS
+                // scene_handle.map(|sh| sh.queue_rebuild_scene());
             }
             WindowEvent::MouseInput { state, .. } => {
                 let event = match state {
@@ -353,7 +360,7 @@ pub struct Context<'a> {
     pub typeface: &'a Typeface,
     pub aspect_ratio: f32,
     pub cursor_position: Option<PhysicalPosition<f64>>,
-    pub viewport_dimensions_px: PhysicalSize<u32>,
+    pub viewport_dimensions_px: Dimensions<u32>,
 }
 
 /// Same as the previously declared context, but with a mutable TypeFace
@@ -361,7 +368,7 @@ pub struct ContextMutTypeface<'a> {
     pub typeface: &'a mut Typeface,
     pub aspect_ratio: f32,
     pub cursor_position: Option<PhysicalPosition<f64>>,
-    pub viewport_dimensions_px: PhysicalSize<u32>,
+    pub viewport_dimensions_px: Dimensions<u32>,
 }
 
 impl<'a> std::fmt::Debug for Context<'a> {

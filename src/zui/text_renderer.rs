@@ -1,7 +1,6 @@
 use wgpu::util::DeviceExt;
-use winit::dpi::PhysicalSize;
 
-use super::{primitives::Rectangle, texture_atlas::TextureAtlas, util};
+use super::{primitives::{Rectangle, Dimensions}, texture_atlas::TextureAtlas, util};
 
 #[allow(dead_code)]
 #[repr(C, align(16))]
@@ -27,7 +26,7 @@ impl TextVertex {
         uv: glam::Vec2,
         colour: glam::Vec4,
         parent_rectangle: &Rectangle<f32>,
-        viewport_dimensions_px: PhysicalSize<u32>
+        viewport_dimensions_px: Dimensions<u32>
     ) -> TextVertex {
         // clip bounds are frame buffer coordinates
         let _clip_bound_x_min = util::normalised_device_space_to_frame_buffer_space_x(

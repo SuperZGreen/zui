@@ -1,6 +1,4 @@
-use winit::dpi::PhysicalSize;
-
-use crate::zui::{Colour, Rectangle};
+use crate::zui::{Colour, Rectangle, primitives::Dimensions};
 
 #[allow(dead_code)]
 #[repr(C, align(16))]
@@ -27,9 +25,9 @@ impl SimpleVertex {
     }
 
     pub fn from_rectangle(
-        rectangle: Rectangle<f32>,
+        rectangle: Rectangle<i32>,
         colour: Colour,
-        viewport_dimensions_px: PhysicalSize<u32>,
+        viewport_dimensions_px: Dimensions<u32>,
     ) -> [Self; 6] {
         let rectangle_vertices = rectangle.vertices(viewport_dimensions_px);
 

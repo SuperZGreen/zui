@@ -6,7 +6,7 @@ use crate::zui::{
     primitives::{Dimensions, Rectangle},
     text::{TextAlignmentHorizontal, TextAlignmentVertical},
     widget::{EventResponse, Layout, LayoutBoundaries},
-    Colour, Context, Event, LineWrapping, MouseEvent, Span, Text, TextConfiguration, TextSegment,
+    Colour, Context, Event, LineWrapping, MouseEvent, SpanConstraint, Text, TextConfiguration, TextSegment,
     Widget,
 };
 
@@ -34,7 +34,7 @@ pub struct FillBar<'a, T, Message> {
     /// The foreground of the FillBar, used to render the foreground colour of the bar
     bar_foreground_rectangle: Option<Rectangle<f32>>,
 
-    span: Span,
+    span: SpanConstraint,
 
     text: Text,
 
@@ -62,13 +62,13 @@ where
             is_grabbed: false,
             clip_rectangle: None,
             bar_foreground_rectangle: None,
-            span: Span::ParentWeight(1f32),
+            span: SpanConstraint::ParentWeight(1f32),
             text,
             layout: Layout::new(),
         }
     }
 
-    pub fn with_span(mut self, span: Span) -> Self {
+    pub fn with_span(mut self, span: SpanConstraint) -> Self {
         self.span = span;
         self
     }
@@ -282,7 +282,7 @@ where
     //     (simple_vertices, text_vertices)
     // }
 
-    fn try_update_dimensions(
+    fn calculate_dimensions(
         &mut self,
         _layout_boundaries: &LayoutBoundaries,
         _context: &Context,

@@ -1,12 +1,12 @@
 use std::collections::VecDeque;
 
-use rustc_hash::FxHashSet;
+use crate::{Rectangle, WidgetStore};
 
 use super::{
-    primitives::Rectangle,
     render_layer::RenderLayer,
-    widget::{Boundary, BoundaryType, Event, EventResponse, LayoutBoundaries, Widget},
-    Context, ContextMutTypeface, Renderable, Scene,
+    widget::{Boundary, BoundaryType, Event, LayoutBoundaries},
+    widget_store::{self, WidgetId},
+    Context, Renderable, Scene,
 };
 
 /// Allows for caching of the widgets produced by Scene::view
@@ -15,213 +15,107 @@ where
     Message: Clone + Copy,
 {
     /// the root widget produced by the scene
-    root_widget: Option<Box<dyn Widget<Message>>>,
+    root_widget_id: Option<WidgetId>,
 
     /// the scene implemented by the user
     scene: Box<dyn Scene<Message = Message>>,
-
-    /// flag checked in update, to rebuild the scene's widgets and rectangles
-    widget_recreation_required: bool,
 
     /// messages produced by the scene widgets
     messages: VecDeque<Message>,
 
     /// messages to be processed by the user developer
     external_messages: VecDeque<Message>,
+
+    /// The persistence/container for Widgets in the underlying scene
+    widget_store: WidgetStore<Message>,
 }
 
 impl<Message> SceneHandle<Message>
 where
     Message: Clone + Copy,
 {
-    pub fn new(
-        scene: Box<dyn Scene<Message = Message>>,
-    ) -> Self {
+    pub fn new(scene: Box<dyn Scene<Message = Message>>) -> Self {
         Self {
-            root_widget: None,
+            root_widget_id: None,
             scene,
-            widget_recreation_required: true,
             messages: VecDeque::new(),
             external_messages: VecDeque::new(),
+            widget_store: WidgetStore::new(),
+        }
+    }
+
+    /// Asks the underlying Scene to build the Widget tree inside of the SceneHandle's WidgetStore.
+    /// Should be called once.
+    pub fn init_scene(&mut self) {
+        self.root_widget_id = Some(self.scene.init(&mut self.widget_store));
+    }
+
+    /// Clears the Widget layout information in the scene, and recalculates Layout info
+    pub fn update(&mut self, context: &Context) {
+        if let Some(root_widget_id) = &self.root_widget_id {
+            let layout_boundaries = LayoutBoundaries {
+                horizontal: Boundary::new(
+                    BoundaryType::Static,
+                    context.viewport_dimensions_px.width as f32,
+                ),
+                vertical: Boundary::new(
+                    BoundaryType::Static,
+                    context.viewport_dimensions_px.height as f32,
+                ),
+            };
+
+            // clearing all layouts
+            self.widget_store.clear_layouts();
+
+            // calculating the child dimensions
+            let dimensions = match self.widget_store.widget_try_update_minimum_dimensions(
+                root_widget_id,
+                &layout_boundaries,
+                context,
+            ) {
+                Ok(dims) => dims,
+                Err(e) => {
+                    warn!("failed to update widget dimensions: {e:?}!");
+                    return;
+                }
+            };
+
+            let region = Rectangle::new(
+                0i32,
+                dimensions.width,
+                context.viewport_dimensions_px.height as i32 - dimensions.height,
+                context.viewport_dimensions_px.height as i32,
+            );
+
+            _ = self.widget_store.widget_place(root_widget_id, region);
         }
     }
 
     /// Allows passing a message to the Scene externally, to be dealt with by the UI
-    pub fn handle_message(&mut self, message: Message) -> Option<Message> {
-        let (message, rebuild_requested) = self.scene.handle_message(message);
-
-        if rebuild_requested {
-            self.widget_recreation_required = true;
-        }
+    pub fn handle_message(
+        &mut self,
+        message: Message,
+    ) -> Option<Message> {
+        let (message, _rebuild_requested) = self.scene.handle_message(&mut self.widget_store, message);
 
         message
     }
 
-    /// Handles external events and rebuilds widgets and rectangles if required
-    pub fn update(
-        &mut self,
-        context_mut_typeface: &mut ContextMutTypeface,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-    ) {
-        self.handle_messages();
-
-        // lazy widget recreation
-        if self.widget_recreation_required {
-            // IMPORTANT: prevents scene from rebuilding if viewport is zero, as this causes a
-            // severe memory leak
-            let viewport_is_zero = context_mut_typeface.viewport_dimensions_px.width == 0
-                || context_mut_typeface.viewport_dimensions_px.height == 0;
-            if !viewport_is_zero {
-                self.rebuild_scene(context_mut_typeface, device, queue);
-            }
-        }
-    }
-
-    /// Queues the recreation of widgets via calling view on the underlying scene
-    pub fn queue_rebuild_scene(&mut self) {
-        self.widget_recreation_required = true;
-    }
-
-    /// Rebuilds the scene using Scene::view, refits the Widgets to the Normalised Device
-    /// Coordinates square
-    fn rebuild_scene(
-        &mut self,
-        context_mut_typeface: &mut ContextMutTypeface,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-    ) {
-        // recreating widgets
-        self.root_widget = Some(
-            self.scene
-                .view(context_mut_typeface.aspect_ratio),
-        );
-
-        // getting the root widget
-        let root_widget = self.root_widget.as_mut().unwrap();
-
-        // let rasterisation_stopwatch = Stopwatch::start();
-        // collecting text symbols for rasterisation
-        let mut symbol_keys = FxHashSet::default();
-        root_widget.collect_text(&mut symbol_keys);
-
-        // // debug printing collected symbol keys
-        // for symbol_key in symbol_keys.iter() {
-        //     info!("symbol_key: {symbol_key:?}");
-        // }
-        // info!("");
-
-        // rasterising the collected symbols and preparing the text atlas etc
-        context_mut_typeface
-            .typeface
-            .rasterise_symbol_keys(symbol_keys, device, queue);
-        // trace!("text rasterisation took: {:.2}ms", rasterisation_stopwatch.elapsed() * 1000f32);
-
-        // creating the layout boundaries to pass to the root widget
-        let layout_boundaries = &LayoutBoundaries::new(
-            Boundary::new(
-                BoundaryType::Static,
-                context_mut_typeface.viewport_dimensions_px.width as f32,
-            ),
-            Boundary::new(
-                BoundaryType::Static,
-                context_mut_typeface.viewport_dimensions_px.height as f32,
-            ),
-        );
-
-        // creating the context
-        let context = Context {
-            typeface: &*context_mut_typeface.typeface,
-            aspect_ratio: context_mut_typeface.aspect_ratio,
-            cursor_position: context_mut_typeface.cursor_position,
-            viewport_dimensions_px: context_mut_typeface.viewport_dimensions_px,
-        };
-
-        // updating the root widget's dimensions
-        let dims = root_widget.try_update_dimensions(layout_boundaries, &context);
-        let clip_rectangle = Rectangle::new(
-            0f32,
-            dims.width,
-            context.viewport_dimensions_px.height as f32 - dims.height,
-            context.viewport_dimensions_px.height as f32,
-        );
-        root_widget.try_fit_rectangle(&clip_rectangle, &context);
-
-        root_widget.place_children(&context);
-
-        self.widget_recreation_required = false;
-    }
-
-    // /// Queues resizing the root widget
-    // pub fn resize_scene(
-    //     &mut self,
-    //     context_mut_typeface: &mut ContextMutTypeface,
-    //     device: &wgpu::Device,
-    //     queue: &wgpu::Queue,
-    // ) {
-    //     // TODO: resize_scene might be defunct?
-    //     self.rebuild_scene(context_mut_typeface, device, queue);
-    // }
-
-    /// Iterates through the self.messages queue and passes messages to the underlying scene one by
-    /// one
-    fn handle_messages(&mut self) {
-        while let Some(message) = self.messages.pop_front() {
-            let (external_message_opt, rebuild_required) = self.scene.handle_message(message);
-
-            if let Some(external_message) = external_message_opt {
-                self.external_messages.push_back(external_message);
-            }
-
-            if rebuild_required {
-                self.widget_recreation_required = true;
-            }
-        }
-    }
-
-    /// Passes a certain event to the scene to be propageed through the widget tree
-    pub fn handle_event(&mut self, mut event: Event, context: &Context) {
-        if let Some(root_widget) = &mut self.root_widget {
-            Self::handle_event_recursively(
-                root_widget,
-                &mut event,
-                context,
-                &mut self.messages,
-            );
-        }
-    }
-
-    /// Handles widget events recursively
-    pub fn handle_event_recursively(
-        // The Widget to handle the event
-        widget: &mut Box<dyn Widget<Message>>,
-
-        // The event for the Widget to handle
-        event: &mut Event,
-
-        // The event Context (mouse position, aspect ratio, fonts, etc)
-        context: &Context,
-
-        // The message as a result of the Widget handling the event
-        result_messages: &mut VecDeque<Message>,
-    ) {
-        let event_response = widget.handle_event(event, context);
-
-        match event_response {
-            EventResponse::Consumed => {} // Do nothing
-            EventResponse::Message(message) => {
-                result_messages.push_back(message);
-            }
-            EventResponse::Propagate => {
-                for child in widget.children_mut().iter_mut() {
-                    Self::handle_event_recursively(
-                        child,
-                        event,
-                        context,
-                        result_messages,
-                    );
+    /// Passes a certain event to all the widgets in the WidgetStore
+    pub fn handle_event(&mut self, event: Event, context: &Context) {
+        for widget_entry in self.widget_store.iter_mut() {
+            // getting the widget's clip rectangle/region
+            let widget_region = match widget_entry.layout.clip_rectangle_px {
+                Some(region) => region,
+                None => {
+                    warn!("Could not get region for Widget");
+                    continue;
                 }
-            }
+            };
+
+            widget_entry
+                .widget
+                .handle_event(&event, &widget_region, context);
         }
     }
 
@@ -236,24 +130,19 @@ where
     Message: Clone + Copy,
 {
     fn to_render_layers(&self, context: &Context) -> VecDeque<RenderLayer> {
-        let root_widget = match &self.root_widget {
-            Some(rw) => rw,
-            None => {
-                warn!("attempting to render SceneHandle with empty root widget");
-                return VecDeque::new();
-            }
-        };
-
         let mut render_layers = VecDeque::new();
         let mut simple_vertices = Vec::new();
         let mut text_vertices = Vec::new();
 
-        root_widget.to_vertices(
-            context,
-            &mut simple_vertices,
-            &mut text_vertices,
-            &mut render_layers,
-        );
+        if let Some(root_widget_id) = self.root_widget_id {
+            _ = self.widget_store.widget_to_vertices(
+                &root_widget_id,
+                context,
+                &mut simple_vertices,
+                &mut text_vertices,
+                &mut render_layers,
+            );
+        }
 
         render_layers.push_front(
             RenderLayer::new(simple_vertices, text_vertices, None).with_name(Some("root_layer")),

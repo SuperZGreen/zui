@@ -1,7 +1,7 @@
 use winit::{
     event::{Event, KeyboardInput, VirtualKeyCode, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
-    window::WindowBuilder,
+    window::WindowBuilder, dpi::PhysicalPosition,
 };
 
 #[macro_use]
@@ -20,6 +20,7 @@ pub enum UiMessage {
     IncrementFrameCounter(u64),
     SetCustomCounter(u64),
     IncrementCustomCounter(u64),
+    MoveCursor(Option<PhysicalPosition<f64>>),
     Exit,
 }
 
@@ -49,12 +50,13 @@ fn main() {
     let mut zui = Zui::new(
         render_state.device(),
         render_state.surface_configuration(),
-        viewport_dimensions_px,
+        viewport_dimensions_px.into(),
     )
     .unwrap();
 
     // setting up the scenes
     let mut scene_handle = SceneHandle::new(Box::new(MainScene::new()));
+    scene_handle.init_scene();
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
@@ -95,8 +97,12 @@ fn main() {
                         }
                         _ => {}
                     },
-                    WindowEvent::CursorMoved { .. } => {
+                    WindowEvent::CursorMoved { position, .. } => {
                         // Do nothing, handled in Zui::handle_winit_window_event
+                        // TODO: hacky
+                        let mut position = *position;
+                        position.y = zui.context().viewport_dimensions_px.height as f64 - position.y;
+                        scene_handle.handle_message(UiMessage::MoveCursor(Some(position)));
                     }
                     WindowEvent::ModifiersChanged(_) => {
                         // TODO
@@ -120,14 +126,10 @@ fn main() {
             Event::Suspended => {}
             Event::Resumed => {}
             Event::MainEventsCleared => {
-                // // TODO: Solving
                 scene_handle.handle_message(UiMessage::IncrementFrameCounter(1));
 
-                scene_handle.update(
-                    &mut zui.context_mut_typeface(),
-                    render_state.device(),
-                    render_state.queue(),
-                );
+                // updating the scene handle
+                scene_handle.update(&zui.context());
 
                 // solving user behaviour
                 while let Some(message) = scene_handle.pop_external_message() {
