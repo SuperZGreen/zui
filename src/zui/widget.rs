@@ -123,6 +123,7 @@ pub trait Widget<Message> {
 
     /// Describes how the WidgetStore should lay out the widget's children. Most Widgets will not
     /// implement this
+    /// TODO
     fn child_placement_descriptor(&self) -> Option<ChildPlacementDescriptor> {
         None
     }

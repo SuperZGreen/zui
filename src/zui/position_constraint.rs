@@ -1,3 +1,5 @@
+use crate::Axis;
+
 /// A PositionConstraint describes a rule by which to determine the position of the Widget
 #[derive(Copy, Clone)]
 pub enum PositionConstraint {
@@ -12,10 +14,10 @@ pub enum PositionConstraint {
 /// Span::ParentWeight(x) in each of the corresponding positions
 #[derive(Copy, Clone)]
 pub struct PaddingWeights {
-    top: f32,
-    bottom: f32,
-    left: f32,
-    right: f32,
+    pub top: f32,
+    pub bottom: f32,
+    pub left: f32,
+    pub right: f32,
 }
 
 impl PaddingWeights {
@@ -47,4 +49,11 @@ impl PaddingWeights {
         }
     }
 
+    /// Sums the two weights along the given axis
+    pub fn sum_by_axis(&self, axis: Axis) -> f32 {
+        match axis {
+            Axis::Vertical => self.top + self.bottom,
+            Axis::Horizontal => self.left + self.right,
+        }
+    }
 }

@@ -1,6 +1,6 @@
 use zui::{
-    premade_widgets::Container, PositionConstraint, Scene, SpanConstraint, WidgetEntryDescriptor,
-    WidgetId, WidgetStore,
+    premade_widgets::Container, PaddingWeights, PositionConstraint, Scene, SpanConstraint,
+    WidgetEntryDescriptor, WidgetId, WidgetStore,
 };
 
 use crate::UiMessage;
@@ -97,6 +97,9 @@ impl Scene for MainScene {
             WidgetEntryDescriptor {
                 width_constraint: SpanConstraint::ParentRatio(0.5f32),
                 height_constraint: SpanConstraint::ParentRatio(0.9f32),
+                position_constraint: PositionConstraint::ParentDetermined(PaddingWeights::vh(
+                    1f32, 1f32,
+                )),
                 ..Default::default()
             },
         );
@@ -106,21 +109,37 @@ impl Scene for MainScene {
             WidgetEntryDescriptor {
                 width_constraint: SpanConstraint::ParentRatio(0.8f32),
                 height_constraint: SpanConstraint::Pixels(64f32),
+                position_constraint: PositionConstraint::ParentDetermined(PaddingWeights::vh(
+                    0f32, 1f32,
+                )),
                 ..Default::default()
             },
         );
 
-        let body = widget_store
-            .add(Container::new().with_background(Some(zui::named_colours::StarshipTonic)),
+        let body = widget_store.add(
+            Container::new().with_background(Some(zui::named_colours::StarshipTonic)),
             WidgetEntryDescriptor {
                 width_constraint: SpanConstraint::ParentRatio(0.6f32),
                 height_constraint: SpanConstraint::ParentRatio(0.8f32),
+                position_constraint: PositionConstraint::ParentDetermined(PaddingWeights::vh(
+                    1f32, 1f32,
+                )),
+                ..Default::default()
+            },
+        );
+
+        let footer = widget_store.add(
+            Container::new().with_background(Some(zui::named_colours::Abyssal)),
+            WidgetEntryDescriptor {
+                width_constraint: SpanConstraint::ParentRatio(1f32),
+                height_constraint: SpanConstraint::Pixels(50f32),
                 ..Default::default()
             },
         );
 
         // widget that follows the cursor
-        let cursor = widget_store.add(Container::new().with_background(Some(zui::named_colours::ActiveVolcano)),
+        let cursor = widget_store.add(
+            Container::new().with_background(Some(zui::named_colours::ActiveVolcano)),
             WidgetEntryDescriptor {
                 width_constraint: SpanConstraint::Pixels(32f32),
                 height_constraint: SpanConstraint::Pixels(32f32),
@@ -133,6 +152,8 @@ impl Scene for MainScene {
 
         _ = widget_store.widget_add_child(&main_container, header);
         _ = widget_store.widget_add_child(&main_container, body);
+        _ = widget_store.widget_add_child(&main_container, footer);
+
         _ = widget_store.widget_add_child(&main_container, cursor);
 
         main_container

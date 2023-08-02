@@ -33,8 +33,10 @@ pub enum SpanConstraint {
     //
     //  Parent-based Sizes, dynamically resizes depending on the size of the parent widget
     //
-    /// Weighted size with respect to the parent's size. Is summed up and divided amongst other
-    /// child's sizes to determine the actual screen-space size of the widget
+    /// Weighted measure of the remaining space after other children widgets have been laid out.
+    /// Will be zero pixels if the parent container is overflowing. The remaining space in the
+    /// parent container is divided amongst all children with Span::ParentWeight along the parent's
+    /// axis according to their weights.
     ParentWeight(f32),
 
     /// The size as a proportion of the parent's size

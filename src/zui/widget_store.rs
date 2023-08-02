@@ -1,13 +1,17 @@
 use std::collections::VecDeque;
 
-use crate::{premade_widgets::Container, Axis, Context, Rectangle, SpanConstraint, Widget, PositionConstraint};
+use crate::{
+    premade_widgets::Container, Axis, Context, PositionConstraint, Rectangle, SpanConstraint,
+    Widget,
+};
 
 use super::{
+    position_constraint::PaddingWeights,
     primitives::Dimensions,
     render_layer::RenderLayer,
     simple_renderer::SimpleVertex,
     text_renderer::TextVertex,
-    widget::{DimensionsError, Layout, LayoutBoundaries, BoundaryType, Boundary}, position_constraint::PaddingWeights,
+    widget::{Boundary, BoundaryType, DimensionsError, Layout, LayoutBoundaries},
 };
 
 /// The ID of a Widget that is stored in the WidgetStore, this is used to access the corresponding
@@ -52,7 +56,6 @@ pub struct WidgetEntryDescriptor {
     // layout is omitted
     // /// The size of the widget and its position
     // pub layout: Layout,
-
     /// The children of the widget
     pub children: Vec<WidgetId>,
 
@@ -91,7 +94,11 @@ impl<Message> WidgetStore<Message> {
     }
 
     /// Adds a Widget to the WidgetStore, returns the WidgetId to fetch the widget later
-    pub fn add(&mut self, widget: impl Into<Box<dyn Widget<Message>>>, widget_entry_descriptor: WidgetEntryDescriptor) -> WidgetId {
+    pub fn add(
+        &mut self,
+        widget: impl Into<Box<dyn Widget<Message>>>,
+        widget_entry_descriptor: WidgetEntryDescriptor,
+    ) -> WidgetId {
         // the widget entry that will be inserted
         let widget_entry = Some(WidgetEntry {
             widget: widget.into(),
@@ -332,7 +339,6 @@ impl<Message> WidgetStore<Message> {
         Ok(())
     }
 
-
     /// Calculates the dimensions of a widget given the provided information, calls recursively on
     /// children if it is FitContents
     pub fn widget_try_update_minimum_dimensions(
@@ -341,7 +347,6 @@ impl<Message> WidgetStore<Message> {
         layout_boundaries: &LayoutBoundaries,
         context: &Context,
     ) -> Result<Dimensions<i32>, DimensionsError> {
-
         // getting the WidgetEntry
         let entry = match self.get(widget_id) {
             Some(we) => we,
@@ -388,7 +393,6 @@ impl<Message> WidgetStore<Message> {
             Err(DimensionsError::FitsChildren) => {
                 let entry = self.get_mut(widget_id).unwrap();
 
-
                 let axis = match entry.widget.as_any().downcast_ref::<Container>() {
                     Some(container) => container.axis,
                     None => {
@@ -430,9 +434,67 @@ impl<Message> WidgetStore<Message> {
             }
         };
 
-        self.get_mut(widget_id).unwrap().layout.minimum_dimensions_px = Some(self_dimensions);
+        self.get_mut(widget_id)
+            .unwrap()
+            .layout
+            .minimum_dimensions_px = Some(self_dimensions);
 
         Ok(self_dimensions)
+    }
+
+    /// Calculates the total used span of the children along the parent's axis, not including
+    /// Span::ParentWeights of course! Returns (span, weights)
+    fn children_sum_span_and_weights(&self, axis: Axis, child_ids: &[WidgetId]) -> (i32, f32) {
+        let mut span = 0i32;
+        let mut weights = 0f32;
+        for child_id in child_ids {
+            let entry = match self.get(child_id) {
+                Some(we) => we,
+                None => {
+                    warn!("failed to find widget with id: {child_id}!");
+                    continue;
+                }
+            };
+
+            // only summing for ParentDetermined children
+            match entry.position_constraint {
+                PositionConstraint::ParentDetermined(_) => {}
+                _ => continue,
+            };
+
+            let minimum_dimensions = match entry.layout.minimum_dimensions_px {
+                Some(min_dims) => min_dims,
+                None => {
+                    warn!("could not find layout for widget with id: {child_id}!");
+                    continue;
+                }
+            };
+
+            span += minimum_dimensions.span_by_axis(axis);
+
+            // adding widget's weight
+            let axis_constraint = match axis {
+                Axis::Vertical => entry.height_constraint,
+                Axis::Horizontal => entry.width_constraint,
+            };
+
+            let parent_weight = match axis_constraint {
+                SpanConstraint::ParentWeight(pw) => pw,
+                _ => 0f32,
+            };
+
+            weights += parent_weight;
+
+            // adding widget's padding weight
+            let padding_weights = match entry.position_constraint {
+                PositionConstraint::ParentDetermined(pw) => pw.sum_by_axis(axis),
+                _ => 0f32,
+            };
+
+            weights += padding_weights;
+        }
+
+        (span, weights)
     }
 
     /// Places a widget and all of its child widgets too
@@ -456,10 +518,25 @@ impl<Message> WidgetStore<Message> {
         };
 
         let child_ids = entry.children.clone();
-        let mut cursor = glam::IVec2::new(region.x_min, region.y_max);
+
+        let free_pixels = entry
+            .layout
+            .minimum_dimensions_px
+            .unwrap()
+            .span_by_axis(axis);
+
+        let (children_span, children_weights) =
+            self.children_sum_span_and_weights(axis, &child_ids);
+
+        let pixels_per_parent_weight = if children_weights == 0f32 {
+            0f32
+        } else {
+            (free_pixels - children_span) as f32 / children_weights
+        };
+
+        let mut cursor = glam::Vec2::new(region.x_min as f32, region.y_max as f32);
 
         for child_id in child_ids {
-
             // getting the child entry
             let child_entry = match self.get(&child_id) {
                 Some(child) => child,
@@ -478,25 +555,43 @@ impl<Message> WidgetStore<Message> {
                 }
             };
 
+            // getting child start and end offset
+            // TODO: needs to change based on axis
+            let start_padding_offset = match child_entry.position_constraint {
+                PositionConstraint::ParentDetermined(pw) => pw.top * pixels_per_parent_weight,
+                _ => 0f32,
+            };
+
+            let end_padding_offset = match child_entry.position_constraint {
+                PositionConstraint::ParentDetermined(pw) => pw.bottom * pixels_per_parent_weight,
+                _ => 0f32,
+            };
+
+            // incrementing cursor by start offset
+            // TODO: needs to account for axis, subpixel movements etc
+            cursor.y -= start_padding_offset;
+
             // determining child region based on position constraint
             let child_region = match child_entry.position_constraint {
                 PositionConstraint::ParentDetermined(_) => {
+                    let child_region_min_x = cursor.x.round() as i32;
+                    let child_region_max_y = cursor.y.round() as i32;
 
                     // determining the child region
                     let child_region = Rectangle::new(
-                        cursor.x,
-                        cursor.x + child_dimensions.width,
-                        cursor.y - child_dimensions.height,
-                        cursor.y,
+                        child_region_min_x,
+                        child_region_min_x + child_dimensions.width,
+                        child_region_max_y - child_dimensions.height,
+                        child_region_max_y,
                     );
 
                     // incrementing the cursor
                     match axis {
                         Axis::Vertical => {
-                            cursor.y -= child_dimensions.height;
+                            cursor.y -= child_dimensions.height as f32;
                         }
                         Axis::Horizontal => {
-                            cursor.x += child_dimensions.width;
+                            cursor.x += child_dimensions.width as f32;
                         }
                     }
 
@@ -519,9 +614,13 @@ impl<Message> WidgetStore<Message> {
                 }
             };
 
+            // incrementing cursor by end offset
+            // TODO: needs to account for axis, subpixel movements etc
+            cursor.y -= end_padding_offset;
+
+
             // placing the child
             _ = self.widget_place(&child_id, child_region);
-
         }
 
         Ok(())
@@ -537,7 +636,6 @@ impl<Message> WidgetStore<Message> {
 
             entry.layout = Layout::new();
         }
-
     }
 }
 
