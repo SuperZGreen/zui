@@ -56,7 +56,6 @@ fn main() {
 
     // setting up the scenes
     let mut scene_handle = SceneHandle::new(Box::new(MainScene::new()));
-    scene_handle.init_scene();
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;

@@ -61,36 +61,15 @@ impl Scene for MainScene {
     }
 
     fn init(&mut self, widget_store: &mut WidgetStore<Self::Message>) -> WidgetId {
-        // let box_aa = widget_store.add(Container::new().with_background(Some(zui::named_colours::Fox)));
-        // _ = widget_store.widget_set_width_contraint(&box_aa, SpanConstraint::Pixels(64f32));
-        // _ = widget_store.widget_set_height_contraint(&box_aa, SpanConstraint::Pixels(64f32));
-
-        // let box_aba = widget_store.add(Container::new().with_background(Some(zui::named_colours::NavalAdventures)));
-        // _ = widget_store.widget_set_width_contraint(&box_aba, SpanConstraint::Pixels(32f32));
-        // _ = widget_store.widget_set_height_contraint(&box_aba, SpanConstraint::Pixels(32f32));
-
-        // let box_abb = widget_store.add(Container::new().with_background(Some(zui::named_colours::Gold)));
-        // _ = widget_store.widget_set_width_contraint(&box_abb, SpanConstraint::Pixels(150f32));
-        // _ = widget_store.widget_set_height_contraint(&box_abb, SpanConstraint::Pixels(30f32));
-
-        // let box_ab = widget_store.add(Container::new().with_background(Some(zui::named_colours::BloodOrange)));
-        // _ = widget_store.widget_set_width_contraint(&box_ab, SpanConstraint::FitContents);
-        // _ = widget_store.widget_set_height_contraint(&box_ab, SpanConstraint::Pixels(128f32));
-        // _ = widget_store.widget_add_child(&box_ab, box_aba);
-        // _ = widget_store.widget_add_child(&box_ab, box_abb);
-
-        // let box_ac = widget_store.add(Container::new().with_background(Some(zui::named_colours::AhoyBlue)));
-        // _ = widget_store.widget_set_width_contraint(&box_ac, SpanConstraint::Pixels(100f32));
-        // _ = widget_store.widget_set_height_contraint(&box_ac, SpanConstraint::Pixels(50f32));
-
-        // let box_a = widget_store.add(Container::new().with_background(Some(zui::named_colours::Frog)));
-        // _ = widget_store.widget_set_width_contraint(&box_a, SpanConstraint::ParentRatio(0.8f32));
-        // _ = widget_store.widget_set_height_contraint(&box_a, SpanConstraint::FitContents);
-        // _ = widget_store.widget_add_child(&box_a, box_aa);
-        // _ = widget_store.widget_add_child(&box_a, box_ab);
-        // _ = widget_store.widget_add_child(&box_a, box_ac);
-
-        // box_a
+        // TODO: this is a workaround as the scenehandle is not placing the widgets correctly..
+        let root = widget_store.add(
+            Container::new(),
+            WidgetEntryDescriptor {
+                width_constraint: SpanConstraint::ParentRatio(1f32),
+                height_constraint: SpanConstraint::ParentRatio(1f32),
+                ..Default::default()
+            },
+        );
 
         let main_container = widget_store.add(
             Container::new().with_background(Some(zui::named_colours::StarryNight)),
@@ -150,12 +129,14 @@ impl Scene for MainScene {
 
         self.cursor_widget_id = Some(cursor);
 
+        _ = widget_store.widget_add_child(&root, main_container);
+
         _ = widget_store.widget_add_child(&main_container, header);
         _ = widget_store.widget_add_child(&main_container, body);
         _ = widget_store.widget_add_child(&main_container, footer);
 
         _ = widget_store.widget_add_child(&main_container, cursor);
 
-        main_container
+        root
     }
 }

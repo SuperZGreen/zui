@@ -5,7 +5,7 @@ use crate::{Rectangle, WidgetStore};
 use super::{
     render_layer::RenderLayer,
     widget::{Boundary, BoundaryType, Event, LayoutBoundaries},
-    widget_store::{self, WidgetId},
+    widget_store::WidgetId,
     Context, Renderable, Scene,
 };
 
@@ -15,13 +15,13 @@ where
     Message: Clone + Copy,
 {
     /// the root widget produced by the scene
-    root_widget_id: Option<WidgetId>,
+    root_widget_id: WidgetId,
 
     /// the scene implemented by the user
     scene: Box<dyn Scene<Message = Message>>,
 
     /// messages produced by the scene widgets
-    messages: VecDeque<Message>,
+    _messages: VecDeque<Message>,
 
     /// messages to be processed by the user developer
     external_messages: VecDeque<Message>,
@@ -34,69 +34,62 @@ impl<Message> SceneHandle<Message>
 where
     Message: Clone + Copy,
 {
-    pub fn new(scene: Box<dyn Scene<Message = Message>>) -> Self {
-        Self {
-            root_widget_id: None,
-            scene,
-            messages: VecDeque::new(),
-            external_messages: VecDeque::new(),
-            widget_store: WidgetStore::new(),
-        }
-    }
+    pub fn new(mut scene: Box<dyn Scene<Message = Message>>) -> Self {
+        let mut widget_store = WidgetStore::new();
+        let root_widget_id = scene.init(&mut widget_store);
 
-    /// Asks the underlying Scene to build the Widget tree inside of the SceneHandle's WidgetStore.
-    /// Should be called once.
-    pub fn init_scene(&mut self) {
-        self.root_widget_id = Some(self.scene.init(&mut self.widget_store));
+        Self {
+            root_widget_id,
+            scene,
+            _messages: VecDeque::new(),
+            external_messages: VecDeque::new(),
+            widget_store,
+        }
     }
 
     /// Clears the Widget layout information in the scene, and recalculates Layout info
     pub fn update(&mut self, context: &Context) {
-        if let Some(root_widget_id) = &self.root_widget_id {
-            let layout_boundaries = LayoutBoundaries {
-                horizontal: Boundary::new(
-                    BoundaryType::Static,
-                    context.viewport_dimensions_px.width as f32,
-                ),
-                vertical: Boundary::new(
-                    BoundaryType::Static,
-                    context.viewport_dimensions_px.height as f32,
-                ),
-            };
+        let layout_boundaries = LayoutBoundaries {
+            horizontal: Boundary::new(
+                BoundaryType::Static,
+                context.viewport_dimensions_px.width as f32,
+            ),
+            vertical: Boundary::new(
+                BoundaryType::Static,
+                context.viewport_dimensions_px.height as f32,
+            ),
+        };
 
-            // clearing all layouts
-            self.widget_store.clear_layouts();
+        // clearing all layouts
+        self.widget_store.clear_layouts();
 
-            // calculating the child dimensions
-            let dimensions = match self.widget_store.widget_try_update_minimum_dimensions(
-                root_widget_id,
-                &layout_boundaries,
-                context,
-            ) {
-                Ok(dims) => dims,
-                Err(e) => {
-                    warn!("failed to update widget dimensions: {e:?}!");
-                    return;
-                }
-            };
+        // calculating the child dimensions
+        let dimensions = match self.widget_store.widget_try_update_minimum_dimensions(
+            &self.root_widget_id,
+            &layout_boundaries,
+            context,
+        ) {
+            Ok(dims) => dims,
+            Err(e) => {
+                warn!("failed to update widget dimensions: {e:?}!");
+                return;
+            }
+        };
 
-            let region = Rectangle::new(
-                0i32,
-                dimensions.width,
-                context.viewport_dimensions_px.height as i32 - dimensions.height,
-                context.viewport_dimensions_px.height as i32,
-            );
+        let region = Rectangle::new(
+            0i32,
+            dimensions.width,
+            context.viewport_dimensions_px.height as i32 - dimensions.height,
+            context.viewport_dimensions_px.height as i32,
+        );
 
-            _ = self.widget_store.widget_place(root_widget_id, region);
-        }
+        _ = self.widget_store.widget_place(&self.root_widget_id, region);
     }
 
     /// Allows passing a message to the Scene externally, to be dealt with by the UI
-    pub fn handle_message(
-        &mut self,
-        message: Message,
-    ) -> Option<Message> {
-        let (message, _rebuild_requested) = self.scene.handle_message(&mut self.widget_store, message);
+    pub fn handle_message(&mut self, message: Message) -> Option<Message> {
+        let (message, _rebuild_requested) =
+            self.scene.handle_message(&mut self.widget_store, message);
 
         message
     }
@@ -134,15 +127,13 @@ where
         let mut simple_vertices = Vec::new();
         let mut text_vertices = Vec::new();
 
-        if let Some(root_widget_id) = self.root_widget_id {
-            _ = self.widget_store.widget_to_vertices(
-                &root_widget_id,
-                context,
-                &mut simple_vertices,
-                &mut text_vertices,
-                &mut render_layers,
-            );
-        }
+        _ = self.widget_store.widget_to_vertices(
+            &self.root_widget_id,
+            context,
+            &mut simple_vertices,
+            &mut text_vertices,
+            &mut render_layers,
+        );
 
         render_layers.push_front(
             RenderLayer::new(simple_vertices, text_vertices, None).with_name(Some("root_layer")),
