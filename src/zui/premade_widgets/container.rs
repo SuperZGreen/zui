@@ -7,9 +7,9 @@ use crate::{
         simple_renderer::SimpleVertex,
         text_renderer::TextVertex,
         widget::{DimensionsError, LayoutBoundaries},
-        Axis, Colour, Context, Event, SpanConstraint, Widget,
+        Axis, Colour, Context, Event, SpanConstraint, Widget, widget_store::{EntryDefaultDescriptor, EntryChildren},
     },
-    MouseEvent,
+    MouseEvent, PaddingWeights,
 };
 
 pub struct Container {
@@ -129,7 +129,7 @@ where
         }
     }
 
-    fn calculate_dimensions(
+    fn calculate_minimum_dimensions(
         &self,
         layout_boundaries: &LayoutBoundaries,
         width_contraint: SpanConstraint,
@@ -162,6 +162,15 @@ where
             width: width_px,
             height: height_px,
         })
+    }
+
+    fn entry_default_descriptor(&self) -> EntryDefaultDescriptor {
+        EntryDefaultDescriptor {
+            children: Some(EntryChildren::new(Axis::Vertical)),
+            width_constraint: SpanConstraint::ParentWeight(1f32),
+            height_constraint: SpanConstraint::ParentWeight(1f32),
+            position_constraint: crate::PositionConstraint::ParentDetermined(PaddingWeights::NONE),
+        }
     }
 }
 

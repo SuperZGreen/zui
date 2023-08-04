@@ -1,3 +1,7 @@
+mod entry;
+
+pub use entry::{Entry, EntryChildren, EntryDefaultDescriptor, EntryOverrideDescriptor};
+
 use std::collections::VecDeque;
 
 use crate::{
@@ -6,7 +10,6 @@ use crate::{
 };
 
 use super::{
-    position_constraint::PaddingWeights,
     primitives::Dimensions,
     render_layer::RenderLayer,
     simple_renderer::SimpleVertex,
@@ -27,62 +30,9 @@ impl std::fmt::Display for WidgetId {
     }
 }
 
-/// A widget's entry in the WidgetStore
-pub struct WidgetEntry<Message> {
-    /// The user-implemented Widget trait object
-    pub widget: Box<dyn Widget<Message>>,
-
-    /// The size of the widget and its position
-    pub layout: Layout,
-
-    /// The children of the widget
-    pub children: Vec<WidgetId>,
-
-    /// The width constraint of the Widget
-    pub width_constraint: SpanConstraint,
-
-    /// The height constraint of the Widget
-    pub height_constraint: SpanConstraint,
-
-    /// Determines the position of the Widget
-    pub position_constraint: PositionConstraint,
-}
-
-pub struct WidgetEntryDescriptor {
-    // widget is omitted
-    // /// The user-implemented Widget trait object
-    // pub widget: Box<dyn Widget<Message>>,
-
-    // layout is omitted
-    // /// The size of the widget and its position
-    // pub layout: Layout,
-    /// The children of the widget
-    pub children: Vec<WidgetId>,
-
-    /// The width constraint of the Widget
-    pub width_constraint: SpanConstraint,
-
-    /// The height constraint of the Widget
-    pub height_constraint: SpanConstraint,
-
-    /// Determines the position of the Widget
-    pub position_constraint: PositionConstraint,
-}
-
-impl Default for WidgetEntryDescriptor {
-    fn default() -> Self {
-        Self {
-            children: Vec::new(),
-            width_constraint: SpanConstraint::FitContents,
-            height_constraint: SpanConstraint::FitContents,
-            position_constraint: PositionConstraint::ParentDetermined(PaddingWeights::NONE),
-        }
-    }
-}
-
 /// Holds the widget state for a scene
 pub struct WidgetStore<Message> {
-    widgets: Vec<Option<WidgetEntry<Message>>>,
+    widgets: Vec<Option<Entry<Message>>>,
 }
 
 impl<Message> WidgetStore<Message> {
@@ -97,16 +47,21 @@ impl<Message> WidgetStore<Message> {
     pub fn add(
         &mut self,
         widget: impl Into<Box<dyn Widget<Message>>>,
-        widget_entry_descriptor: WidgetEntryDescriptor,
+        entry_override_descriptor: EntryOverrideDescriptor,
     ) -> WidgetId {
+        let widget = widget.into();
+
+        let mut entry_descriptor = widget.entry_default_descriptor();
+        entry_descriptor.apply_overrides(entry_override_descriptor);
+
         // the widget entry that will be inserted
-        let widget_entry = Some(WidgetEntry {
-            widget: widget.into(),
+        let widget_entry = Some(Entry {
+            widget,
             layout: Layout::new(),
-            children: widget_entry_descriptor.children,
-            width_constraint: widget_entry_descriptor.width_constraint,
-            height_constraint: widget_entry_descriptor.height_constraint,
-            position_constraint: widget_entry_descriptor.position_constraint,
+            children: entry_descriptor.children,
+            width_constraint: entry_descriptor.width_constraint,
+            height_constraint: entry_descriptor.height_constraint,
+            position_constraint: entry_descriptor.position_constraint,
         });
 
         // trying to get the index of a free entry
@@ -126,7 +81,7 @@ impl<Message> WidgetStore<Message> {
     }
 
     /// Gets a reference to the WidgetEntry
-    pub fn get(&self, widget_id: &WidgetId) -> Option<&WidgetEntry<Message>> {
+    pub fn get(&self, widget_id: &WidgetId) -> Option<&Entry<Message>> {
         match self.widgets.get(widget_id.index) {
             Some(widget_entry_opt) => widget_entry_opt.as_ref(),
             None => None,
@@ -134,7 +89,7 @@ impl<Message> WidgetStore<Message> {
     }
 
     /// Gets a mutable reference to the WidgetEntry
-    pub fn get_mut(&mut self, widget_id: &WidgetId) -> Option<&mut WidgetEntry<Message>> {
+    pub fn get_mut(&mut self, widget_id: &WidgetId) -> Option<&mut Entry<Message>> {
         match self.widgets.get_mut(widget_id.index) {
             Some(widget_entry_opt) => widget_entry_opt.as_mut(),
             None => None,
@@ -173,7 +128,7 @@ impl<Message> WidgetStore<Message> {
 
     /// Gets a free entry (ie. allocated WidgetEntry that is not in use, returns None if there are
     /// no free entries, and a new entry will have to be pushed
-    fn get_available_entry_index(widgets: &Vec<Option<WidgetEntry<Message>>>) -> Option<usize> {
+    fn get_available_entry_index(widgets: &Vec<Option<Entry<Message>>>) -> Option<usize> {
         for (index, widget_entry) in widgets.iter().enumerate() {
             if widget_entry.is_none() {
                 return Some(index);
@@ -194,8 +149,8 @@ impl<Message> WidgetStore<Message> {
     /// Sets the dimensions of the given Widget
     pub fn widget_set_dimensions(
         &mut self,
-        widget_id: &WidgetId,
-        dimensions_px: Option<Dimensions<f32>>,
+        _widget_id: &WidgetId,
+        _dimensions_px: Option<Dimensions<f32>>,
     ) -> Result<(), ()> {
         todo!()
     }
@@ -219,16 +174,23 @@ impl<Message> WidgetStore<Message> {
             }
         };
 
-        entry.children.push(child_widget_id);
-
-        Ok(())
+        match entry.children.as_mut() {
+            Some(children) => {
+                children.ids.push(child_widget_id);
+                Ok(())
+            }
+            None => {
+                warn!("Failed to push child for widget: {parent_widget_id}, widget accepts no children!");
+                Err(())
+            }
+        }
     }
 
     /// Unsets a child Widget for the widget
     pub fn widget_remove_child(
         &mut self,
-        parent_widget_id: &WidgetId,
-        child_widget_id: WidgetId,
+        _parent_widget_id: &WidgetId,
+        _child_widget_id: WidgetId,
     ) -> Result<(), ()> {
         todo!()
     }
@@ -266,7 +228,13 @@ impl<Message> WidgetStore<Message> {
             render_layers,
         );
 
-        let child_ids = &entry.children;
+        let child_ids = match entry.children.as_ref() {
+            Some(children) => &children.ids,
+            None => {
+                return Ok(());
+            }
+        };
+
         drop(entry);
 
         for child_id in child_ids {
@@ -363,15 +331,20 @@ impl<Message> WidgetStore<Message> {
         }
 
         // calculating dimensions from the underlying Widget trait object
-        let dimensions_result = entry.widget.calculate_dimensions(
+        let dimensions_result = entry.widget.calculate_minimum_dimensions(
             layout_boundaries,
             entry.width_constraint,
             entry.height_constraint,
             context,
         );
 
-        // TODO remove clone, may not be possible unless using unsafe?
-        let child_ids = entry.children.clone();
+        // getting child ids and early exit if widget doesn't accept children
+        let child_ids = match entry.children.as_ref() {
+            Some(children) => children.ids.clone(),
+            None => {
+                return dimensions_result;
+            }
+        };
 
         let self_dimensions = match dimensions_result {
             Ok(dims) => {
@@ -499,6 +472,7 @@ impl<Message> WidgetStore<Message> {
 
     /// Places a widget and all of its child widgets too
     pub fn widget_place(&mut self, widget_id: &WidgetId, region: Rectangle<i32>) -> Result<(), ()> {
+        // getting the entry
         let entry = match self.get_mut(widget_id) {
             Some(we) => we,
             None => {
@@ -507,17 +481,23 @@ impl<Message> WidgetStore<Message> {
             }
         };
 
+        //
+        // placing self
+        //
+
         entry.layout.clip_rectangle_px = Some(region);
 
-        // code beyond here is only for Containers
-        let axis = match entry.widget.as_any().downcast_ref::<Container>() {
-            Some(container) => container.axis,
+        //
+        //  Placing children
+        //
+
+        // getting children, early exit if widget does not accept children
+        let (axis, child_ids) = match entry.children.as_ref() {
+            Some(children) => (children.axis, children.ids.clone()),
             None => {
                 return Ok(());
             }
         };
-
-        let child_ids = entry.children.clone();
 
         let free_pixels = entry
             .layout
@@ -618,7 +598,6 @@ impl<Message> WidgetStore<Message> {
             // TODO: needs to account for axis, subpixel movements etc
             cursor.y -= end_padding_offset;
 
-
             // placing the child
             _ = self.widget_place(&child_id, child_region);
         }
@@ -640,12 +619,12 @@ impl<Message> WidgetStore<Message> {
 }
 
 pub struct WidgetStoreIter<'a, Message> {
-    widgets: &'a Vec<Option<WidgetEntry<Message>>>,
+    widgets: &'a Vec<Option<Entry<Message>>>,
     index: usize,
 }
 
 impl<'a, Message> Iterator for WidgetStoreIter<'a, Message> {
-    type Item = &'a WidgetEntry<Message>;
+    type Item = &'a Entry<Message>;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -671,13 +650,13 @@ impl<'a, Message> Iterator for WidgetStoreIter<'a, Message> {
 }
 
 pub struct WidgetStoreIterMut<'a, Message> {
-    widgets: &'a mut [Option<WidgetEntry<Message>>],
+    widgets: &'a mut [Option<Entry<Message>>],
     len: usize,
     index: usize,
 }
 
 impl<'a, Message> Iterator for WidgetStoreIterMut<'a, Message> {
-    type Item = &'a mut WidgetEntry<Message>;
+    type Item = &'a mut Entry<Message>;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -688,13 +667,13 @@ impl<'a, Message> Iterator for WidgetStoreIterMut<'a, Message> {
 
             // getting the current entry, using a raw pointer due to aliasing issues with mutable
             // iterators
-            let entry: *mut Option<WidgetEntry<Message>> = &mut self.widgets[self.index];
+            let entry: *mut Option<Entry<Message>> = &mut self.widgets[self.index];
 
             // incrementing the counter
             self.index += 1;
 
             unsafe {
-                let entry_mut: &mut Option<WidgetEntry<Message>> = &mut *entry;
+                let entry_mut: &mut Option<Entry<Message>> = &mut *entry;
 
                 if let Some(we) = entry_mut {
                     return Some(we);

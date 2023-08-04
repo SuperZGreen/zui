@@ -1,9 +1,13 @@
 use rustc_hash::FxHashSet;
-use winit::dpi::PhysicalSize;
 
 use super::{
-    primitives::Dimensions, render_layer::RenderLayer, simple_renderer::SimpleVertex,
-    text_renderer::TextVertex, typeface::SymbolKey, widget_store::WidgetId, Rectangle,
+    primitives::Dimensions,
+    render_layer::RenderLayer,
+    simple_renderer::SimpleVertex,
+    text_renderer::TextVertex,
+    typeface::SymbolKey,
+    widget_store::EntryDefaultDescriptor,
+    Rectangle,
 };
 use std::{any::Any, collections::VecDeque};
 
@@ -86,7 +90,7 @@ pub trait Widget<Message> {
     /// Asks the widget to calculate its dimensions provided the LayoutBoundaries and width and
     /// height SpanConstraints. The Widget will return a DimensionsError if it can not do this on
     /// its own, and the dimensions calculation will then be performed by the parent
-    fn calculate_dimensions(
+    fn calculate_minimum_dimensions(
         &self,
         layout_boundaries: &LayoutBoundaries,
         width_contraint: SpanConstraint,
@@ -127,6 +131,8 @@ pub trait Widget<Message> {
     fn child_placement_descriptor(&self) -> Option<ChildPlacementDescriptor> {
         None
     }
+
+    fn entry_default_descriptor(&self) -> EntryDefaultDescriptor;
 
     fn as_any(&self) -> &dyn Any;
 }

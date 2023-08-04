@@ -272,7 +272,7 @@ impl RenderState {
         &self.device
     }
 
-    pub fn queue(&self) -> &wgpu::Queue {
+    pub fn _queue(&self) -> &wgpu::Queue {
         &self.queue
     }
 

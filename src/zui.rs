@@ -32,7 +32,7 @@ pub use text::{
 use text_renderer::TextRenderer;
 pub use typeface::Typeface;
 pub use widget::{Axis, Event, MouseEvent, Widget};
-pub use widget_store::{WidgetStore, WidgetId, WidgetEntryDescriptor};
+pub use widget_store::{WidgetStore, WidgetId, EntryOverrideDescriptor};
 
 use winit::{
     dpi::PhysicalPosition,
