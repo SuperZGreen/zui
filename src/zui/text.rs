@@ -243,6 +243,7 @@ impl Text {
     ) -> Vec<TextVertex> {
         // the number of vertices produced by a symbol
         let vertices_per_symbol = 6usize;
+
         let mut vertices = Vec::with_capacity(self.symbols.len() * vertices_per_symbol);
         for symbol in self.symbols.iter() {
             vertices.extend_from_slice(

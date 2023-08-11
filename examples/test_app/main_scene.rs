@@ -1,6 +1,7 @@
 use zui::{
-    premade_widgets::Container, EntryOverrideDescriptor, PaddingWeights, ParentHeight, ParentWidth,
-    PositionConstraint, Scene, SpanConstraint, WidgetId, WidgetStore,
+    premade_widgets::{Container, TextContainer},
+    EntryOverrideDescriptor, PaddingWeights, ParentHeight, ParentWidth, PositionConstraint, Scene,
+    SpanConstraint, Text, TextSegment, WidgetId, WidgetStore, TextConfiguration,
 };
 
 use crate::UiMessage;
@@ -107,6 +108,47 @@ impl Scene for MainScene {
             },
         );
 
+        let first_paragraph = widget_store.add(
+            TextContainer::new()
+            .with_text(Text::new().push_segment(TextSegment::new("Hello there! This is my very long first paragraph full of much useful information that you'll need on your journey through this demo!", zui::named_colours::White)))
+            .with_background_colour(Some(zui::named_colours::RedTape)),
+            EntryOverrideDescriptor {
+                width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1.0f32))),
+                // height_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(0.6f32))),
+                ..Default::default()
+            },
+        );
+
+        let second_paragraph = widget_store.add(
+            TextContainer::new()
+            .with_text(
+                Text::new()
+                    .push_segment(TextSegment::new("This is the Second Paragraph. I spent a lot of time putting together this demo for this library. I hope you enjoy. Take care! Adieu! Bye-bye!", zui::named_colours::White))
+                    .with_configuration(TextConfiguration {
+                        line_wrapping: zui::LineWrapping::Word,
+                        ..Default::default()
+                    })
+            )
+            .with_background_colour(Some(zui::named_colours::Avocado)),
+            EntryOverrideDescriptor {
+                width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1.0f32))),
+                // height_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(0.6f32))),
+                ..Default::default()
+            },
+        );
+
+        let pretend_image = widget_store.add(
+            Container::new().with_background(Some(zui::named_colours::Goldfish)),
+            EntryOverrideDescriptor {
+                width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(0.6f32))),
+                height_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(0.4f32))),
+                position_constraint: Some(PositionConstraint::ParentDetermined(
+                    PaddingWeights::vh(1f32, 1f32),
+                )),
+                ..Default::default()
+            },
+        );
+
         let footer = widget_store.add(
             Container::new().with_background(Some(zui::named_colours::Abyssal)),
             EntryOverrideDescriptor {
@@ -137,6 +179,9 @@ impl Scene for MainScene {
 
         _ = widget_store.widget_add_child(&main_container, cursor);
 
+        _ = widget_store.widget_add_child(&body, first_paragraph);
+        _ = widget_store.widget_add_child(&body, second_paragraph);
+        _ = widget_store.widget_add_child(&body, pretend_image);
         root
     }
 }

@@ -1,7 +1,8 @@
 use winit::{
+    dpi::PhysicalPosition,
     event::{Event, KeyboardInput, VirtualKeyCode, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
-    window::WindowBuilder, dpi::PhysicalPosition,
+    window::WindowBuilder,
 };
 
 #[macro_use]
@@ -100,7 +101,8 @@ fn main() {
                         // Do nothing, handled in Zui::handle_winit_window_event
                         // TODO: hacky
                         let mut position = *position;
-                        position.y = zui.context().viewport_dimensions_px.height as f64 - position.y;
+                        position.y =
+                            zui.context().viewport_dimensions_px.height as f64 - position.y;
                         scene_handle.handle_message(UiMessage::MoveCursor(Some(position)));
                     }
                     WindowEvent::ModifiersChanged(_) => {
@@ -128,7 +130,11 @@ fn main() {
                 scene_handle.handle_message(UiMessage::IncrementFrameCounter(1));
 
                 // updating the scene handle
-                scene_handle.update(&zui.context());
+                scene_handle.update(
+                    &mut zui.context_mut_typeface(),
+                    &render_state.device,
+                    &render_state.queue,
+                );
 
                 // solving user behaviour
                 while let Some(message) = scene_handle.pop_external_message() {

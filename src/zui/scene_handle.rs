@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use crate::{Rectangle, WidgetStore};
+use crate::{Rectangle, WidgetStore, ContextMutTypeface};
 
 use super::{
     render_layer::RenderLayer,
@@ -48,7 +48,21 @@ where
     }
 
     /// Clears the Widget layout information in the scene, and recalculates Layout info
-    pub fn update(&mut self, context: &Context) {
+    pub fn update(&mut self, context: &mut ContextMutTypeface, device: &wgpu::Device, queue: &wgpu::Queue) {
+
+        // collecting all text
+        let symbol_keys = self.widget_store.collect_text();
+
+        context.typeface.rasterise_symbol_keys(symbol_keys, device, queue);
+
+        let context = &Context {
+            typeface: context.typeface,
+            aspect_ratio: context.aspect_ratio,
+            cursor_position: context.cursor_position,
+            viewport_dimensions_px: context.viewport_dimensions_px,
+        };
+
+        // getting the main viewport's layout boundaries
         let layout_boundaries = LayoutBoundaries {
             horizontal: Boundary::new(
                 BoundaryType::Static,

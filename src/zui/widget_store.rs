@@ -6,8 +6,8 @@ use rustc_hash::FxHashSet;
 use std::collections::VecDeque;
 
 use crate::{
-    typeface::SymbolKey, zui::span_constraint::IntoPixelSpan, Axis,
-    Context, PositionConstraint, Rectangle, SpanConstraint, Widget,
+    typeface::SymbolKey, zui::span_constraint::IntoPixelSpan, Axis, Context, PositionConstraint,
+    Rectangle, SpanConstraint, Widget,
 };
 
 use super::{
@@ -139,10 +139,12 @@ impl<Message> WidgetStore<Message> {
     }
 
     /// Collects the text SymbolKeys of all Widgets in the provided FxHashSet
-    pub fn collect_text(&self, symbol_keys: &mut FxHashSet<SymbolKey>) {
+    pub fn collect_text(&self) -> FxHashSet<SymbolKey> {
+        let mut symbol_keys = FxHashSet::default();
         for entry in self.iter() {
-            entry.widget.collect_text(symbol_keys);
+            entry.widget.collect_text(&mut symbol_keys);
         }
+        symbol_keys
     }
 
     //
@@ -371,7 +373,12 @@ impl<Message> WidgetStore<Message> {
     }
 
     /// Places a widget and all of its child widgets too
-    pub fn widget_place(&mut self, widget_id: &WidgetId, region: Rectangle<i32>, context: &Context) -> Result<(), ()> {
+    pub fn widget_place(
+        &mut self,
+        widget_id: &WidgetId,
+        region: Rectangle<i32>,
+        context: &Context,
+    ) -> Result<(), ()> {
         // getting the entry
         let entry = match self.get_mut(widget_id) {
             Some(we) => we,
@@ -386,6 +393,9 @@ impl<Message> WidgetStore<Message> {
         //
 
         entry.layout.clip_rectangle_px = Some(region);
+
+        // allowing widget to update its internals
+        entry.widget.place(&region, context);
 
         //
         //  Placing children
@@ -565,12 +575,9 @@ impl<Message> WidgetStore<Message> {
         let width_constraint = entry.width_constraint;
         let height_constraint = entry.height_constraint;
 
-        // This can be set if widget is SpanConstraint::FitChildren below
-        let mut widget_dimensions = Dimensions::new(0, 0);
-
         // figuring out if either the width or height constraint requires calculation of the
         // children's dimensions
-        if matches!(width_constraint, SpanConstraint::FitChildren)
+        let children_dimensions = if matches!(width_constraint, SpanConstraint::FitChildren)
             || matches!(height_constraint, SpanConstraint::FitChildren)
         {
             // cloning the children ids and axis
@@ -604,8 +611,30 @@ impl<Message> WidgetStore<Message> {
                 };
             }
 
-            widget_dimensions = Dimensions::new(width_counter, height_counter);
-        }
+            Dimensions::new(width_counter, height_counter)
+        } else {
+            Dimensions::new(0, 0)
+        };
+
+        // getting the WidgetEntry again..
+        let entry = match self.get_mut(widget_id) {
+            Some(we) => we,
+            None => {
+                warn!("failed to find widget with id: {widget_id}!");
+                return Dimensions::new(0i32, 0i32);
+            }
+        };
+
+        // getting contents dimensions if fits contents
+        let contents_dimensions = if matches!(width_constraint, SpanConstraint::FitContents)
+            || matches!(height_constraint, SpanConstraint::FitContents)
+        {
+            entry
+                .widget
+                .calculate_minimum_dimensions(layout_boundaries, context)
+        } else {
+            Dimensions::new(0, 0)
+        };
 
         // TODO: check all the i32 casts
         let width_px = match width_constraint {
@@ -613,8 +642,8 @@ impl<Message> WidgetStore<Message> {
             SpanConstraint::ViewHeight(vh) => vh.into_pixel_span(context).round() as i32,
             SpanConstraint::ViewMin(vm) => vm.into_pixel_span(context).round() as i32,
             SpanConstraint::Pixels(p) => p.round() as i32,
-            SpanConstraint::FitContents => todo!(),
-            SpanConstraint::FitChildren => widget_dimensions.width,
+            SpanConstraint::FitContents => contents_dimensions.width,
+            SpanConstraint::FitChildren => children_dimensions.width,
             SpanConstraint::ParentWeight(_) => todo!(),
             SpanConstraint::ParentWidth(pw) => pw.into_pixel_span(layout_boundaries.into()) as i32,
             SpanConstraint::ParentHeight(ph) => ph.into_pixel_span(layout_boundaries.into()) as i32,
@@ -625,8 +654,8 @@ impl<Message> WidgetStore<Message> {
             SpanConstraint::ViewHeight(vh) => vh.into_pixel_span(context).round() as i32,
             SpanConstraint::ViewMin(vm) => vm.into_pixel_span(context).round() as i32,
             SpanConstraint::Pixels(p) => p.round() as i32,
-            SpanConstraint::FitContents => todo!(),
-            SpanConstraint::FitChildren => widget_dimensions.width,
+            SpanConstraint::FitContents => contents_dimensions.height,
+            SpanConstraint::FitChildren => children_dimensions.height,
             SpanConstraint::ParentWeight(_) => todo!(),
             SpanConstraint::ParentWidth(pw) => pw.into_pixel_span(layout_boundaries.into()) as i32,
             SpanConstraint::ParentHeight(ph) => ph.into_pixel_span(layout_boundaries.into()) as i32,

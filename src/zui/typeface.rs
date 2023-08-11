@@ -141,7 +141,7 @@ impl Typeface {
         Some(symbol_info)
     }
 
-    /// Rasterises symbols in the provided hashset
+    /// Rasterises symbols in the provided hashset, and discards those that aren't in symbol_keys
     pub fn rasterise_symbol_keys(
         &mut self,
         symbol_keys: FxHashSet<SymbolKey>,
