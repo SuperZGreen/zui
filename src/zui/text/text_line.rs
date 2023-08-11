@@ -1,5 +1,7 @@
 use std::ops::Range;
 
+use crate::zui::primitives::Dimensions;
+
 use super::{text_configuration::LineWrapping, PixelFontMetrics, Presymbol};
 
 /// Used to calculate the width of a word or group of Text
@@ -272,7 +274,7 @@ impl TextLines {
         Self { lines }
     }
 
-    pub fn viewport_px_dimensions(&self, font_metrics_px: &PixelFontMetrics) -> glam::IVec2 {
+    pub fn viewport_px_dimensions(&self, font_metrics_px: &PixelFontMetrics) -> Dimensions<i32> {
         // lines max width
         let mut width = 0i32;
         for line in self.lines.iter() {
@@ -291,6 +293,6 @@ impl TextLines {
             }
         }
 
-        glam::IVec2::new(width, height)
+        Dimensions::new(width, height)
     }
 }

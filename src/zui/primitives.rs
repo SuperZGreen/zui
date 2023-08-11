@@ -88,6 +88,15 @@ where
     }
 }
 
+impl<T> PartialEq for Rectangle<T> where T: PartialEq {
+    fn eq(&self, other: &Self) -> bool {
+        self.x_min == other.x_min &&
+        self.x_max == other.x_max &&
+        self.y_min == other.y_min &&
+        self.y_max == other.y_max
+    }
+}
+
 impl Rectangle<i32> {
     /// Returns the viewport pixel (y up, (0,0) in bottom left) position vertices that make up the
     /// rectangle in the following order:

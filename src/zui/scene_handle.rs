@@ -52,11 +52,11 @@ where
         let layout_boundaries = LayoutBoundaries {
             horizontal: Boundary::new(
                 BoundaryType::Static,
-                context.viewport_dimensions_px.width as f32,
+                context.viewport_dimensions_px.width as i32,
             ),
             vertical: Boundary::new(
                 BoundaryType::Static,
-                context.viewport_dimensions_px.height as f32,
+                context.viewport_dimensions_px.height as i32,
             ),
         };
 
@@ -64,17 +64,11 @@ where
         self.widget_store.clear_layouts();
 
         // calculating the child dimensions
-        let dimensions = match self.widget_store.widget_try_update_minimum_dimensions(
+        let dimensions = self.widget_store.widget_try_update_minimum_dimensions(
             &self.root_widget_id,
             &layout_boundaries,
             context,
-        ) {
-            Ok(dims) => dims,
-            Err(e) => {
-                warn!("failed to update widget dimensions: {e:?}!");
-                return;
-            }
-        };
+        );
 
         let region = Rectangle::new(
             0i32,
@@ -83,7 +77,7 @@ where
             context.viewport_dimensions_px.height as i32,
         );
 
-        _ = self.widget_store.widget_place(&self.root_widget_id, region);
+        _ = self.widget_store.widget_place(&self.root_widget_id, region, context);
     }
 
     /// Allows passing a message to the Scene externally, to be dealt with by the UI

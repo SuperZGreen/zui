@@ -9,16 +9,10 @@ pub struct GlyphOrigin {
 
 impl GlyphOrigin {
     /// Places the origin at the top left of the rectangle
-    pub fn at_top_left(clip_region: &Rectangle<f32>, font_metrics_px: &PixelFontMetrics) -> Self {
+    pub fn at_top_left(clip_region: &Rectangle<i32>, font_metrics_px: &PixelFontMetrics) -> Self {
         let viewport_px_position = glam::IVec2::new(
             clip_region.x_min as i32,
-            // This is ceiled as a workaround, as text is pixel aligned, and clipping rectangles are
-            // not, therefore truncating downwards with 'as i32' can force the bottom pixels of
-            // characters such as 'p's, 'y's, 'g's etc off the bottom of a Container whose size is
-            // determined by the span of the TextLayout, or that is supposed to be 100% of the
-            // Container height. It is unlikely that the extra pixel that may be missing from the
-            // top of the container will cause clipping, whereas the bottom pixel is far more likely
-            clip_region.y_max.ceil() as i32 - font_metrics_px.ascent,
+            clip_region.y_max - font_metrics_px.ascent,
         );
 
         Self {
@@ -28,13 +22,12 @@ impl GlyphOrigin {
 
     /// Places the origin at the top left of the rectangle
     pub fn at_centre_left(
-        clip_region: &Rectangle<f32>,
+        clip_region: &Rectangle<i32>,
         font_metrics_px: &PixelFontMetrics,
     ) -> Self {
-        let margin_y = (clip_region.height()
-            - (font_metrics_px.ascent - font_metrics_px.descent) as f32)
-            / 2f32;
-        let origin_position_y = clip_region.y_min + margin_y - font_metrics_px.descent as f32;
+        let margin_y = (clip_region.height() - (font_metrics_px.ascent - font_metrics_px.descent))
+            / 2i32;
+        let origin_position_y = clip_region.y_min + margin_y - font_metrics_px.descent;
 
         let viewport_px_position =
             glam::IVec2::new(clip_region.x_min as i32, origin_position_y as i32);
@@ -46,15 +39,12 @@ impl GlyphOrigin {
 
     /// Places the origin at the bottom left of the rectangle
     pub fn at_bottom_left(
-        clip_region: &Rectangle<f32>,
+        clip_region: &Rectangle<i32>,
         font_metrics_px: &PixelFontMetrics,
     ) -> Self {
         let viewport_px_position = glam::IVec2::new(
-            clip_region.x_min as i32,
-            // have to ceil y_min otherwise characters such as 'y's and 'g's can display below the
-            // bottom of the clip region. This is because clip regions are not pixel aligned, and
-            // may display a pixel above what is expected when truncating through y_min as i32
-            clip_region.y_min.ceil() as i32 - font_metrics_px.descent,
+            clip_region.x_min,
+            clip_region.y_min - font_metrics_px.descent,
         );
 
         Self {
@@ -88,8 +78,8 @@ impl GlyphOrigin {
 
     /// Resets the glyph origin to the left of the parent rectangle and moves downward for a new
     /// line
-    pub fn new_line(&mut self, clip_rectangle: &Rectangle<f32>, font_metrics_px: &PixelFontMetrics) {
-        self.viewport_px_position.x = clip_rectangle.x_min as i32;
+    pub fn new_line(&mut self, clip_rectangle: &Rectangle<i32>, font_metrics_px: &PixelFontMetrics) {
+        self.viewport_px_position.x = clip_rectangle.x_min;
         self.viewport_px_position.y -= font_metrics_px.new_line_size;
     }
 }

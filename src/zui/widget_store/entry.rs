@@ -75,7 +75,7 @@ impl Default for EntryOverrideDescriptor {
     }
 }
 
-/// The default descriptor for an Entry
+/// The default descriptor for an Entry, set by the Widget's implementation
 pub struct EntryDefaultDescriptor {
     /// The children of the widget
     pub children: Option<EntryChildren>,

@@ -6,7 +6,6 @@ use glyph_origin::GlyphOrigin;
 use rustc_hash::FxHashSet;
 use text_line::TextLines;
 
-use winit::dpi::PhysicalSize;
 
 use super::{
     primitives::{Dimensions, Rectangle},
@@ -53,14 +52,14 @@ impl Default for TextSegment {
 struct TextLayout {
     pub presymbols: Vec<Presymbol>,
     pub lines: TextLines,
-    pub viewport_dimensions_px: glam::IVec2,
+    pub viewport_dimensions_px: Dimensions<i32>,
 }
 
 impl TextLayout {
     pub fn new(
         presymbols: Vec<Presymbol>,
         lines: TextLines,
-        viewport_dimensions_px: glam::IVec2,
+        viewport_dimensions_px: Dimensions<i32>,
     ) -> Self {
         Self {
             presymbols,
@@ -133,7 +132,7 @@ impl Text {
         &mut self,
         typeface: &Typeface,
         bounds: Bounds<f32>,
-        _viewport_dimensions_px: PhysicalSize<u32>, // TODO: will be used for other text height calculations (?)
+        _viewport_dimensions_px: Dimensions<u32>, // TODO: will be used for other text height calculations (?)
     ) {
         // converting the line metrics of Fontdue to screen space
         let font_metrics_px = typeface
@@ -164,7 +163,7 @@ impl Text {
 
     /// Updates/places/caluclates the symbol dimensions and locations from the Text's TextSegments,
     /// performing line wrapping, alignment etc
-    pub fn place_symbols(&mut self, typeface: &Typeface, clip_rectangle: &Rectangle<f32>) {
+    pub fn place_symbols(&mut self, typeface: &Typeface, clip_rectangle: &Rectangle<i32>) {
         let layout = match &mut self.layout {
             Some(layout) => layout,
             None => return,
@@ -198,7 +197,7 @@ impl Text {
             let horizontal_offset = match self.configuration.horizontal_alignment {
                 TextAlignmentHorizontal::Left => 0i32,
                 TextAlignmentHorizontal::Centre => {
-                    ((clip_rectangle.width() - line.viewport_px_dimensions.x as f32) / 2f32) as i32
+                    (clip_rectangle.width() - line.viewport_px_dimensions.x) / 2i32
                 }
                 TextAlignmentHorizontal::Right => {
                     clip_rectangle.width() as i32 - line.viewport_px_dimensions.x
@@ -215,22 +214,18 @@ impl Text {
     }
 
     /// Gives the screen space span of the text along a given axis
-    pub fn span_px(&self, axis: Axis) -> Option<f32> {
-        let axis_index = axis.to_index();
+    pub fn span_px(&self, axis: Axis) -> Option<i32> {
         if let Some(layout) = &self.layout {
-            Some(layout.viewport_dimensions_px[axis_index] as f32)
+            Some(layout.viewport_dimensions_px.span_by_axis(axis))
         } else {
             None
         }
     }
 
     /// Gives the dimensions of the text object after it has been layed out with 'update_layout'
-    pub fn dimensions_px(&self) -> Option<Dimensions<f32>> {
+    pub fn dimensions_px(&self) -> Option<Dimensions<i32>> {
         if let Some(layout) = self.layout.as_ref() {
-            Some(Dimensions::new(
-                layout.viewport_dimensions_px.x as f32,
-                layout.viewport_dimensions_px.y as f32,
-            ))
+            Some(layout.viewport_dimensions_px)
         } else {
             None
         }
@@ -241,7 +236,7 @@ impl Text {
         &self,
         // The clipping region of the parent widget, can not render fragments outside of this rect.
         // Given in viewport pixels
-        parent_clip_region: Rectangle<f32>,
+        parent_clip_region: Rectangle<i32>,
         // The viewport dimensions in pixels, used to calculate the clip bounds for the text
         // fragment shader
         viewport_dimensions_px: Dimensions<u32>,
@@ -303,7 +298,7 @@ impl Symbol {
     /// Produces text vertices from the [`Symbol`]
     pub fn to_text_vertices(
         &self,
-        parent_clip_region: Rectangle<f32>,
+        parent_clip_region: Rectangle<i32>,
         viewport_dimensions_px: Dimensions<u32>,
     ) -> [TextVertex; 6] {
         let symbol_rectangle = Rectangle::new(

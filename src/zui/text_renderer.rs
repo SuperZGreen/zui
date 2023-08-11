@@ -1,6 +1,10 @@
 use wgpu::util::DeviceExt;
 
-use super::{primitives::{Rectangle, Dimensions}, texture_atlas::TextureAtlas, util};
+use super::{
+    primitives::{Dimensions, Rectangle},
+    texture_atlas::TextureAtlas,
+    util,
+};
 
 #[allow(dead_code)]
 #[repr(C, align(16))]
@@ -25,26 +29,26 @@ impl TextVertex {
         position: glam::Vec2,
         uv: glam::Vec2,
         colour: glam::Vec4,
-        parent_rectangle: &Rectangle<f32>,
-        viewport_dimensions_px: Dimensions<u32>
+        parent_rectangle: &Rectangle<i32>,
+        viewport_dimensions_px: Dimensions<u32>,
     ) -> TextVertex {
         // clip bounds are frame buffer coordinates
         let _clip_bound_x_min = util::normalised_device_space_to_frame_buffer_space_x(
-            parent_rectangle.x_min,
+            parent_rectangle.x_min as f32, // TODO: see if this conversion to f32 is appropriate
             viewport_dimensions_px.width as f32,
         );
         let _clip_bound_x_max = util::normalised_device_space_to_frame_buffer_space_x(
-            parent_rectangle.x_max,
+            parent_rectangle.x_max as f32, // TODO: see if this conversion to f32 is appropriate
             viewport_dimensions_px.width as f32,
         );
 
         // Note: the max and min will swap due to the y-down nature of wgpu's frame buffer coordinates
         let _clip_bound_y_max = util::normalised_device_space_to_frame_buffer_space_y(
-            parent_rectangle.y_min,
+            parent_rectangle.y_min as f32, // TODO: see if this conversion to f32 is appropriate
             viewport_dimensions_px.height as f32,
         );
         let _clip_bound_y_min = util::normalised_device_space_to_frame_buffer_space_y(
-            parent_rectangle.y_max,
+            parent_rectangle.y_max as f32, // TODO: see if this conversion to f32 is appropriate
             viewport_dimensions_px.height as f32,
         );
 
@@ -59,12 +63,7 @@ impl TextVertex {
             //     clip_bound_y_min,
             //     clip_bound_y_max,
             // ),
-            clip_bounds: glam::Vec4::new(
-                -1f32,
-                1f32,
-                -1f32,
-                1f32,
-            ),
+            clip_bounds: glam::Vec4::new(-1f32, 1f32, -1f32, 1f32),
         }
     }
 

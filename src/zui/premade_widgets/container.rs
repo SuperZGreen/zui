@@ -6,16 +6,13 @@ use crate::{
         render_layer::RenderLayer,
         simple_renderer::SimpleVertex,
         text_renderer::TextVertex,
-        widget::{DimensionsError, LayoutBoundaries},
+        widget::LayoutBoundaries,
         Axis, Colour, Context, Event, SpanConstraint, Widget, widget_store::{EntryDefaultDescriptor, EntryChildren},
     },
     MouseEvent, PaddingWeights,
 };
 
 pub struct Container {
-    /// The axis that the children of the Container are placed along within the Container
-    pub axis: Axis,
-
     // The name/tag of the Container, usually for debugging purposes
     pub name: Option<String>,
 
@@ -34,7 +31,6 @@ impl Container {
     pub fn new() -> Self {
         Self {
             name: None,
-            axis: Axis::Vertical,
             background: None,
             overflowing: false,
             test_toggle: false,
@@ -44,12 +40,6 @@ impl Container {
     /// Used for diagnostic purposes
     pub fn with_name(mut self, name: &str) -> Self {
         self.name = Some(String::from(name));
-        self
-    }
-
-    /// Sets the Axis along which the container's Widgets are laid out
-    pub fn with_axis(mut self, axis: Axis) -> Self {
-        self.axis = axis;
         self
     }
 
@@ -130,38 +120,11 @@ where
     }
 
     fn calculate_minimum_dimensions(
-        &self,
-        layout_boundaries: &LayoutBoundaries,
-        width_contraint: SpanConstraint,
-        height_contraint: SpanConstraint,
+        &mut self,
+        _layout_boundaries: &LayoutBoundaries,
         _context: &Context,
-    ) -> Result<Dimensions<i32>, DimensionsError> {
-        let width_px = match width_contraint {
-            SpanConstraint::Pixels(px) => px as i32,
-            SpanConstraint::ParentRatio(pr) => {
-                (layout_boundaries.horizontal.span_px as f32 * pr) as i32
-            }
-            SpanConstraint::FitContents => {
-                return Err(DimensionsError::FitsChildren);
-            }
-            _ => 32i32,
-        };
-
-        let height_px = match height_contraint {
-            SpanConstraint::Pixels(px) => px as i32,
-            SpanConstraint::ParentRatio(pr) => {
-                (layout_boundaries.vertical.span_px as f32 * pr) as i32
-            }
-            SpanConstraint::FitContents => {
-                return Err(DimensionsError::FitsChildren);
-            }
-            _ => 32i32,
-        };
-
-        Ok(Dimensions {
-            width: width_px,
-            height: height_px,
-        })
+    ) -> Dimensions<i32> {
+        Dimensions::new(0i32, 0i32)
     }
 
     fn entry_default_descriptor(&self) -> EntryDefaultDescriptor {

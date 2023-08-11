@@ -1,4 +1,5 @@
 mod colour;
+mod position_constraint;
 pub mod premade_widgets;
 mod primitives;
 mod render_layer;
@@ -7,7 +8,6 @@ mod scene;
 mod scene_handle;
 mod simple_renderer;
 mod span_constraint;
-mod position_constraint;
 mod stopwatch;
 pub mod text;
 mod text_renderer;
@@ -19,20 +19,20 @@ mod widget_store;
 
 pub use colour::named as named_colours;
 pub use colour::Colour;
+pub use position_constraint::{PaddingWeights, PositionConstraint};
 pub use primitives::Rectangle;
 pub use renderable::Renderable;
 pub use scene::Scene;
 pub use scene_handle::SceneHandle;
 use simple_renderer::SimpleRenderer;
-pub use span_constraint::SpanConstraint;
-pub use position_constraint::{PositionConstraint, PaddingWeights};
+pub use span_constraint::{ParentHeight, ParentWidth, SpanConstraint, ViewHeight, ViewWidth};
 pub use text::{
     LineWrapping, Text, TextAlignmentHorizontal, TextConfiguration, TextSegment, TextSize,
 };
 use text_renderer::TextRenderer;
 pub use typeface::Typeface;
 pub use widget::{Axis, Event, MouseEvent, Widget};
-pub use widget_store::{WidgetStore, WidgetId, EntryOverrideDescriptor};
+pub use widget_store::{EntryOverrideDescriptor, WidgetId, WidgetStore};
 
 use winit::{
     dpi::PhysicalPosition,

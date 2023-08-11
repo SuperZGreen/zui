@@ -1,17 +1,13 @@
 use rustc_hash::FxHashSet;
 
 use super::{
-    primitives::Dimensions,
-    render_layer::RenderLayer,
-    simple_renderer::SimpleVertex,
-    text_renderer::TextVertex,
-    typeface::SymbolKey,
-    widget_store::EntryDefaultDescriptor,
+    primitives::Dimensions, render_layer::RenderLayer, simple_renderer::SimpleVertex,
+    text_renderer::TextVertex, typeface::SymbolKey, widget_store::EntryDefaultDescriptor,
     Rectangle,
 };
 use std::{any::Any, collections::VecDeque};
 
-use crate::{zui::Context, SpanConstraint, WidgetStore};
+use crate::zui::Context;
 
 #[derive(Copy, Clone)]
 pub enum Axis {
@@ -58,23 +54,6 @@ pub enum Event {
     // FitRectangle(Rectangle<f32>),
 }
 
-/// Error returned by Widget::calculate_dimensions
-#[derive(Debug)]
-pub enum DimensionsError {
-    /// Is given if the Widget contains a SpanConstraint::ParentWeight, where the dimensions of the
-    /// widget is unable to be calculated by the Widget in isolation or with its children, and
-    /// instead is determined by the Parent.
-    IsSetByParent,
-
-    /// This is returned if the Widget needs to fit its children, as the Widget object in isolation
-    /// has no concept of its children, this needs to be performed by the WidgetEntry, which is
-    /// made aware of the fact it needs to perform this calculation by this error value
-    FitsChildren,
-
-    /// A catch all error
-    Other,
-}
-
 pub struct ChildPlacementDescriptor {
     /// The axis that the children will be placed along
     pub axis: Axis,
@@ -91,21 +70,21 @@ pub trait Widget<Message> {
     /// height SpanConstraints. The Widget will return a DimensionsError if it can not do this on
     /// its own, and the dimensions calculation will then be performed by the parent
     fn calculate_minimum_dimensions(
-        &self,
+        &mut self,
         layout_boundaries: &LayoutBoundaries,
-        width_contraint: SpanConstraint,
-        height_contraint: SpanConstraint,
         context: &Context,
-    ) -> Result<Dimensions<i32>, DimensionsError>;
+    ) -> Dimensions<i32>;
 
-    /// Widgets insert all characters (SymbolKeys) that they will need to render their Text, and
-    /// propogates the call to their children. This is to ensure that the font system has the
-    /// required characters rasterised and ready to render when text Presymbols are generated
-    fn collect_text(
-        &self,
-        widget_store: &WidgetStore<Message>,
-        symbol_keys: &mut FxHashSet<SymbolKey>,
-    ) {
+    /// Adds the Text's SymbolKeys to the symbol_keys FxHashSet for this widget. Does not propagate
+    /// to chilren as it is called on all valid entries by the WidgetStore. This is to ensure that
+    /// the font system has the required characters rasterised and ready to render when text
+    /// Presymbols are generated
+    fn collect_text(&self, symbol_keys: &mut FxHashSet<SymbolKey>) {
+        // Do nothing
+    }
+
+    /// Allows the widget to update any extra internals required when the widget is placed
+    fn place(&mut self, region: &Rectangle<i32>, context: &Context) {
         // Do nothing
     }
 
@@ -146,11 +125,11 @@ pub enum BoundaryType {
 
 pub struct Boundary {
     pub boundary_type: BoundaryType,
-    pub span_px: f32,
+    pub span_px: i32,
 }
 
 impl Boundary {
-    pub fn new(boundary_type: BoundaryType, span_px: f32) -> Self {
+    pub fn new(boundary_type: BoundaryType, span_px: i32) -> Self {
         Self {
             boundary_type,
             span_px,
@@ -178,6 +157,16 @@ impl LayoutBoundaries {
             Axis::Vertical => &self.vertical,
             Axis::Horizontal => &self.horizontal,
         }
+    }
+}
+
+/// Converts LayoutBoundaries to Dimensions<i32> for SpanConstraint::ParentWidth/Height calculation
+impl Into<Dimensions<i32>> for &LayoutBoundaries {
+    fn into(self) -> Dimensions<i32> {
+        let width = self.horizontal.span_px;
+        let height = self.vertical.span_px;
+
+        Dimensions::new(width, height)
     }
 }
 

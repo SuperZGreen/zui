@@ -1,4 +1,4 @@
-use crate::{Rectangle, Axis, Context};
+use crate::Context;
 
 use super::primitives::Dimensions;
 
@@ -13,20 +13,23 @@ pub enum SpanConstraint {
     //
     /// Fixed Span, Size as a portion of the view height, ie. the height of the application window
     /// surface is 1
-    ViewWidth(f32),
+    ViewWidth(ViewWidth),
 
     /// Fixed Span: Size as a portion of the view width, ie. the width of the application window
     /// surface is 1
-    ViewHeight(f32),
+    ViewHeight(ViewHeight),
 
     /// Fixed Span: Relative size with respect to the minimum dimension of the wgpu viewport
-    ViewMin(f32),
+    ViewMin(ViewMin),
 
     /// Fixed Span: The length in pixels of the Span
     Pixels(f32),
 
     /// ALlows the widget to determine its own size
     FitContents,
+
+    /// Fits the children of the widget
+    FitChildren,
 
     // TODO: ViewMax?
 
@@ -39,91 +42,101 @@ pub enum SpanConstraint {
     /// axis according to their weights.
     ParentWeight(f32),
 
-    /// The size as a proportion of the parent's size
-    ParentRatio(f32),
+    /// Gives as a portion of the parent widget's width
+    ParentWidth(ParentWidth),
+
+    /// Gives as a portion of the parent widget's width
+    ParentHeight(ParentHeight),
 }
 
-impl SpanConstraint {
-    pub fn view_min_to_span_px(view_min: f32, viewport_dimensions_px: Dimensions<u32>) -> f32 {
-        if viewport_dimensions_px.width < viewport_dimensions_px.height {
-            Self::view_width_to_span_px(view_min, viewport_dimensions_px.width)
-        } else {
-            Self::view_height_to_span_px(view_min, viewport_dimensions_px.height)
-        }
-    }
+/// Allows transformation of SpanConstraints into floating pixel span values
+pub trait IntoPixelSpan {
+    fn into_pixel_span(&self, context: &Context) -> f32;
+}
 
-    pub fn view_height_to_span_px(view_height: f32, viewport_height_px: u32) -> f32 {
-        view_height as f32 * viewport_height_px as f32
-    }
+/// Describes a span in terms of a viewport height coefficient
+#[derive(Copy, Clone)]
+pub struct ViewHeight {
+    pub value: f32,
+}
 
-    pub fn view_width_to_span_px(
-        view_width: f32,
-        // The width of the viewport in pixels
-        viewport_width_px: u32,
-    ) -> f32 {
-        view_width as f32 * viewport_width_px as f32
-    }
-
-    /// Converts the span into a pixel span value given context and parent widget region and axis
-    pub fn to_viewport_px(
-        &self,
-        parent_rectangle: &Rectangle<f32>,
-        parent_axis: Axis,
-        sum_of_parent_weights: Option<f32>,
-        // the amount of screen space not taken up by non-weighted widgets
-        parent_span_px_available: Option<u32>,
-        context: &Context,
-        fit_contents_span_px: f32,
-    ) -> f32 {
-        match self {
-            SpanConstraint::ViewWidth(vw) => {
-                Self::view_width_to_span_px(*vw, context.viewport_dimensions_px.width)
-            }
-            SpanConstraint::ViewHeight(vh) => {
-                Self::view_height_to_span_px(*vh, context.viewport_dimensions_px.height)
-            }
-            SpanConstraint::ViewMin(vm) => Self::view_min_to_span_px(*vm, context.viewport_dimensions_px),
-            SpanConstraint::Pixels(px) => *px,
-            SpanConstraint::ParentWeight(pw) => {
-                if sum_of_parent_weights.is_none() || parent_span_px_available.is_none() {
-                    0f32
-                } else {
-                    *pw / sum_of_parent_weights.unwrap() * parent_span_px_available.unwrap() as f32
-                }
-            }
-            SpanConstraint::ParentRatio(ratio) => *ratio * parent_rectangle.span_by_axis(parent_axis) as f32,
-            SpanConstraint::FitContents => fit_contents_span_px,
-        }
-    }
-
-    /// Converts fixed type Spans to f32 viewport pixels
-    pub fn min_span_px(
-        &self,
-        axis: Axis,
-        region_dimensions_px: Dimensions<f32>,
-        viewport_dimensions_px: Dimensions<u32>,
-    ) -> Option<f32> {
-        match self {
-            SpanConstraint::ViewWidth(vw) => Some(Self::view_width_to_span_px(
-                *vw,
-                viewport_dimensions_px.width,
-            )),
-            SpanConstraint::ViewHeight(vh) => Some(Self::view_height_to_span_px(
-                *vh,
-                viewport_dimensions_px.height,
-            )),
-            SpanConstraint::ViewMin(vm) => Some(Self::view_min_to_span_px(*vm, viewport_dimensions_px)),
-            SpanConstraint::Pixels(p) => Some(*p),
-            SpanConstraint::ParentRatio(pr) => {
-                let parent_span_px = region_dimensions_px.span_by_axis(axis);
-                Some(pr * parent_span_px)
-            }
-
-            // This is also potentially a 'fixed' type, but can not be calculated here, so returns
-            // None instead
-            SpanConstraint::FitContents => None,
-            SpanConstraint::ParentWeight(_) => None,
-        }
+impl ViewHeight {
+    pub fn new(value: f32) -> Self {
+        Self { value }
     }
 }
 
+impl IntoPixelSpan for ViewHeight {
+    fn into_pixel_span(&self, context: &Context) -> f32 {
+        self.value as f32 * context.viewport_dimensions_px.height as f32
+    }
+}
+
+/// Describes a span in terms of a viewport width coefficient
+#[derive(Copy, Clone)]
+pub struct ViewWidth {
+    pub value: f32,
+}
+
+impl ViewWidth {
+    pub fn new(value: f32) -> Self {
+        Self { value }
+    }
+}
+
+impl IntoPixelSpan for ViewWidth {
+    fn into_pixel_span(&self, context: &Context) -> f32 {
+        self.value as f32 * context.viewport_dimensions_px.width as f32
+    }
+}
+
+/// Describes a span in terms of the smaller of the view width or height as a coefficient
+#[derive(Copy, Clone)]
+pub struct ViewMin {
+    pub value: f32,
+}
+
+impl ViewMin {
+    pub fn new(value: f32) -> Self {
+        Self { value }
+    }
+}
+
+impl IntoPixelSpan for ViewMin {
+    fn into_pixel_span(&self, _context: &Context) -> f32 {
+        // TODO
+        todo!()
+    }
+}
+
+/// Describes a span in terms of the parent's width
+#[derive(Copy, Clone)]
+pub struct ParentWidth {
+    pub value: f32,
+}
+
+impl ParentWidth {
+    pub fn new(value: f32) -> Self {
+        Self { value }
+    }
+
+    pub fn into_pixel_span(&self, parent_dimensions: Dimensions<i32>) -> f32 {
+        parent_dimensions.width as f32 * self.value
+    }
+}
+
+/// Describes a span in terms of the parent's height
+#[derive(Copy, Clone)]
+pub struct ParentHeight {
+    pub value: f32,
+}
+
+impl ParentHeight {
+    pub fn new(value: f32) -> Self {
+        Self { value }
+    }
+
+    pub fn into_pixel_span(&self, parent_dimensions: Dimensions<i32>) -> f32 {
+        parent_dimensions.height as f32 * self.value
+    }
+}

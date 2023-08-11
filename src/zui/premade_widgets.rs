@@ -1,7 +1,7 @@
 // mod button;
 mod container;
 // mod fill_bar;
-// mod text_container;
+mod text_container;
 
 // pub use button::Button;
 pub use container::Container;

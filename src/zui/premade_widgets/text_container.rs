@@ -1,28 +1,33 @@
 use std::collections::VecDeque;
 
-use crate::zui::{
-    primitives::Dimensions,
-    render_layer::RenderLayer,
-    simple_renderer::SimpleVertex,
-    text_renderer::TextVertex,
-    widget::{Bounds, EventResponse, Layout, LayoutBoundaries},
-    Colour, Context, Rectangle, Text, Widget,
+use crate::{
+    zui::{
+        primitives::Dimensions,
+        render_layer::RenderLayer,
+        simple_renderer::SimpleVertex,
+        text_renderer::TextVertex,
+        widget::{Bounds, LayoutBoundaries},
+        Colour, Context, Rectangle, Text, Widget, widget_store::EntryDefaultDescriptor,
+    },
+    Event, SpanConstraint, PositionConstraint, PaddingWeights,
 };
 
 // A basic widget that contains text
 pub struct TextContainer {
+
+    /// The text that the text container contains.
     text: Option<Text>,
+
+    /// The background colour of the text container.
     background_colour: Option<Colour>,
-    clip_rectangle: Option<Rectangle<f32>>,
-    layout: Layout,
 }
+
+#[allow(dead_code)]
 impl TextContainer {
     pub fn new() -> Self {
         Self {
             text: None,
             background_colour: None,
-            clip_rectangle: None,
-            layout: Layout::new(),
         }
     }
 
@@ -41,76 +46,70 @@ impl<Message> Widget<Message> for TextContainer
 where
     Message: Copy + Clone,
 {
-    fn handle_event(
-        &mut self,
-        _event: &crate::zui::Event,
-        _context: &crate::zui::Context,
-    ) -> crate::zui::widget::EventResponse<Message> {
-        // responds to no input events
-        EventResponse::Consumed
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn handle_event(&mut self, event: &Event, _region: &Rectangle<i32>, _context: &Context) {
+        match event {
+            _ => {}
+        }
     }
 
     fn to_vertices(
         &self,
+        region: Rectangle<i32>,
         context: &Context,
         simple_vertices: &mut Vec<SimpleVertex>,
         text_vertices: &mut Vec<TextVertex>,
         _render_layers: &mut VecDeque<RenderLayer>,
     ) {
+
         // adding own text vertices
         if let Some(text) = &self.text {
-            if let Some(clip_rectangle) = self.clip_rectangle {
-                text_vertices
-                    .append(&mut text.to_vertices(clip_rectangle, context.viewport_dimensions_px));
-            }
+            text_vertices.append(&mut text.to_vertices(region, context.viewport_dimensions_px));
         }
 
         // adding own rectangle/simple vertices
-        if let Some(rectangle) = self.clip_rectangle {
-            if let Some(colour) = self.background_colour {
-                simple_vertices.extend_from_slice(&SimpleVertex::from_rectangle(
-                    rectangle,
-                    colour,
-                    context.viewport_dimensions_px,
-                ));
-            }
+        if let Some(colour) = self.background_colour {
+            simple_vertices.extend_from_slice(&SimpleVertex::from_rectangle(
+                region,
+                colour,
+                context.viewport_dimensions_px,
+            ));
         }
     }
 
-    fn calculate_dimensions(
+    fn calculate_minimum_dimensions(
         &mut self,
         layout_boundaries: &LayoutBoundaries,
-        context: &crate::zui::Context,
-    ) -> Dimensions<f32> {
+        context: &Context,
+    ) -> Dimensions<i32> {
         if let Some(text) = self.text.as_mut() {
+
             let boundary_width = layout_boundaries.horizontal.span_px;
 
             text.update_layout(
                 context.typeface,
                 Bounds {
-                    span: boundary_width,
+                    span: boundary_width as f32, // TODO
                 },
                 context.viewport_dimensions_px,
             );
 
             let dimensions = text.dimensions_px().unwrap();
 
-            self.layout.dimensions_px = Some(dimensions);
+            // self.layout.dimensions_px = Some(dimensions);
 
             dimensions
         } else {
-            Dimensions::new(0f32, 0f32)
+            Dimensions::new(0i32, 0i32)
         }
     }
 
-    fn layout<'a>(&'a self) -> &'a Layout {
-        &self.layout
-    }
-
-    fn try_fit_rectangle(&mut self, clip_rectangle: &Rectangle<f32>, context: &Context) {
-        self.clip_rectangle = Some(*clip_rectangle);
+    fn place(&mut self, region: &Rectangle<i32>, context: &Context) {
         if let Some(text) = self.text.as_mut() {
-            text.place_symbols(context.typeface, clip_rectangle);
+            text.place_symbols(context.typeface, region);
         }
     }
 
@@ -124,6 +123,15 @@ where
         };
 
         text.collect_symbol_keys(symbol_keys);
+    }
+
+    fn entry_default_descriptor(&self) -> crate::zui::widget_store::EntryDefaultDescriptor {
+        EntryDefaultDescriptor {
+            children: None,
+            width_constraint: SpanConstraint::FitContents,
+            height_constraint: SpanConstraint::FitContents,
+            position_constraint: PositionConstraint::ParentDetermined(PaddingWeights::NONE),
+        }
     }
 }
 

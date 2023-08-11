@@ -1,12 +1,13 @@
 mod entry;
 
 pub use entry::{Entry, EntryChildren, EntryDefaultDescriptor, EntryOverrideDescriptor};
+use rustc_hash::FxHashSet;
 
 use std::collections::VecDeque;
 
 use crate::{
-    premade_widgets::Container, Axis, Context, PositionConstraint, Rectangle, SpanConstraint,
-    Widget,
+    typeface::SymbolKey, zui::span_constraint::IntoPixelSpan, Axis,
+    Context, PositionConstraint, Rectangle, SpanConstraint, Widget,
 };
 
 use super::{
@@ -14,7 +15,7 @@ use super::{
     render_layer::RenderLayer,
     simple_renderer::SimpleVertex,
     text_renderer::TextVertex,
-    widget::{Boundary, BoundaryType, DimensionsError, Layout, LayoutBoundaries},
+    widget::{Boundary, BoundaryType, Layout, LayoutBoundaries},
 };
 
 /// The ID of a Widget that is stored in the WidgetStore, this is used to access the corresponding
@@ -135,6 +136,13 @@ impl<Message> WidgetStore<Message> {
             }
         }
         None
+    }
+
+    /// Collects the text SymbolKeys of all Widgets in the provided FxHashSet
+    pub fn collect_text(&self, symbol_keys: &mut FxHashSet<SymbolKey>) {
+        for entry in self.iter() {
+            entry.widget.collect_text(symbol_keys);
+        }
     }
 
     //
@@ -307,114 +315,6 @@ impl<Message> WidgetStore<Message> {
         Ok(())
     }
 
-    /// Calculates the dimensions of a widget given the provided information, calls recursively on
-    /// children if it is FitContents
-    pub fn widget_try_update_minimum_dimensions(
-        &mut self,
-        widget_id: &WidgetId,
-        layout_boundaries: &LayoutBoundaries,
-        context: &Context,
-    ) -> Result<Dimensions<i32>, DimensionsError> {
-        // getting the WidgetEntry
-        let entry = match self.get(widget_id) {
-            Some(we) => we,
-            None => {
-                warn!("failed to find widget with id: {widget_id}!");
-                return Err(DimensionsError::Other);
-            }
-        };
-
-        // early exit if dimensions already are calculated
-        match entry.layout.minimum_dimensions_px {
-            Some(min_dims) => return Ok(min_dims),
-            None => {}
-        }
-
-        // calculating dimensions from the underlying Widget trait object
-        let dimensions_result = entry.widget.calculate_minimum_dimensions(
-            layout_boundaries,
-            entry.width_constraint,
-            entry.height_constraint,
-            context,
-        );
-
-        // getting child ids and early exit if widget doesn't accept children
-        let child_ids = match entry.children.as_ref() {
-            Some(children) => children.ids.clone(),
-            None => {
-                return dimensions_result;
-            }
-        };
-
-        let self_dimensions = match dimensions_result {
-            Ok(dims) => {
-                let layout_boundaries = LayoutBoundaries::new(
-                    Boundary::new(BoundaryType::Static, dims.width as f32),
-                    Boundary::new(BoundaryType::Static, dims.height as f32),
-                );
-
-                for child_id in child_ids {
-                    _ = self.widget_try_update_minimum_dimensions(
-                        &child_id,
-                        &layout_boundaries,
-                        context,
-                    );
-                }
-
-                dims
-            }
-            Err(DimensionsError::FitsChildren) => {
-                let entry = self.get_mut(widget_id).unwrap();
-
-                let axis = match entry.widget.as_any().downcast_ref::<Container>() {
-                    Some(container) => container.axis,
-                    None => {
-                        error!("is not a container!");
-                        panic!();
-                    }
-                };
-
-                // spans parallel and perpendicular to the container's axis
-                let mut width = 0i32;
-                let mut height = 0i32;
-
-                for child_id in child_ids {
-                    match self.widget_try_update_minimum_dimensions(
-                        &child_id,
-                        // since is FitsChildren, the layout boundaries provided by the parents will
-                        // do fine
-                        layout_boundaries,
-                        context,
-                    ) {
-                        Ok(dims) => match axis {
-                            Axis::Vertical => {
-                                width = width.max(dims.width);
-                                height += dims.height;
-                            }
-                            Axis::Horizontal => {
-                                width += dims.width;
-                                height = height.max(dims.height);
-                            }
-                        },
-                        Err(_) => todo!(),
-                    }
-                }
-
-                Dimensions::new(width, height)
-            }
-            Err(e) => {
-                return Err(e);
-            }
-        };
-
-        self.get_mut(widget_id)
-            .unwrap()
-            .layout
-            .minimum_dimensions_px = Some(self_dimensions);
-
-        Ok(self_dimensions)
-    }
-
     /// Calculates the total used span of the children along the parent's axis, not including
     /// Span::ParentWeights of course! Returns (span, weights)
     fn children_sum_span_and_weights(&self, axis: Axis, child_ids: &[WidgetId]) -> (i32, f32) {
@@ -471,7 +371,7 @@ impl<Message> WidgetStore<Message> {
     }
 
     /// Places a widget and all of its child widgets too
-    pub fn widget_place(&mut self, widget_id: &WidgetId, region: Rectangle<i32>) -> Result<(), ()> {
+    pub fn widget_place(&mut self, widget_id: &WidgetId, region: Rectangle<i32>, context: &Context) -> Result<(), ()> {
         // getting the entry
         let entry = match self.get_mut(widget_id) {
             Some(we) => we,
@@ -499,6 +399,27 @@ impl<Message> WidgetStore<Message> {
             }
         };
 
+        drop(entry);
+
+        // important: updating children's layouts if this wasn't already done initially
+        let layout_boundaries = LayoutBoundaries::new(
+            Boundary::new(BoundaryType::Static, region.width()),
+            Boundary::new(BoundaryType::Static, region.height()),
+        );
+        for child_id in child_ids.iter() {
+            self.widget_try_update_minimum_dimensions(child_id, &layout_boundaries, context);
+        }
+
+        // getting the entry again..
+        let entry = match self.get_mut(widget_id) {
+            Some(we) => we,
+            None => {
+                warn!("failed to find widget with id: {widget_id}!");
+                return Err(());
+            }
+        };
+
+        // calculating pixels per parent weight
         let free_pixels = entry
             .layout
             .minimum_dimensions_px
@@ -599,7 +520,7 @@ impl<Message> WidgetStore<Message> {
             cursor.y -= end_padding_offset;
 
             // placing the child
-            _ = self.widget_place(&child_id, child_region);
+            _ = self.widget_place(&child_id, child_region, context);
         }
 
         Ok(())
@@ -615,6 +536,119 @@ impl<Message> WidgetStore<Message> {
 
             entry.layout = Layout::new();
         }
+    }
+
+    /// Returns the internal dimensions of the widget, and updates it's internal layout. Will call
+    /// recursively on its children if uses SpanConstraint::FitChildren. Will also call
+    /// Widget::calculate_minimum_dimensions
+    pub fn widget_try_update_minimum_dimensions(
+        &mut self,
+        widget_id: &WidgetId,
+        layout_boundaries: &LayoutBoundaries,
+        context: &Context,
+    ) -> Dimensions<i32> {
+        // getting the WidgetEntry
+        let entry = match self.get(widget_id) {
+            Some(we) => we,
+            None => {
+                warn!("failed to find widget with id: {widget_id}!");
+                return Dimensions::new(0i32, 0i32);
+            }
+        };
+
+        // early exit if minimum dimensions already calculated
+        match entry.layout.minimum_dimensions_px {
+            Some(min_dims) => return min_dims,
+            None => {}
+        }
+
+        let width_constraint = entry.width_constraint;
+        let height_constraint = entry.height_constraint;
+
+        // This can be set if widget is SpanConstraint::FitChildren below
+        let mut widget_dimensions = Dimensions::new(0, 0);
+
+        // figuring out if either the width or height constraint requires calculation of the
+        // children's dimensions
+        if matches!(width_constraint, SpanConstraint::FitChildren)
+            || matches!(height_constraint, SpanConstraint::FitChildren)
+        {
+            // cloning the children ids and axis
+            let (child_ids, axis) = match entry.children.as_ref() {
+                Some(children) => (children.ids.clone(), children.axis),
+                None => {
+                    warn!("entry has no Children!");
+                    return Dimensions::new(0i32, 0i32);
+                }
+            };
+
+            // getting the cumulate dimensions of the children
+            let mut width_counter = 0i32;
+            let mut height_counter = 0i32;
+            for child_id in child_ids {
+                let child_dims = self.widget_try_update_minimum_dimensions(
+                    &child_id,
+                    &layout_boundaries,
+                    context,
+                );
+
+                match axis {
+                    Axis::Vertical => {
+                        width_counter = width_counter.max(child_dims.width);
+                        height_counter += child_dims.height;
+                    }
+                    Axis::Horizontal => {
+                        width_counter = width_counter.max(child_dims.width);
+                        height_counter += child_dims.height;
+                    }
+                };
+            }
+
+            widget_dimensions = Dimensions::new(width_counter, height_counter);
+        }
+
+        // TODO: check all the i32 casts
+        let width_px = match width_constraint {
+            SpanConstraint::ViewWidth(vw) => vw.into_pixel_span(context).round() as i32,
+            SpanConstraint::ViewHeight(vh) => vh.into_pixel_span(context).round() as i32,
+            SpanConstraint::ViewMin(vm) => vm.into_pixel_span(context).round() as i32,
+            SpanConstraint::Pixels(p) => p.round() as i32,
+            SpanConstraint::FitContents => todo!(),
+            SpanConstraint::FitChildren => widget_dimensions.width,
+            SpanConstraint::ParentWeight(_) => todo!(),
+            SpanConstraint::ParentWidth(pw) => pw.into_pixel_span(layout_boundaries.into()) as i32,
+            SpanConstraint::ParentHeight(ph) => ph.into_pixel_span(layout_boundaries.into()) as i32,
+        };
+
+        let height_px = match height_constraint {
+            SpanConstraint::ViewWidth(vw) => vw.into_pixel_span(context).round() as i32,
+            SpanConstraint::ViewHeight(vh) => vh.into_pixel_span(context).round() as i32,
+            SpanConstraint::ViewMin(vm) => vm.into_pixel_span(context).round() as i32,
+            SpanConstraint::Pixels(p) => p.round() as i32,
+            SpanConstraint::FitContents => todo!(),
+            SpanConstraint::FitChildren => widget_dimensions.width,
+            SpanConstraint::ParentWeight(_) => todo!(),
+            SpanConstraint::ParentWidth(pw) => pw.into_pixel_span(layout_boundaries.into()) as i32,
+            SpanConstraint::ParentHeight(ph) => ph.into_pixel_span(layout_boundaries.into()) as i32,
+        };
+
+        // getting final dimensions
+        let dims = Dimensions::new(width_px, height_px);
+
+        // getting the WidgetEntry
+        let entry = match self.get_mut(widget_id) {
+            Some(we) => we,
+            None => {
+                warn!("failed to find widget with id: {widget_id}!");
+                return Dimensions::new(0i32, 0i32);
+            }
+        };
+
+        // updating self
+        entry.layout.minimum_dimensions_px = Some(dims);
+
+        // returning
+        dims
     }
 }
 

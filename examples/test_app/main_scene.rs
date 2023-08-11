@@ -1,6 +1,6 @@
 use zui::{
-    premade_widgets::Container, EntryOverrideDescriptor, PaddingWeights, PositionConstraint, Scene,
-    SpanConstraint, WidgetId, WidgetStore,
+    premade_widgets::Container, EntryOverrideDescriptor, PaddingWeights, ParentHeight, ParentWidth,
+    PositionConstraint, Scene, SpanConstraint, WidgetId, WidgetStore,
 };
 
 use crate::UiMessage;
@@ -65,8 +65,8 @@ impl Scene for MainScene {
         let root = widget_store.add(
             Container::new(),
             EntryOverrideDescriptor {
-                width_constraint: Some(SpanConstraint::ParentRatio(1f32)),
-                height_constraint: Some(SpanConstraint::ParentRatio(1f32)),
+                width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1f32))),
+                height_constraint: Some(SpanConstraint::ParentHeight(ParentHeight::new(1f32))),
                 ..Default::default()
             },
         );
@@ -74,8 +74,8 @@ impl Scene for MainScene {
         let main_container = widget_store.add(
             Container::new().with_background(Some(zui::named_colours::StarryNight)),
             EntryOverrideDescriptor {
-                width_constraint: Some(SpanConstraint::ParentRatio(0.5f32)),
-                height_constraint: Some(SpanConstraint::ParentRatio(0.9f32)),
+                width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(0.5f32))),
+                height_constraint: Some(SpanConstraint::ParentHeight(ParentHeight::new(0.9f32))),
                 position_constraint: Some(PositionConstraint::ParentDetermined(
                     PaddingWeights::vh(1f32, 1f32),
                 )),
@@ -86,7 +86,7 @@ impl Scene for MainScene {
         let header = widget_store.add(
             Container::new().with_background(Some(zui::named_colours::SolarFlare)),
             EntryOverrideDescriptor {
-                width_constraint: Some(SpanConstraint::ParentRatio(0.8f32)),
+                width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(0.8f32))),
                 height_constraint: Some(SpanConstraint::Pixels(64f32)),
                 position_constraint: Some(PositionConstraint::ParentDetermined(
                     PaddingWeights::vh(0f32, 1f32),
@@ -98,8 +98,8 @@ impl Scene for MainScene {
         let body = widget_store.add(
             Container::new().with_background(Some(zui::named_colours::StarshipTonic)),
             EntryOverrideDescriptor {
-                width_constraint: Some(SpanConstraint::ParentRatio(0.6f32)),
-                height_constraint: Some(SpanConstraint::ParentRatio(0.8f32)),
+                width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(0.6f32))),
+                height_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(0.6f32))),
                 position_constraint: Some(PositionConstraint::ParentDetermined(
                     PaddingWeights::vh(1f32, 1f32),
                 )),
@@ -110,7 +110,7 @@ impl Scene for MainScene {
         let footer = widget_store.add(
             Container::new().with_background(Some(zui::named_colours::Abyssal)),
             EntryOverrideDescriptor {
-                width_constraint: Some(SpanConstraint::ParentRatio(1f32)),
+                width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1f32))),
                 height_constraint: Some(SpanConstraint::Pixels(50f32)),
                 ..Default::default()
             },
