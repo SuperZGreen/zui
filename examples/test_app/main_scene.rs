@@ -100,7 +100,7 @@ impl Scene for MainScene {
             Container::new().with_background(Some(zui::named_colours::StarshipTonic)),
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(0.6f32))),
-                height_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(0.6f32))),
+                height_constraint: Some(SpanConstraint::ParentWeight(10f32)),
                 position_constraint: Some(PositionConstraint::ParentDetermined(
                     PaddingWeights::vh(1f32, 1f32),
                 )),

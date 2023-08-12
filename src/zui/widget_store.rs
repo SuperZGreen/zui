@@ -373,6 +373,7 @@ impl<Message> WidgetStore<Message> {
             &child_ids,
         );
 
+        // The cursor that tracks the placement of the children widgets
         let mut cursor = glam::Vec2::new(region.x_min as f32, region.y_max as f32);
 
         for child_id in child_ids {
@@ -386,13 +387,29 @@ impl<Message> WidgetStore<Message> {
             };
 
             // getting the child dimensions
-            let child_dimensions = match child_entry.layout.minimum_dimensions_px {
+            let mut child_dimensions = match child_entry.layout.minimum_dimensions_px {
                 Some(cd) => cd,
                 None => {
                     warn!("child with id: {child_id} has no dimensions!");
                     continue;
                 }
             };
+
+            // setting SpanConstraint::ParentWeight child dimension
+            match child_entry.width_constraint {
+                SpanConstraint::ParentWeight(pw) => {
+                    // TODO: check this round()
+                    child_dimensions.width = (pw * pixels_per_parent_weight).round() as i32;
+                }
+                _ => {}
+            }
+            match child_entry.height_constraint {
+                SpanConstraint::ParentWeight(pw) => {
+                    // TODO: check this round()
+                    child_dimensions.height = (pw * pixels_per_parent_weight).round() as i32;
+                }
+                _ => {}
+            }
 
             // getting child start and end offset
             // TODO: needs to change based on axis
@@ -660,7 +677,7 @@ impl<Message> WidgetStore<Message> {
             SpanConstraint::Pixels(p) => p.round() as i32,
             SpanConstraint::FitContents => contents_dimensions.width,
             SpanConstraint::FitChildren => children_dimensions.width,
-            SpanConstraint::ParentWeight(_) => todo!(),
+            SpanConstraint::ParentWeight(_) => 0i32, // Silently pass through
             SpanConstraint::ParentWidth(pw) => pw.into_pixel_span(layout_boundaries.into()) as i32,
             SpanConstraint::ParentHeight(ph) => ph.into_pixel_span(layout_boundaries.into()) as i32,
         };
@@ -672,7 +689,7 @@ impl<Message> WidgetStore<Message> {
             SpanConstraint::Pixels(p) => p.round() as i32,
             SpanConstraint::FitContents => contents_dimensions.height,
             SpanConstraint::FitChildren => children_dimensions.height,
-            SpanConstraint::ParentWeight(_) => todo!(),
+            SpanConstraint::ParentWeight(_) => 0i32, // Silently pass through
             SpanConstraint::ParentWidth(pw) => pw.into_pixel_span(layout_boundaries.into()) as i32,
             SpanConstraint::ParentHeight(ph) => ph.into_pixel_span(layout_boundaries.into()) as i32,
         };
