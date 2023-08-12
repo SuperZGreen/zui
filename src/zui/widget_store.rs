@@ -317,61 +317,6 @@ impl<Message> WidgetStore<Message> {
         Ok(())
     }
 
-    /// Calculates the total used span of the children along the parent's axis, not including
-    /// Span::ParentWeights of course! Returns (span, weights)
-    fn children_sum_span_and_weights(&self, axis: Axis, child_ids: &[WidgetId]) -> (i32, f32) {
-        let mut span = 0i32;
-        let mut weights = 0f32;
-        for child_id in child_ids {
-            let entry = match self.get(child_id) {
-                Some(we) => we,
-                None => {
-                    warn!("failed to find widget with id: {child_id}!");
-                    continue;
-                }
-            };
-
-            // only summing for ParentDetermined children
-            match entry.position_constraint {
-                PositionConstraint::ParentDetermined(_) => {}
-                _ => continue,
-            };
-
-            let minimum_dimensions = match entry.layout.minimum_dimensions_px {
-                Some(min_dims) => min_dims,
-                None => {
-                    warn!("could not find layout for widget with id: {child_id}!");
-                    continue;
-                }
-            };
-
-            span += minimum_dimensions.span_by_axis(axis);
-
-            // adding widget's weight
-            let axis_constraint = match axis {
-                Axis::Vertical => entry.height_constraint,
-                Axis::Horizontal => entry.width_constraint,
-            };
-
-            let parent_weight = match axis_constraint {
-                SpanConstraint::ParentWeight(pw) => pw,
-                _ => 0f32,
-            };
-
-            weights += parent_weight;
-
-            // adding widget's padding weight
-            let padding_weights = match entry.position_constraint {
-                PositionConstraint::ParentDetermined(pw) => pw.sum_by_axis(axis),
-                _ => 0f32,
-            };
-
-            weights += padding_weights;
-        }
-
-        (span, weights)
-    }
-
     /// Places a widget and all of its child widgets too
     pub fn widget_place(
         &mut self,
@@ -420,30 +365,13 @@ impl<Message> WidgetStore<Message> {
             self.widget_try_update_minimum_dimensions(child_id, &layout_boundaries, context);
         }
 
-        // getting the entry again..
-        let entry = match self.get_mut(widget_id) {
-            Some(we) => we,
-            None => {
-                warn!("failed to find widget with id: {widget_id}!");
-                return Err(());
-            }
-        };
-
-        // calculating pixels per parent weight
-        let free_pixels = entry
-            .layout
-            .minimum_dimensions_px
-            .unwrap()
-            .span_by_axis(axis);
-
-        let (children_span, children_weights) =
-            self.children_sum_span_and_weights(axis, &child_ids);
-
-        let pixels_per_parent_weight = if children_weights == 0f32 {
-            0f32
-        } else {
-            (free_pixels - children_span) as f32 / children_weights
-        };
+        // calculating the number of pixels that each SpanConstraint::ParentWeight(1f32) will use
+        let pixels_per_parent_weight = Self::calculate_pixels_per_parent_weight(
+            self,
+            &region,
+            axis,
+            &child_ids,
+        );
 
         let mut cursor = glam::Vec2::new(region.x_min as f32, region.y_max as f32);
 
@@ -534,6 +462,94 @@ impl<Message> WidgetStore<Message> {
         }
 
         Ok(())
+    }
+
+    /// Calculates the number of pixels per SpanConstraint::ParentWeight, given the parent axis,
+    /// child ids, parent entry. Returns f32 as can be less than a pixel.
+    fn calculate_pixels_per_parent_weight(
+        &mut self,
+        parent_region: &Rectangle<i32>,
+        parent_axis: Axis,
+        child_ids: &[WidgetId],
+    ) -> f32 {
+
+        // the number of pixels in the parent rectangle/region
+        let parent_span = parent_region.span_by_axis(parent_axis);
+
+        // the number of pixels used up by the parent widget's children
+        let (children_span, children_weights) =
+            self.children_sum_span_and_weights(parent_axis, &child_ids);
+
+        // calculating the remaining pixels
+        let free_pixels = if parent_span - children_span < 0 {
+            0i32
+        } else {
+            parent_span - children_span
+        };
+
+        // getting final pixels per parent weight
+        let pixels_per_parent_weight = if children_weights == 0f32 {
+            0f32
+        } else {
+            free_pixels as f32 / children_weights
+        };
+
+        pixels_per_parent_weight
+    }
+
+    /// Calculates the total used span of the children along the parent's axis, not including
+    /// Span::ParentWeights of course! Returns (span, weights)
+    fn children_sum_span_and_weights(&self, axis: Axis, child_ids: &[WidgetId]) -> (i32, f32) {
+        let mut span = 0i32;
+        let mut weights = 0f32;
+        for child_id in child_ids {
+            let entry = match self.get(child_id) {
+                Some(we) => we,
+                None => {
+                    warn!("failed to find widget with id: {child_id}!");
+                    continue;
+                }
+            };
+
+            // only summing for ParentDetermined children
+            match entry.position_constraint {
+                PositionConstraint::ParentDetermined(_) => {}
+                _ => continue,
+            };
+
+            let minimum_dimensions = match entry.layout.minimum_dimensions_px {
+                Some(min_dims) => min_dims,
+                None => {
+                    warn!("could not find layout for widget with id: {child_id}!");
+                    continue;
+                }
+            };
+
+            span += minimum_dimensions.span_by_axis(axis);
+
+            // adding widget's weight
+            let axis_constraint = match axis {
+                Axis::Vertical => entry.height_constraint,
+                Axis::Horizontal => entry.width_constraint,
+            };
+
+            let parent_weight = match axis_constraint {
+                SpanConstraint::ParentWeight(pw) => pw,
+                _ => 0f32,
+            };
+
+            weights += parent_weight;
+
+            // adding widget's padding weight
+            let padding_weights = match entry.position_constraint {
+                PositionConstraint::ParentDetermined(pw) => pw.sum_by_axis(axis),
+                _ => 0f32,
+            };
+
+            weights += padding_weights;
+        }
+
+        (span, weights)
     }
 
     /// Clears all layouts
