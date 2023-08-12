@@ -7,7 +7,7 @@ use std::collections::VecDeque;
 
 use crate::{
     typeface::SymbolKey, zui::span_constraint::IntoPixelSpan, Axis, Context, PositionConstraint,
-    Rectangle, SpanConstraint, Widget,
+    Rectangle, SpanConstraint, Widget, PaddingWeights,
 };
 
 use super::{
@@ -366,12 +366,8 @@ impl<Message> WidgetStore<Message> {
         }
 
         // calculating the number of pixels that each SpanConstraint::ParentWeight(1f32) will use
-        let pixels_per_parent_weight = Self::calculate_pixels_per_parent_weight(
-            self,
-            &region,
-            axis,
-            &child_ids,
-        );
+        let pixels_per_parent_weight =
+            Self::calculate_pixels_per_parent_weight(self, &region, axis, &child_ids);
 
         // The cursor that tracks the placement of the children widgets
         let mut cursor = glam::Vec2::new(region.x_min as f32, region.y_max as f32);
@@ -411,21 +407,21 @@ impl<Message> WidgetStore<Message> {
                 _ => {}
             }
 
-            // getting child start and end offset
-            // TODO: needs to change based on axis
-            let start_padding_offset = match child_entry.position_constraint {
-                PositionConstraint::ParentDetermined(pw) => pw.top * pixels_per_parent_weight,
-                _ => 0f32,
+            // getting child padding weights, zero if none, ie PositionConstraint::Floating
+            let child_padding_weights = match child_entry.position_constraint {
+                PositionConstraint::ParentDetermined(pw) => pw,
+                _ => PaddingWeights::NONE,
             };
 
-            let end_padding_offset = match child_entry.position_constraint {
-                PositionConstraint::ParentDetermined(pw) => pw.bottom * pixels_per_parent_weight,
-                _ => 0f32,
-            };
-
-            // incrementing cursor by start offset
-            // TODO: needs to account for axis, subpixel movements etc
-            cursor.y -= start_padding_offset;
+            // incrementing cursor by start padding offset
+            match axis {
+                Axis::Vertical => {
+                    cursor.y -= child_padding_weights.top * pixels_per_parent_weight;
+                }
+                Axis::Horizontal => {
+                    cursor.x += child_padding_weights.left * pixels_per_parent_weight;
+                }
+            }
 
             // determining child region based on position constraint
             let child_region = match child_entry.position_constraint {
@@ -470,9 +466,15 @@ impl<Message> WidgetStore<Message> {
                 }
             };
 
-            // incrementing cursor by end offset
-            // TODO: needs to account for axis, subpixel movements etc
-            cursor.y -= end_padding_offset;
+            // incrementing cursor by end padding offset
+            match axis {
+                Axis::Vertical => {
+                    cursor.y -= child_padding_weights.bottom * pixels_per_parent_weight;
+                }
+                Axis::Horizontal => {
+                    cursor.x += child_padding_weights.right * pixels_per_parent_weight;
+                }
+            }
 
             // placing the child
             _ = self.widget_place(&child_id, child_region, context);
@@ -489,7 +491,6 @@ impl<Message> WidgetStore<Message> {
         parent_axis: Axis,
         child_ids: &[WidgetId],
     ) -> f32 {
-
         // the number of pixels in the parent rectangle/region
         let parent_span = parent_region.span_by_axis(parent_axis);
 
