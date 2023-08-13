@@ -6,8 +6,8 @@ use rustc_hash::FxHashSet;
 use std::collections::VecDeque;
 
 use crate::{
-    typeface::SymbolKey, zui::span_constraint::IntoPixelSpan, Axis, Context, PositionConstraint,
-    Rectangle, SpanConstraint, Widget, PaddingWeights,
+    typeface::SymbolKey, zui::span_constraint::IntoPixelSpan, Axis, Context, PaddingWeights,
+    PositionConstraint, Rectangle, SpanConstraint, Widget,
 };
 
 use super::{
@@ -391,21 +391,57 @@ impl<Message> WidgetStore<Message> {
                 }
             };
 
-            // setting SpanConstraint::ParentWeight child dimension
-            match child_entry.width_constraint {
-                SpanConstraint::ParentWeight(pw) => {
-                    // TODO: check this round()
+            let perpendicular_pixels_per_parent_weight =
+                Self::calculate_pixels_per_parent_weight(self, &region, axis.other(), &[child_id]);
+
+            // setting for SpanConstraint::ParentWeight for height constraint
+            match (axis, child_entry.height_constraint) {
+                (Axis::Vertical, SpanConstraint::ParentWeight(pw)) => {
+                    child_dimensions.height = (pw * pixels_per_parent_weight).round() as i32;
+                }
+                (Axis::Horizontal, SpanConstraint::ParentWeight(pw)) => {
+                    child_dimensions.height =
+                        (pw * perpendicular_pixels_per_parent_weight).round() as i32;
+                }
+                _ => {}
+            };
+
+            // setting for SpanConstraint::ParentWeight for width constraint
+            match (axis, child_entry.width_constraint) {
+                (Axis::Vertical, SpanConstraint::ParentWeight(pw)) => {
+                    child_dimensions.width =
+                        (pw * perpendicular_pixels_per_parent_weight).round() as i32;
+                }
+                (Axis::Horizontal, SpanConstraint::ParentWeight(pw)) => {
                     child_dimensions.width = (pw * pixels_per_parent_weight).round() as i32;
                 }
                 _ => {}
-            }
-            match child_entry.height_constraint {
-                SpanConstraint::ParentWeight(pw) => {
-                    // TODO: check this round()
-                    child_dimensions.height = (pw * pixels_per_parent_weight).round() as i32;
+            };
+
+            // setting the children offsets, ie the offset of the widget caused by the
+            // PaddingWeights perpendicular to the parent axis
+            let child_offset_px = match axis {
+                Axis::Vertical => {
+                    let horizontal_offset = match child_entry.position_constraint {
+                        PositionConstraint::ParentDetermined(pw) => {
+                            (pw.left * perpendicular_pixels_per_parent_weight) as i32
+                        }
+                        PositionConstraint::Floating(_, _) => 0i32,
+                    };
+
+                    glam::IVec2::new(horizontal_offset, 0i32)
                 }
-                _ => {}
-            }
+                Axis::Horizontal => {
+                    let vertical_offset = match child_entry.position_constraint {
+                        PositionConstraint::ParentDetermined(pw) => {
+                            -((pw.top * perpendicular_pixels_per_parent_weight) as i32)
+                        }
+                        PositionConstraint::Floating(_, _) => 0i32,
+                    };
+
+                    glam::IVec2::new(0i32, vertical_offset)
+                }
+            };
 
             // getting child padding weights, zero if none, ie PositionConstraint::Floating
             let child_padding_weights = match child_entry.position_constraint {
@@ -426,8 +462,8 @@ impl<Message> WidgetStore<Message> {
             // determining child region based on position constraint
             let child_region = match child_entry.position_constraint {
                 PositionConstraint::ParentDetermined(_) => {
-                    let child_region_min_x = cursor.x.round() as i32;
-                    let child_region_max_y = cursor.y.round() as i32;
+                    let child_region_min_x = cursor.x.round() as i32 + child_offset_px.x;
+                    let child_region_max_y = cursor.y.round() as i32 + child_offset_px.y;
 
                     // determining the child region
                     let child_region = Rectangle::new(
@@ -486,7 +522,7 @@ impl<Message> WidgetStore<Message> {
     /// Calculates the number of pixels per SpanConstraint::ParentWeight, given the parent axis,
     /// child ids, parent entry. Returns f32 as can be less than a pixel.
     fn calculate_pixels_per_parent_weight(
-        &mut self,
+        &self,
         parent_region: &Rectangle<i32>,
         parent_axis: Axis,
         child_ids: &[WidgetId],
@@ -678,7 +714,8 @@ impl<Message> WidgetStore<Message> {
             SpanConstraint::Pixels(p) => p.round() as i32,
             SpanConstraint::FitContents => contents_dimensions.width,
             SpanConstraint::FitChildren => children_dimensions.width,
-            SpanConstraint::ParentWeight(_) => 0i32, // Silently pass through
+            // Silently pass through, is overidden during placement
+            SpanConstraint::ParentWeight(_) => 0i32,
             SpanConstraint::ParentWidth(pw) => pw.into_pixel_span(layout_boundaries.into()) as i32,
             SpanConstraint::ParentHeight(ph) => ph.into_pixel_span(layout_boundaries.into()) as i32,
         };
@@ -690,7 +727,8 @@ impl<Message> WidgetStore<Message> {
             SpanConstraint::Pixels(p) => p.round() as i32,
             SpanConstraint::FitContents => contents_dimensions.height,
             SpanConstraint::FitChildren => children_dimensions.height,
-            SpanConstraint::ParentWeight(_) => 0i32, // Silently pass through
+            // Silently pass through, is overidden during placement
+            SpanConstraint::ParentWeight(_) => 0i32,
             SpanConstraint::ParentWidth(pw) => pw.into_pixel_span(layout_boundaries.into()) as i32,
             SpanConstraint::ParentHeight(ph) => ph.into_pixel_span(layout_boundaries.into()) as i32,
         };
