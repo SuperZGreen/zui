@@ -1,22 +1,25 @@
 use zui::{
     premade_widgets::{Container, TextContainer},
-    EntryOverrideDescriptor, PaddingWeights, ParentHeight, ParentWidth, PositionConstraint, Scene,
-    SpanConstraint, Text, TextSegment, WidgetId, WidgetStore, TextConfiguration, EntryChildren, Axis,
+    Axis, Colour, EntryChildren, EntryOverrideDescriptor, PaddingWeights, ParentHeight,
+    ParentWidth, PositionConstraint, Scene, SpanConstraint, Text, TextConfiguration, TextSegment,
+    WidgetId, WidgetStore,
 };
 
 use crate::UiMessage;
 
+use rand::Rng;
+
 pub struct MainScene {
-    frame_counter: u64,
-    custom_counter: u64,
+    body_id: Option<WidgetId>,
+    counter: i32,
     cursor_widget_id: Option<WidgetId>,
 }
 
 impl MainScene {
     pub fn new() -> Self {
         Self {
-            frame_counter: 0u64,
-            custom_counter: 0u64,
+            body_id: None,
+            counter: 0i32,
             cursor_widget_id: None,
         }
     }
@@ -31,18 +34,6 @@ impl Scene for MainScene {
         message: Self::Message,
     ) -> (Option<Self::Message>, bool) {
         match message {
-            UiMessage::IncrementFrameCounter(increment) => {
-                self.frame_counter += increment;
-                (None, true)
-            }
-            UiMessage::SetCustomCounter(count) => {
-                self.custom_counter = count;
-                (None, true)
-            }
-            UiMessage::IncrementCustomCounter(increment) => {
-                self.custom_counter += increment;
-                (None, true)
-            }
             UiMessage::MoveCursor(Some(physical_position)) => {
                 _ = widget_store.widget_set_position_constraint(
                     &self.cursor_widget_id.unwrap(),
@@ -55,6 +46,51 @@ impl Scene for MainScene {
             }
             UiMessage::MoveCursor(None) => {
                 // TODO
+                (None, true)
+            }
+
+            UiMessage::AddText => {
+                if let Some(body_id) = self.body_id {
+                    let mut rng = rand::thread_rng();
+
+                    let background_colour = Colour::rgb(rng.gen::<f32>(), rng.gen(), rng.gen());
+
+                    let text_colour =
+                        if background_colour.r + background_colour.g + background_colour.b > 1.5f32
+                        {
+                            Colour::BLACK
+                        } else {
+                            Colour::WHITE
+                        };
+
+                    let text = format!("this is line number: {}", self.counter);
+                    self.counter += 1;
+
+                    let text_widget = widget_store.add(
+                        TextContainer::new()
+                            .with_text(
+                                Text::new().push_segment(TextSegment::new(&text, text_colour)),
+                            )
+                            .with_background_colour(Some(background_colour)),
+                        EntryOverrideDescriptor {
+                            width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(
+                                1.0f32,
+                            ))),
+                            ..Default::default()
+                        },
+                    );
+
+                    _ = widget_store.widget_add_child(&body_id, text_widget);
+                }
+
+                (None, true)
+            }
+
+            UiMessage::ClearText => {
+                if let Some(body_id) = self.body_id {
+                    _ = widget_store.widget_delete_children(&body_id);
+                }
+
                 (None, true)
             }
             _ => (Some(message), false),
@@ -188,16 +224,19 @@ impl Scene for MainScene {
 
         let third_paragraph = widget_store.add(
             TextContainer::new()
-            .with_text(
-                Text::new()
-                    .push_segment(TextSegment::new("This is the third paragraph", zui::named_colours::White))
-                    .with_configuration(TextConfiguration {
-                        horizontal_alignment: zui::TextAlignmentHorizontal::Right,
-                        line_wrapping: zui::LineWrapping::Word,
-                        ..Default::default()
-                    })
-            )
-            .with_background_colour(Some(zui::named_colours::Azure)),
+                .with_text(
+                    Text::new()
+                        .push_segment(TextSegment::new(
+                            "This is the third paragraph",
+                            zui::named_colours::White,
+                        ))
+                        .with_configuration(TextConfiguration {
+                            horizontal_alignment: zui::TextAlignmentHorizontal::Right,
+                            line_wrapping: zui::LineWrapping::Word,
+                            ..Default::default()
+                        }),
+                )
+                .with_background_colour(Some(zui::named_colours::Azure)),
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1.0f32))),
                 // height_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(0.6f32))),
@@ -226,6 +265,7 @@ impl Scene for MainScene {
         );
 
         self.cursor_widget_id = Some(cursor);
+        self.body_id = Some(body);
 
         _ = widget_store.widget_add_child(&root, main_container);
 

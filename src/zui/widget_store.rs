@@ -97,8 +97,8 @@ impl<Message> WidgetStore<Message> {
         }
     }
 
-    /// Removes an entry, returns Err(()) if the entry was already removed/does not exist
-    pub fn remove(&mut self, widget_id: &WidgetId) -> Result<(), ()> {
+    /// Deletes an entry, returns Err(()) if the entry was already deleted/does not exist
+    pub fn delete(&mut self, widget_id: &WidgetId) -> Result<(), ()> {
         match self.widgets.get_mut(widget_id.index) {
             Some(we) => {
                 *we = None;
@@ -750,6 +750,36 @@ impl<Message> WidgetStore<Message> {
 
         // returning
         dims
+    }
+
+    /// Deletes the children of the widget from the widget store, and unparents the deleted
+    /// children. This functions recursively TODO.
+    pub fn widget_delete_children(&mut self, widget_id: &WidgetId) -> Result<(), ()> {
+
+        // getting the WidgetEntry
+        let entry = match self.get_mut(widget_id) {
+            Some(we) => we,
+            None => {
+                warn!("failed to find widget with id: {widget_id}!");
+                return Err(());
+            }
+        };
+
+        let child_ids = match entry.children.as_mut() {
+            Some(children) => {
+                let ci = children.ids.clone();
+                children.ids.clear();
+                ci
+            }
+            None => return Ok(()),
+        };
+
+        for child_id in child_ids {
+            _ = self.widget_delete_children(&child_id);
+            _ = self.delete(&child_id);
+        }
+
+        Ok(())
     }
 }
 

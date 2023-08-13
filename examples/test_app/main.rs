@@ -18,10 +18,9 @@ use main_scene::MainScene;
 
 #[derive(Clone, Copy)]
 pub enum UiMessage {
-    IncrementFrameCounter(u64),
-    SetCustomCounter(u64),
-    IncrementCustomCounter(u64),
     MoveCursor(Option<PhysicalPosition<f64>>),
+    AddText,
+    ClearText,
     Exit,
 }
 
@@ -82,12 +81,19 @@ fn main() {
                             KeyboardInput {
                                 // virtual_keycode: Some(VirtualKeyCode::X),
                                 virtual_keycode: Some(virtual_key_code),
+                                state: winit::event::ElementState::Pressed,
                                 ..
                             },
                         ..
                     } => match virtual_key_code {
                         VirtualKeyCode::X => {
                             exit(control_flow);
+                        }
+                        VirtualKeyCode::A => {
+                            scene_handle.handle_message(UiMessage::AddText);
+                        }
+                        VirtualKeyCode::D => {
+                            scene_handle.handle_message(UiMessage::ClearText);
                         }
                         VirtualKeyCode::F10 => {
                             zui.debug_try_save_typeface_texture_atlas("out.png");
@@ -127,8 +133,6 @@ fn main() {
             Event::Suspended => {}
             Event::Resumed => {}
             Event::MainEventsCleared => {
-                scene_handle.handle_message(UiMessage::IncrementFrameCounter(1));
-
                 // updating the scene handle
                 scene_handle.update(
                     &mut zui.context_mut_typeface(),
