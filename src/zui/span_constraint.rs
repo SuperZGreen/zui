@@ -47,6 +47,10 @@ pub enum SpanConstraint {
 
     /// Gives as a portion of the parent widget's width
     ParentHeight(ParentHeight),
+
+    /// Looks at the opposite (vorizontal/vertical) span, and multiplies this value by the aspect
+    /// value.
+    Aspect(f32),
 }
 
 /// Allows transformation of SpanConstraints into floating pixel span values

@@ -199,7 +199,7 @@ impl Scene for TextScene {
             EntryOverrideDescriptor {
                 children: Some(EntryChildren::new(Axis::Horizontal)),
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1f32))),
-                height_constraint: Some(SpanConstraint::ParentHeight(ParentHeight::new(0.1f32))),
+                height_constraint: Some(SpanConstraint::FitChildren),
                 ..Default::default()
             },
         );
@@ -220,7 +220,7 @@ impl Scene for TextScene {
             ).with_background_colour(Some(zui::named_colours::RedTape)),
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(0.2f32))),
-                height_constraint: Some(SpanConstraint::ParentHeight(ParentHeight::new(1f32))),
+                height_constraint: Some(SpanConstraint::Aspect(1f32)),
                 position_constraint: Some(PositionConstraint::ParentDetermined(
                     PaddingWeights::NONE,
                 )),
@@ -253,7 +253,7 @@ impl Scene for TextScene {
             ).with_background_colour(Some(zui::named_colours::GreenEnvy)),
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(0.2f32))),
-                height_constraint: Some(SpanConstraint::ParentHeight(ParentHeight::new(1f32))),
+                height_constraint: Some(SpanConstraint::Aspect(1.0f32)),
                 position_constraint: Some(PositionConstraint::ParentDetermined(
                     PaddingWeights::vh(0f32, 1f32),
                 )),
@@ -277,7 +277,7 @@ impl Scene for TextScene {
             ).with_background_colour(Some(zui::named_colours::BlueChip)),
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(0.2f32))),
-                height_constraint: Some(SpanConstraint::ParentHeight(ParentHeight::new(1f32))),
+                height_constraint: Some(SpanConstraint::Aspect(1f32)),
                 position_constraint: Some(PositionConstraint::ParentDetermined(
                     PaddingWeights::NONE
                 )),

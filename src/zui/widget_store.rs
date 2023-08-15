@@ -675,8 +675,8 @@ impl<Message> WidgetStore<Message> {
                         height_counter += child_dims.height;
                     }
                     Axis::Horizontal => {
-                        width_counter = width_counter.max(child_dims.width);
-                        height_counter += child_dims.height;
+                        width_counter += child_dims.width;
+                        height_counter = height_counter.max(child_dims.height);
                     }
                 };
             }
@@ -707,6 +707,7 @@ impl<Message> WidgetStore<Message> {
             SpanConstraint::ParentWeight(_) => 0i32,
             SpanConstraint::ParentWidth(pw) => pw.into_pixel_span(layout_boundaries.into()) as i32,
             SpanConstraint::ParentHeight(ph) => ph.into_pixel_span(layout_boundaries.into()) as i32,
+            SpanConstraint::Aspect(_) => layout_boundaries.horizontal.span_px,
         };
 
         let boundary_height_px = match height_constraint {
@@ -720,6 +721,7 @@ impl<Message> WidgetStore<Message> {
             SpanConstraint::ParentWeight(_) => 0i32,
             SpanConstraint::ParentWidth(pw) => pw.into_pixel_span(layout_boundaries.into()) as i32,
             SpanConstraint::ParentHeight(ph) => ph.into_pixel_span(layout_boundaries.into()) as i32,
+            SpanConstraint::Aspect(_) => layout_boundaries.vertical.span_px,
         };
 
         // getting contents dimensions if fits contents
@@ -731,15 +733,29 @@ impl<Message> WidgetStore<Message> {
             context,
         );
 
-        // applying override if is FitContents
-        let width_px = match width_constraint {
+        // applying overrides if is FitContents
+        let mut width_px = match width_constraint {
             SpanConstraint::FitContents => contents_dimensions.width,
             _ => boundary_width_px,
         };
 
-        let height_px = match height_constraint {
+        let mut height_px = match height_constraint {
             SpanConstraint::FitContents => contents_dimensions.height,
             _ => boundary_height_px,
+        };
+
+        // applying aspect overrides
+        match width_constraint {
+            SpanConstraint::Aspect(aspect) => {
+                width_px = (height_px as f32 * aspect).round() as i32;
+            }
+            _ => {}
+        };
+        match height_constraint {
+            SpanConstraint::Aspect(aspect) => {
+                height_px = (width_px as f32 * aspect).round() as i32;
+            }
+            _ => {}
         };
 
         // getting final dimensions
