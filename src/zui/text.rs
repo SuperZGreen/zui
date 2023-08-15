@@ -2,10 +2,11 @@ mod glyph_origin;
 mod text_configuration;
 mod text_line;
 
+use std::fmt::Display;
+
 use glyph_origin::GlyphOrigin;
 use rustc_hash::FxHashSet;
 use text_line::TextLines;
-
 
 use super::{
     primitives::{Dimensions, Rectangle},
@@ -127,7 +128,6 @@ impl Text {
 
     /// Calculates the screen space dimensions of the text for a given clip rectangle, and generates
     /// presymbols
-    // TODO: Note that this hits twice due to containers Span::FitContents behaviour
     pub fn update_layout(
         &mut self,
         typeface: &Typeface,
@@ -162,8 +162,8 @@ impl Text {
     }
 
     /// Updates/places/caluclates the symbol dimensions and locations from the Text's TextSegments,
-    /// performing line wrapping, alignment etc
-    pub fn place_symbols(&mut self, typeface: &Typeface, clip_rectangle: &Rectangle<i32>) {
+    /// performing line wrapping, alignment etc. Text is placed in the provided region
+    pub fn place_symbols(&mut self, typeface: &Typeface, region: &Rectangle<i32>) {
         let layout = match &mut self.layout {
             Some(layout) => layout,
             None => return,
@@ -181,14 +181,14 @@ impl Text {
 
         // repositioning origin for vertical alignment
         let mut origin = match self.configuration.vertical_alignment {
-            TextAlignmentVertical::Top => {
-                GlyphOrigin::at_top_left(clip_rectangle, &font_metrics_px)
-            }
-            TextAlignmentVertical::Centre => {
-                GlyphOrigin::at_centre_left(clip_rectangle, &font_metrics_px)
-            }
+            TextAlignmentVertical::Top => GlyphOrigin::at_top_left(region, &font_metrics_px),
+            TextAlignmentVertical::Centre => GlyphOrigin::at_centre_aligned_left(
+                region,
+                &font_metrics_px,
+                layout.lines.lines.len(),
+            ),
             TextAlignmentVertical::Bottom => {
-                GlyphOrigin::at_bottom_left(clip_rectangle, &font_metrics_px)
+                GlyphOrigin::at_bottom_left(region, &font_metrics_px, layout.lines.lines.len())
             }
         };
 
@@ -197,10 +197,10 @@ impl Text {
             let horizontal_offset = match self.configuration.horizontal_alignment {
                 TextAlignmentHorizontal::Left => 0i32,
                 TextAlignmentHorizontal::Centre => {
-                    (clip_rectangle.width() - line.viewport_px_dimensions.x) / 2i32
+                    (region.width() - line.viewport_px_dimensions.x) / 2i32
                 }
                 TextAlignmentHorizontal::Right => {
-                    clip_rectangle.width() as i32 - line.viewport_px_dimensions.x
+                    region.width() as i32 - line.viewport_px_dimensions.x
                 }
             };
 
@@ -209,7 +209,7 @@ impl Text {
                 self.symbols.push(origin.symbol_from_presymbol(presymbol));
                 origin.increment_by_presymbol(presymbol);
             }
-            origin.new_line(clip_rectangle, &font_metrics_px);
+            origin.new_line(region, &font_metrics_px);
         }
     }
 
@@ -279,6 +279,16 @@ impl Text {
         }
 
         ps
+    }
+}
+
+impl Display for Text {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for segment in self.segments.iter() {
+            _ = f.write_str(&segment.string);
+        }
+
+        Ok(())
     }
 }
 

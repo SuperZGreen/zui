@@ -337,10 +337,10 @@ impl<Message> WidgetStore<Message> {
         // placing self
         //
 
-        entry.layout.clip_rectangle_px = Some(region);
-
         // allowing widget to update its internals
         entry.widget.place(&region, context);
+
+        entry.layout.clip_rectangle_px = Some(region);
 
         //
         //  Placing children
@@ -695,24 +695,13 @@ impl<Message> WidgetStore<Message> {
             }
         };
 
-        // getting contents dimensions if fits contents
-        let contents_dimensions = if matches!(width_constraint, SpanConstraint::FitContents)
-            || matches!(height_constraint, SpanConstraint::FitContents)
-        {
-            entry
-                .widget
-                .calculate_minimum_dimensions(layout_boundaries, context)
-        } else {
-            Dimensions::new(0, 0)
-        };
-
         // TODO: check all the i32 casts
-        let width_px = match width_constraint {
+        let boundary_width_px = match width_constraint {
             SpanConstraint::ViewWidth(vw) => vw.into_pixel_span(context).round() as i32,
             SpanConstraint::ViewHeight(vh) => vh.into_pixel_span(context).round() as i32,
             SpanConstraint::ViewMin(vm) => vm.into_pixel_span(context).round() as i32,
             SpanConstraint::Pixels(p) => p.round() as i32,
-            SpanConstraint::FitContents => contents_dimensions.width,
+            SpanConstraint::FitContents => layout_boundaries.horizontal.span_px,
             SpanConstraint::FitChildren => children_dimensions.width,
             // Silently pass through, is overidden during placement
             SpanConstraint::ParentWeight(_) => 0i32,
@@ -720,17 +709,37 @@ impl<Message> WidgetStore<Message> {
             SpanConstraint::ParentHeight(ph) => ph.into_pixel_span(layout_boundaries.into()) as i32,
         };
 
-        let height_px = match height_constraint {
+        let boundary_height_px = match height_constraint {
             SpanConstraint::ViewWidth(vw) => vw.into_pixel_span(context).round() as i32,
             SpanConstraint::ViewHeight(vh) => vh.into_pixel_span(context).round() as i32,
             SpanConstraint::ViewMin(vm) => vm.into_pixel_span(context).round() as i32,
             SpanConstraint::Pixels(p) => p.round() as i32,
-            SpanConstraint::FitContents => contents_dimensions.height,
+            SpanConstraint::FitContents => layout_boundaries.vertical.span_px,
             SpanConstraint::FitChildren => children_dimensions.height,
             // Silently pass through, is overidden during placement
             SpanConstraint::ParentWeight(_) => 0i32,
             SpanConstraint::ParentWidth(pw) => pw.into_pixel_span(layout_boundaries.into()) as i32,
             SpanConstraint::ParentHeight(ph) => ph.into_pixel_span(layout_boundaries.into()) as i32,
+        };
+
+        // getting contents dimensions if fits contents
+        let contents_dimensions = entry.widget.calculate_minimum_dimensions(
+            &LayoutBoundaries::new(
+                Boundary::new(BoundaryType::Static, boundary_width_px),
+                Boundary::new(BoundaryType::Static, boundary_height_px),
+            ),
+            context,
+        );
+
+        // applying override if is FitContents
+        let width_px = match width_constraint {
+            SpanConstraint::FitContents => contents_dimensions.width,
+            _ => boundary_width_px,
+        };
+
+        let height_px = match height_constraint {
+            SpanConstraint::FitContents => contents_dimensions.height,
+            _ => boundary_height_px,
         };
 
         // getting final dimensions
@@ -755,7 +764,6 @@ impl<Message> WidgetStore<Message> {
     /// Deletes the children of the widget from the widget store, and unparents the deleted
     /// children. This functions recursively TODO.
     pub fn widget_delete_children(&mut self, widget_id: &WidgetId) -> Result<(), ()> {
-
         // getting the WidgetEntry
         let entry = match self.get_mut(widget_id) {
             Some(we) => we,

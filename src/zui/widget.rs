@@ -73,7 +73,10 @@ pub trait Widget<Message> {
         &mut self,
         layout_boundaries: &LayoutBoundaries,
         context: &Context,
-    ) -> Dimensions<i32>;
+    ) -> Dimensions<i32> {
+        // Returns 0 dimensions by default
+        Dimensions::new(0i32, 0i32)
+    }
 
     /// Adds the Text's SymbolKeys to the symbol_keys FxHashSet for this widget. Does not propagate
     /// to chilren as it is called on all valid entries by the WidgetStore. This is to ensure that
@@ -167,6 +170,15 @@ impl Into<Dimensions<i32>> for &LayoutBoundaries {
         let height = self.vertical.span_px;
 
         Dimensions::new(width, height)
+    }
+}
+
+impl From<&Rectangle<i32>> for LayoutBoundaries {
+    fn from(value: &Rectangle<i32>) -> Self {
+        LayoutBoundaries::new(
+            Boundary::new(BoundaryType::Static, value.width()),
+            Boundary::new(BoundaryType::Static, value.height()),
+        )
     }
 }
 

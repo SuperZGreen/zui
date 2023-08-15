@@ -1,5 +1,5 @@
+use scenes::BaseSceneMessage;
 use winit::{
-    dpi::PhysicalPosition,
     event::{Event, KeyboardInput, VirtualKeyCode, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
@@ -13,14 +13,13 @@ use zui::{SceneHandle, Zui};
 mod render_state;
 use render_state::RenderState;
 
-mod main_scene;
-use main_scene::MainScene;
+use crate::scenes::{SceneIdentifier, BaseScene};
+
+mod scenes;
 
 #[derive(Clone, Copy)]
 pub enum UiMessage {
-    MoveCursor(Option<PhysicalPosition<f64>>),
-    AddText,
-    ClearText,
+    BaseSceneMessage(BaseSceneMessage),
     Exit,
 }
 
@@ -55,7 +54,7 @@ fn main() {
     .unwrap();
 
     // setting up the scenes
-    let mut scene_handle = SceneHandle::new(Box::new(MainScene::new()));
+    let mut scene_handle = SceneHandle::new(Box::new(BaseScene::new()));
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
@@ -90,10 +89,29 @@ fn main() {
                             exit(control_flow);
                         }
                         VirtualKeyCode::A => {
-                            scene_handle.handle_message(UiMessage::AddText);
+                            scene_handle.handle_message(UiMessage::BaseSceneMessage(
+                                BaseSceneMessage::AddSidebarText,
+                            ));
                         }
                         VirtualKeyCode::D => {
-                            scene_handle.handle_message(UiMessage::ClearText);
+                            scene_handle.handle_message(UiMessage::BaseSceneMessage(
+                                BaseSceneMessage::ClearSidebarText,
+                            ));
+                        }
+                        VirtualKeyCode::Key1 => {
+                            scene_handle.handle_message(UiMessage::BaseSceneMessage(
+                                BaseSceneMessage::ChangeScene(SceneIdentifier::ContainerDemo),
+                            ));
+                        }
+                        VirtualKeyCode::Key2 => {
+                            scene_handle.handle_message(UiMessage::BaseSceneMessage(
+                                BaseSceneMessage::ChangeScene(SceneIdentifier::TextDemo),
+                            ));
+                        }
+                        VirtualKeyCode::Key3 => {
+                            scene_handle.handle_message(UiMessage::BaseSceneMessage(
+                                BaseSceneMessage::ChangeScene(SceneIdentifier::ButtonDemo),
+                            ));
                         }
                         VirtualKeyCode::F10 => {
                             zui.debug_try_save_typeface_texture_atlas("out.png");
@@ -109,7 +127,9 @@ fn main() {
                         let mut position = *position;
                         position.y =
                             zui.context().viewport_dimensions_px.height as f64 - position.y;
-                        scene_handle.handle_message(UiMessage::MoveCursor(Some(position)));
+                        scene_handle.handle_message(UiMessage::BaseSceneMessage(
+                            BaseSceneMessage::MoveCursor(Some(position)),
+                        ));
                     }
                     WindowEvent::ModifiersChanged(_) => {
                         // TODO

@@ -27,7 +27,7 @@ pub use scene_handle::SceneHandle;
 use simple_renderer::SimpleRenderer;
 pub use span_constraint::{ParentHeight, ParentWidth, SpanConstraint, ViewHeight, ViewWidth};
 pub use text::{
-    LineWrapping, Text, TextAlignmentHorizontal, TextConfiguration, TextSegment, TextSize,
+    LineWrapping, Text, TextAlignmentHorizontal, TextAlignmentVertical, TextConfiguration, TextSegment, TextSize,
 };
 use text_renderer::TextRenderer;
 pub use typeface::Typeface;
