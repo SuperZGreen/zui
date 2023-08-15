@@ -9,7 +9,7 @@ use crate::{
         widget::LayoutBoundaries,
         Axis, Colour, Context, Event, SpanConstraint, Widget, widget_store::{EntryDefaultDescriptor, EntryChildren},
     },
-    MouseEvent, PaddingWeights,
+    PaddingWeights,
 };
 
 pub struct Container {
@@ -23,8 +23,8 @@ pub struct Container {
     /// Flag that describes whether the container is overflowing or not
     pub overflowing: bool,
 
-    /// A test toggle that inverts the background colour when true
-    test_toggle: bool,
+    // /// A test toggle that inverts the background colour when true
+    // test_toggle: bool,
 }
 
 impl Container {
@@ -33,7 +33,7 @@ impl Container {
             name: None,
             background: None,
             overflowing: false,
-            test_toggle: false,
+            // test_toggle: false,
         }
     }
 
@@ -66,25 +66,21 @@ where
         self
     }
 
-    fn handle_event(&mut self, event: &Event, region: &Rectangle<i32>, context: &Context) {
+    fn handle_event(&mut self, event: &Event, _region: &Rectangle<i32>, _context: &Context) {
         match event {
-            // Event::MouseEvent(MouseEvent::ButtonReleased) => {
-            //     self.test_toggle = !self.test_toggle;
+            // Event::MouseEvent(MouseEvent::CursorMoved) => {
+            //     if let Some(cursor_position) = context.cursor_position {
+            //         if region.is_in(&cursor_position) {
+            //             self.test_toggle = true;
+            //         } else {
+            //             self.test_toggle = false;
+            //         }
+            //     }
             // }
 
-            Event::MouseEvent(MouseEvent::CursorMoved) => {
-                if let Some(cursor_position) = context.cursor_position {
-                    if region.is_in(&cursor_position) {
-                        self.test_toggle = true;
-                    } else {
-                        self.test_toggle = false;
-                    }
-                }
-            }
-
-            Event::MouseEvent(MouseEvent::CursorExitedWindow) => {
-                self.test_toggle = false;
-            }
+            // Event::MouseEvent(MouseEvent::CursorExitedWindow) => {
+            //     self.test_toggle = false;
+            // }
 
             _ => {}
         }
@@ -100,20 +96,21 @@ where
     ) {
         // adding own rectangle/simple vertices
         if let Some(base_colour) = self.background {
-            let modified_colour = if self.test_toggle {
-                Colour {
-                    r: 1f32 - base_colour.r,
-                    g: 1f32 - base_colour.g,
-                    b: 1f32 - base_colour.b,
-                    a: 1f32,
-                }
-            } else {
-                base_colour
-            };
+            // let modified_colour = if self.test_toggle {
+            //     Colour {
+            //         r: 1f32 - base_colour.r,
+            //         g: 1f32 - base_colour.g,
+            //         b: 1f32 - base_colour.b,
+            //         a: 1f32,
+            //     }
+            // } else {
+            //     base_colour
+            // };
 
             simple_vertices.extend_from_slice(&SimpleVertex::from_rectangle(
                 region,
-                modified_colour,
+                // modified_colour,
+                base_colour,
                 context.viewport_dimensions_px,
             ));
         }
