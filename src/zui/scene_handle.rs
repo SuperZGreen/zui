@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use crate::{Rectangle, WidgetStore, ContextMutTypeface};
+use crate::{ContextMutTypeface, Rectangle, WidgetStore};
 
 use super::{
     render_layer::RenderLayer,
@@ -21,7 +21,7 @@ where
     scene: Box<dyn Scene<Message = Message>>,
 
     /// messages produced by the scene widgets
-    _messages: VecDeque<Message>,
+    messages: VecDeque<Message>,
 
     /// messages to be processed by the user developer
     external_messages: VecDeque<Message>,
@@ -41,19 +41,34 @@ where
         Self {
             root_widget_id,
             scene,
-            _messages: VecDeque::new(),
+            messages: VecDeque::new(),
             external_messages: VecDeque::new(),
             widget_store,
         }
     }
 
     /// Clears the Widget layout information in the scene, and recalculates Layout info
-    pub fn update(&mut self, context: &mut ContextMutTypeface, device: &wgpu::Device, queue: &wgpu::Queue) {
+    pub fn update(
+        &mut self,
+        context: &mut ContextMutTypeface,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+    ) {
+        // handling all messages
+        for message in self.messages.drain(..) {
+            let (external_message, _) = self.scene.handle_message(&mut self.widget_store, message);
+
+            if let Some(external_message) = external_message {
+                self.external_messages.push_back(external_message);
+            }
+        }
 
         // collecting all text
         let symbol_keys = self.widget_store.collect_text();
 
-        context.typeface.rasterise_symbol_keys(symbol_keys, device, queue);
+        context
+            .typeface
+            .rasterise_symbol_keys(symbol_keys, device, queue);
 
         let context = &Context {
             typeface: context.typeface,
@@ -91,15 +106,17 @@ where
             context.viewport_dimensions_px.height as i32,
         );
 
-        _ = self.widget_store.widget_place(&self.root_widget_id, region, context);
+        _ = self
+            .widget_store
+            .widget_place(&self.root_widget_id, region, context);
     }
 
     /// Allows passing a message to the Scene externally, to be dealt with by the UI
     pub fn handle_message(&mut self, message: Message) -> Option<Message> {
-        let (message, _rebuild_requested) =
+        let (external_message, _rebuild_requested) =
             self.scene.handle_message(&mut self.widget_store, message);
 
-        message
+        external_message
     }
 
     /// Passes a certain event to all the widgets in the WidgetStore
@@ -114,9 +131,12 @@ where
                 }
             };
 
-            widget_entry
+            if let Some(message) = widget_entry
                 .widget
-                .handle_event(&event, &widget_region, context);
+                .handle_event(&event, &widget_region, context)
+            {
+                self.messages.push_back(message);
+            }
         }
     }
 

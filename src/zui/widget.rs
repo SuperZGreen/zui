@@ -62,8 +62,14 @@ pub struct ChildPlacementDescriptor {
 #[allow(unused_variables)]
 pub trait Widget<Message> {
     /// Handles an input event for the widget. Region is the region of the placed Widget
-    fn handle_event(&mut self, event: &Event, region: &Rectangle<i32>, context: &Context) {
+    fn handle_event(
+        &mut self,
+        event: &Event,
+        region: &Rectangle<i32>,
+        context: &Context,
+    ) -> Option<Message> {
         // Do nothing
+        None
     }
 
     /// Asks the widget to calculate its dimensions provided the LayoutBoundaries and width and

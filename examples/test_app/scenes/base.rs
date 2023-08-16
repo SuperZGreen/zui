@@ -1,6 +1,6 @@
 use winit::dpi::PhysicalPosition;
 use zui::{
-    premade_widgets::{Container, TextContainer},
+    premade_widgets::{Button, Container, TextContainer},
     Axis, Colour, EntryChildren, EntryOverrideDescriptor, PaddingWeights, ParentHeight,
     ParentWidth, PositionConstraint, Scene, SpanConstraint, Text, TextConfiguration, TextSegment,
     WidgetId, WidgetStore,
@@ -10,9 +10,9 @@ use crate::UiMessage;
 
 use rand::Rng;
 
-use super::{container_demo, SceneIdentifier, text_demo};
+use super::{container_demo, text_demo, SceneIdentifier};
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum BaseSceneMessage {
     MoveCursor(Option<PhysicalPosition<f64>>),
     AddSidebarText,
@@ -24,8 +24,14 @@ pub struct BaseScene {
     display_area: Option<WidgetId>,
     sidebar: Option<WidgetId>,
     counter: i32,
+
+    // The id of the widget that tracks the cursor
     cursor_widget_id: Option<WidgetId>,
 
+    // The buttons on the sidebar that lead to the demo scenes
+    demo_navigation_buttons: Vec<WidgetId>,
+
+    // The current child scene
     child_scene: Option<Box<dyn Scene<Message = UiMessage>>>,
 }
 
@@ -38,6 +44,8 @@ impl BaseScene {
             counter: 0i32,
 
             cursor_widget_id: None,
+
+            demo_navigation_buttons: Vec::new(),
 
             child_scene: None,
         }
@@ -52,8 +60,13 @@ impl Scene for BaseScene {
         widget_store: &mut WidgetStore<Self::Message>,
         message: Self::Message,
     ) -> (Option<Self::Message>, bool) {
+
         match message {
-            UiMessage::BaseSceneMessage(msm) => match msm {
+            UiMessage::Exit => {
+                (Some(UiMessage::Exit), false)
+            },
+
+            UiMessage::BaseSceneMessage(bsm) => match bsm {
                 BaseSceneMessage::MoveCursor(Some(physical_position)) => {
                     _ = widget_store.widget_set_position_constraint(
                         &self.cursor_widget_id.unwrap(),
@@ -116,9 +129,16 @@ impl Scene for BaseScene {
 
                         self.child_scene = match scene_identifier {
                             SceneIdentifier::ContainerDemo => {
+
+                                // creating a new instance of the scene
                                 let mut scene = Box::new(container_demo::ContainerScene::new());
+
+                                // initing the scene
                                 let root_widget = scene.init(widget_store);
+
+                                // adding the scene's root widget as a child of display area
                                 _ = widget_store.widget_add_child(&display_area, root_widget);
+
                                 Some(scene)
                             }
                             SceneIdentifier::TextDemo => {
@@ -136,7 +156,7 @@ impl Scene for BaseScene {
                 }
             },
 
-            _ => (Some(message), false),
+            // _ => (Some(message), false),
         }
     }
 
@@ -157,6 +177,76 @@ impl Scene for BaseScene {
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(0.2f32))),
                 height_constraint: Some(SpanConstraint::ParentHeight(ParentHeight::new(1f32))),
+                position_constraint: Some(PositionConstraint::ParentDetermined(
+                    PaddingWeights::NONE,
+                )),
+                ..Default::default()
+            },
+        );
+
+        let container_demo_button = widget_store.add(
+            Button::new(
+                UiMessage::BaseSceneMessage(BaseSceneMessage::ChangeScene(SceneIdentifier::ContainerDemo)),
+                zui::named_colours::BonneNuit,
+                zui::named_colours::Botanical,
+            )
+            .with_text(Text::new().push_segment(TextSegment::new("Container Demo", Colour::WHITE))),
+            EntryOverrideDescriptor {
+                width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1f32))),
+                height_constraint: Some(SpanConstraint::FitContents),
+                position_constraint: Some(PositionConstraint::ParentDetermined(
+                    PaddingWeights::NONE,
+                )),
+                ..Default::default()
+            },
+        );
+
+        let button_demo_button = widget_store.add(
+            Button::new(
+                UiMessage::BaseSceneMessage(BaseSceneMessage::ChangeScene(SceneIdentifier::ButtonDemo)),
+                zui::named_colours::BonneNuit,
+                zui::named_colours::Botanical,
+            )
+            .with_text(Text::new().push_segment(TextSegment::new("ButtonDemo", Colour::WHITE))),
+            EntryOverrideDescriptor {
+                width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1f32))),
+                height_constraint: Some(SpanConstraint::FitContents),
+                position_constraint: Some(PositionConstraint::ParentDetermined(
+                    PaddingWeights::NONE,
+                )),
+                ..Default::default()
+            },
+        );
+
+        let exit_button = widget_store.add(
+            Button::new(
+                UiMessage::Exit,
+                // UiMessage::BaseSceneMessage(BaseSceneMessage::ChangeScene(SceneIdentifier::TextDemo)),
+                zui::named_colours::EcstaticRed,
+                // zui::named_colours::FabulousFuchsia,
+                zui::named_colours::FabulousFuchsia,
+            )
+            .with_text(Text::new().push_segment(TextSegment::new("Exit Demo App", Colour::WHITE))),
+            EntryOverrideDescriptor {
+                width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1f32))),
+                height_constraint: Some(SpanConstraint::FitContents),
+                position_constraint: Some(PositionConstraint::ParentDetermined(
+                    PaddingWeights::new(10f32, 0f32, 0f32, 0f32),
+                )),
+                ..Default::default()
+            },
+        );
+
+        let text_demo_button = widget_store.add(
+            Button::new(
+                UiMessage::BaseSceneMessage(BaseSceneMessage::ChangeScene(SceneIdentifier::TextDemo)),
+                zui::named_colours::BonneNuit,
+                zui::named_colours::Botanical,
+            )
+            .with_text(Text::new().push_segment(TextSegment::new("Text Demo", Colour::WHITE))),
+            EntryOverrideDescriptor {
+                width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1f32))),
+                height_constraint: Some(SpanConstraint::FitContents),
                 position_constraint: Some(PositionConstraint::ParentDetermined(
                     PaddingWeights::NONE,
                 )),
@@ -209,21 +299,20 @@ impl Scene for BaseScene {
 
         let text_none = widget_store.add(
             TextContainer::new().with_text(
-                Text::new().push_segment(TextSegment::new(
-                        "No demo scene selected!"
-                        , Colour::WHITE))
-                .with_configuration(TextConfiguration {
-                    line_wrapping: zui::LineWrapping::Word,
-                    horizontal_alignment: zui::TextAlignmentHorizontal::Centre,
-                    // vertical_alignment: zui::text::TextAlignmentVertical::Centre,
-                    ..Default::default()
-                }),
+                Text::new()
+                    .push_segment(TextSegment::new("No demo scene selected!", Colour::WHITE))
+                    .with_configuration(TextConfiguration {
+                        line_wrapping: zui::LineWrapping::Word,
+                        horizontal_alignment: zui::TextAlignmentHorizontal::Centre,
+                        // vertical_alignment: zui::text::TextAlignmentVertical::Centre,
+                        ..Default::default()
+                    }),
             ),
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1f32))),
                 // height_constraint: Some(SpanConstraint::ParentHeight(ParentHeight::new(1f32))),
                 position_constraint: Some(PositionConstraint::ParentDetermined(
-                    PaddingWeights::NONE
+                    PaddingWeights::NONE,
                 )),
                 ..Default::default()
             },
@@ -244,6 +333,16 @@ impl Scene for BaseScene {
         self.sidebar = Some(sidebar);
 
         _ = widget_store.widget_add_child(&sidebar, info_text);
+
+        _ = widget_store.widget_add_child(&sidebar, container_demo_button);
+        _ = widget_store.widget_add_child(&sidebar, text_demo_button);
+        _ = widget_store.widget_add_child(&sidebar, button_demo_button);
+
+        self.demo_navigation_buttons.push(container_demo_button);
+        self.demo_navigation_buttons.push(text_demo_button);
+        self.demo_navigation_buttons.push(button_demo_button);
+
+        _ = widget_store.widget_add_child(&sidebar, exit_button);
 
         _ = widget_store.widget_add_child(&root, sidebar);
         _ = widget_store.widget_add_child(&root, display_area_background);

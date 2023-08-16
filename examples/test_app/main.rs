@@ -17,7 +17,7 @@ use crate::scenes::{SceneIdentifier, BaseScene};
 
 mod scenes;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum UiMessage {
     BaseSceneMessage(BaseSceneMessage),
     Exit,
@@ -27,7 +27,7 @@ fn main() {
     // configuring log
     std::env::set_var("RUST_BACKTRACE", "1");
     env_logger::Builder::new()
-        // .filter_level(log::LevelFilter::Trace)
+        .filter_level(log::LevelFilter::Info)
         .filter_module("wgpu", log::LevelFilter::Warn)
         .filter_module("zui", log::LevelFilter::Trace)
         .init();

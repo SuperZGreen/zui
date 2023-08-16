@@ -7,14 +7,14 @@ use crate::{
         simple_renderer::SimpleVertex,
         text_renderer::TextVertex,
         widget::{Bounds, LayoutBoundaries},
-        Colour, Context, Rectangle, Text, Widget, widget_store::EntryDefaultDescriptor,
+        widget_store::EntryDefaultDescriptor,
+        Colour, Context, Rectangle, Text, Widget,
     },
-    Event, SpanConstraint, PositionConstraint, PaddingWeights,
+    Event, PaddingWeights, PositionConstraint, SpanConstraint,
 };
 
 // A basic widget that contains text
 pub struct TextContainer {
-
     /// The text that the text container contains.
     text: Option<Text>,
 
@@ -50,10 +50,17 @@ where
         self
     }
 
-    fn handle_event(&mut self, event: &Event, _region: &Rectangle<i32>, _context: &Context) {
+    fn handle_event(
+        &mut self,
+        event: &Event,
+        _region: &Rectangle<i32>,
+        _context: &Context,
+    ) -> Option<Message> {
         match event {
             _ => {}
         }
+
+        None
     }
 
     fn to_vertices(
@@ -64,7 +71,6 @@ where
         text_vertices: &mut Vec<TextVertex>,
         _render_layers: &mut VecDeque<RenderLayer>,
     ) {
-
         // adding own text vertices
         if let Some(text) = &self.text {
             text_vertices.append(&mut text.to_vertices(region, context.viewport_dimensions_px));
@@ -86,7 +92,6 @@ where
         context: &Context,
     ) -> Dimensions<i32> {
         if let Some(text) = self.text.as_mut() {
-
             let boundary_width = layout_boundaries.horizontal.span_px;
 
             text.update_layout(

@@ -7,7 +7,8 @@ use crate::{
         simple_renderer::SimpleVertex,
         text_renderer::TextVertex,
         widget::LayoutBoundaries,
-        Axis, Colour, Context, Event, SpanConstraint, Widget, widget_store::{EntryDefaultDescriptor, EntryChildren},
+        widget_store::{EntryChildren, EntryDefaultDescriptor},
+        Axis, Colour, Context, Event, SpanConstraint, Widget,
     },
     PaddingWeights,
 };
@@ -22,7 +23,6 @@ pub struct Container {
 
     /// Flag that describes whether the container is overflowing or not
     pub overflowing: bool,
-
     // /// A test toggle that inverts the background colour when true
     // test_toggle: bool,
 }
@@ -66,7 +66,12 @@ where
         self
     }
 
-    fn handle_event(&mut self, event: &Event, _region: &Rectangle<i32>, _context: &Context) {
+    fn handle_event(
+        &mut self,
+        event: &Event,
+        _region: &Rectangle<i32>,
+        _context: &Context,
+    ) -> Option<Message> {
         match event {
             // Event::MouseEvent(MouseEvent::CursorMoved) => {
             //     if let Some(cursor_position) = context.cursor_position {
@@ -81,9 +86,10 @@ where
             // Event::MouseEvent(MouseEvent::CursorExitedWindow) => {
             //     self.test_toggle = false;
             // }
-
             _ => {}
         }
+
+        None
     }
 
     fn to_vertices(

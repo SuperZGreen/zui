@@ -1,20 +1,24 @@
 use std::collections::VecDeque;
 
-use crate::{zui::{
-    self,
-    primitives::{Dimensions, Rectangle},
-    render_layer::RenderLayer,
-    simple_renderer::SimpleVertex,
-    text_renderer::TextVertex,
-    widget::{Bounds, Event, LayoutBoundaries, MouseEvent, Widget, DimensionsError},
-    Colour, Context,
-}, SpanConstraint};
+use crate::{
+    zui::{
+        primitives::{Dimensions, Rectangle},
+        render_layer::RenderLayer,
+        simple_renderer::SimpleVertex,
+        text_renderer::TextVertex,
+        widget::{Bounds, Event, LayoutBoundaries, MouseEvent, Widget},
+        widget_store::EntryDefaultDescriptor,
+        Colour, Context,
+    },
+    PaddingWeights, PositionConstraint, SpanConstraint, Text,
+};
 
 pub struct Button<Message> {
     cursor_on_colour: Colour,
     cursor_off_colour: Colour,
     on_click_message: Message,
     cursor_is_over: bool,
+    text: Option<Text>,
 }
 
 impl<Message> Button<Message> {
@@ -31,7 +35,13 @@ impl<Message> Button<Message> {
             cursor_off_colour,
             on_click_message,
             cursor_is_over: false,
+            text: None,
         }
+    }
+
+    pub fn with_text(mut self, text: Text) -> Self {
+        self.text = Some(text);
+        self
     }
 }
 
@@ -46,15 +56,41 @@ where
 
 impl<Message> Widget<Message> for Button<Message>
 where
-    Message: Copy + Clone + 'static,
+    Message: Copy + Clone,
 {
-
-    fn handle_event(&mut self, event: &Event, _context: &Context) {
+    fn handle_event(
+        &mut self,
+        event: &Event,
+        region: &Rectangle<i32>,
+        context: &Context,
+    ) -> Option<Message> {
         match event {
             Event::MouseEvent(MouseEvent::CursorMoved) => {
-                // Do nothing
+                if let Some(cursor_position) = context.cursor_position {
+                    if region.is_in(&cursor_position) {
+                        self.cursor_is_over = true;
+                    } else {
+                        self.cursor_is_over = false;
+                    }
+                }
+
+                None
             }
-            _ => {}
+
+            Event::MouseEvent(MouseEvent::CursorExitedWindow) => {
+                self.cursor_is_over = false;
+
+                None
+            }
+
+            Event::MouseEvent(MouseEvent::ButtonPressed) => {
+                if self.cursor_is_over {
+                    Some(self.on_click_message)
+                } else {
+                    None
+                }
+            }
+            _ => None,
         }
     }
 
@@ -63,38 +99,79 @@ where
         region: Rectangle<i32>,
         context: &Context,
         simple_vertices: &mut Vec<SimpleVertex>,
-        _text_vertices: &mut Vec<TextVertex>,
+        text_vertices: &mut Vec<TextVertex>,
         _render_layers: &mut VecDeque<RenderLayer>,
     ) {
+        // adding own text vertices
+        if let Some(text) = &self.text {
+            text_vertices.append(&mut text.to_vertices(region, context.viewport_dimensions_px));
+        }
+
+        let colour = if self.cursor_is_over {
+            self.cursor_on_colour
+        } else {
+            self.cursor_off_colour
+        };
+
+        // adding own rectangle/simple vertices
+        simple_vertices.extend_from_slice(&SimpleVertex::from_rectangle(
+            region,
+            colour,
+            context.viewport_dimensions_px,
+        ));
     }
 
-    fn calculate_dimensions(
-        &self,
+    fn calculate_minimum_dimensions(
+        &mut self,
         layout_boundaries: &LayoutBoundaries,
-        width_contraint: SpanConstraint,
-        height_contraint: SpanConstraint,
-        _context: &Context,
-    ) -> Result<Dimensions<i32>, DimensionsError> {
-        let width_px = match width_contraint {
-            SpanConstraint::Pixels(px) => px as i32,
-            SpanConstraint::ParentRatio(pr) => {
-                (layout_boundaries.horizontal.span_px as f32 * pr) as i32
-            }
-            _ => 64i32,
-        };
+        context: &Context,
+    ) -> Dimensions<i32> {
+        if let Some(text) = self.text.as_mut() {
+            let boundary_width = layout_boundaries.horizontal.span_px;
 
-        let height_px = match height_contraint {
-            SpanConstraint::Pixels(px) => px as i32,
-            SpanConstraint::ParentRatio(pr) => {
-                (layout_boundaries.horizontal.span_px as f32 * pr) as i32
-            }
-            _ => 64i32,
-        };
+            text.update_layout(
+                context.typeface,
+                Bounds {
+                    span: boundary_width as f32, // TODO
+                },
+                context.viewport_dimensions_px,
+            );
 
-        Ok(Dimensions {
-            width: width_px,
-            height: height_px,
-        })
+            let dimensions = text.dimensions_px().unwrap();
+
+            // self.layout.dimensions_px = Some(dimensions);
+
+            dimensions
+        } else {
+            Dimensions::new(0i32, 0i32)
+        }
     }
 
+    fn entry_default_descriptor(&self) -> crate::zui::widget_store::EntryDefaultDescriptor {
+        EntryDefaultDescriptor {
+            children: None,
+            width_constraint: SpanConstraint::FitContents,
+            height_constraint: SpanConstraint::FitContents,
+            position_constraint: PositionConstraint::ParentDetermined(PaddingWeights::NONE),
+        }
+    }
+
+    fn place(&mut self, region: &Rectangle<i32>, context: &Context) {
+        if let Some(text) = self.text.as_mut() {
+            text.place_symbols(context.typeface, region);
+        }
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        todo!()
+    }
+
+    fn collect_text(&self, symbol_keys: &mut rustc_hash::FxHashSet<crate::typeface::SymbolKey>) {
+        let text = match self.text.as_ref() {
+            Some(text) => text,
+            None => return,
+        };
+
+        text.collect_symbol_keys(symbol_keys);
+    }
 }
