@@ -20,7 +20,7 @@ mod widget_store;
 pub use colour::named as named_colours;
 pub use colour::Colour;
 pub use position_constraint::{PaddingWeights, PositionConstraint};
-pub use primitives::Rectangle;
+pub use primitives::{Rectangle, Dimensions};
 pub use renderable::Renderable;
 pub use scene::Scene;
 pub use scene_handle::SceneHandle;
@@ -38,8 +38,6 @@ use winit::{
     dpi::PhysicalPosition,
     event::{ElementState, WindowEvent},
 };
-
-use self::primitives::Dimensions;
 
 pub struct Zui {
     typeface: Typeface,
@@ -148,7 +146,7 @@ impl Zui {
         output_texture_view: &wgpu::TextureView,
         command_encoder: &mut wgpu::CommandEncoder,
     ) where
-        Message: Copy + Clone,
+        Message: Clone,
     {
         /// Describes how the RenderLayer should be rendered
         #[derive(Debug)]
@@ -243,10 +241,12 @@ impl Zui {
                 resolve_target: None,
                 ops: wgpu::Operations {
                     load: wgpu::LoadOp::Load,
-                    store: true,
+                    store: wgpu::StoreOp::Store,
                 },
             })],
             depth_stencil_attachment: None,
+            timestamp_writes: None, // TODO: check this
+            occlusion_query_set: None, // TODO: check this
         });
 
         if let Some(clip_rectangle) = clip_rectangle {
@@ -313,10 +313,10 @@ impl Zui {
     /// Handles a winit event, can pass the relevant zui::Event onto a SceneHandle if suitable
     pub fn handle_winit_window_event<Message>(
         &mut self,
-        event: &winit::event::WindowEvent<'_>,
+        event: &winit::event::WindowEvent,
         scene_handle: Option<&mut SceneHandle<Message>>,
     ) where
-        Message: Copy,
+        Message: Clone,
     {
         match event {
             WindowEvent::CursorMoved {

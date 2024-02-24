@@ -60,7 +60,7 @@ impl Container {
 
 impl<Message> Widget<Message> for Container
 where
-    Message: Clone + Copy,
+    Message: Clone,
 {
     fn as_any(&self) -> &dyn std::any::Any {
         self
@@ -142,7 +142,7 @@ where
 
 impl<'a, Message> Into<Box<dyn Widget<Message> + 'a>> for Container
 where
-    Message: Clone + Copy + 'a,
+    Message: Clone + 'a,
 {
     fn into(self) -> Box<dyn Widget<Message> + 'a> {
         Box::new(self)

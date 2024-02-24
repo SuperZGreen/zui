@@ -28,7 +28,7 @@ impl<Message> Button<Message> {
         cursor_on_colour: Colour,
     ) -> Button<Message>
     where
-        Message: Copy,
+        Message: Clone,
     {
         Self {
             cursor_on_colour,
@@ -47,7 +47,7 @@ impl<Message> Button<Message> {
 
 impl<'a, Message> Into<Box<dyn Widget<Message> + 'a>> for Button<Message>
 where
-    Message: Clone + Copy + 'a,
+    Message: Clone + 'a,
 {
     fn into(self) -> Box<dyn Widget<Message> + 'a> {
         Box::new(self)
@@ -56,7 +56,7 @@ where
 
 impl<Message> Widget<Message> for Button<Message>
 where
-    Message: Copy + Clone,
+    Message: Clone,
 {
     fn handle_event(
         &mut self,
@@ -83,9 +83,9 @@ where
                 None
             }
 
-            Event::MouseEvent(MouseEvent::ButtonPressed) => {
+            Event::MouseEvent(MouseEvent::ButtonReleased) => {
                 if self.cursor_is_over {
-                    Some(self.on_click_message)
+                    Some(self.on_click_message.clone())
                 } else {
                     None
                 }

@@ -9,10 +9,9 @@ use super::{
     Context, Renderable, Scene,
 };
 
-/// Allows for caching of the widgets produced by Scene::view
 pub struct SceneHandle<Message>
 where
-    Message: Clone + Copy,
+    Message: Clone,
 {
     /// the root widget produced by the scene
     root_widget_id: WidgetId,
@@ -32,7 +31,7 @@ where
 
 impl<Message> SceneHandle<Message>
 where
-    Message: Clone + Copy,
+    Message: Clone,
 {
     pub fn new(mut scene: Box<dyn Scene<Message = Message>>) -> Self {
         let mut widget_store = WidgetStore::new();
@@ -144,11 +143,16 @@ where
     pub fn pop_external_message(&mut self) -> Option<Message> {
         self.external_messages.pop_front()
     }
+
+    /// Queues a message for the scene
+    pub fn queue_message(&mut self, message: Message) {
+        self.messages.push_back(message);
+    }
 }
 
 impl<Message> Renderable for SceneHandle<Message>
 where
-    Message: Clone + Copy,
+    Message: Clone,
 {
     fn to_render_layers(&self, context: &Context) -> VecDeque<RenderLayer> {
         let mut render_layers = VecDeque::new();

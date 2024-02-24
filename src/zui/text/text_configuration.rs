@@ -1,5 +1,5 @@
-#[derive(Clone)]
 /// Holds information describing how to form the layout of the [`Text`]
+#[derive(Clone)]
 pub struct TextConfiguration {
     pub line_wrapping: LineWrapping,
     pub size_px: u32,
@@ -18,17 +18,17 @@ impl Default for TextConfiguration {
     }
 }
 
+/// Determines the line wrapping behaviour of [`Text`]
 #[derive(Clone)]
 #[allow(dead_code)]
-/// Determines the line wrapping behaviour of [`Text`]
 pub enum LineWrapping {
     None,
     Symbol,
     Word,
 }
 
-#[derive(Clone)]
 /// Used to derive height of the text, ascent to descent
+#[derive(Clone)]
 pub enum TextSize {
     /// Height of the text (ascent to descent) Proportion of the parent's rectangle height
     ParentHeight(f32),
@@ -47,16 +47,16 @@ impl TextSize {
     }
 }
 
-#[derive(Copy, Clone)]
 /// Determines the horizontal alignment of the [`Text`]
+#[derive(Copy, Clone)]
 pub enum TextAlignmentHorizontal {
     Left,
     Centre,
     Right,
 }
 
-#[derive(Copy, Clone)]
 /// Determinse the vertical alignment of the [`Text`]
+#[derive(Copy, Clone)]
 pub enum TextAlignmentVertical {
     Top,
     Centre,

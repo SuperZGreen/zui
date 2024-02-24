@@ -3,7 +3,7 @@ use crate::WidgetStore;
 use super::widget_store::WidgetId;
 
 pub trait Scene {
-    type Message: Copy + Clone;
+    type Message: Clone;
 
     /// Implements the update logic when a new message is received from a widget,
     /// Returns an external message, ie a command that is to be handled by the external context

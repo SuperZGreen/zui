@@ -245,8 +245,6 @@ impl<Message> WidgetStore<Message> {
             }
         };
 
-        drop(entry);
-
         for child_id in child_ids {
             _ = self.widget_to_vertices(
                 child_id,
@@ -354,8 +352,6 @@ impl<Message> WidgetStore<Message> {
             }
         };
 
-        drop(entry);
-
         // important: updating children's layouts if this wasn't already done initially
         let layout_boundaries = LayoutBoundaries::new(
             Boundary::new(BoundaryType::Static, region.width()),
@@ -446,7 +442,7 @@ impl<Message> WidgetStore<Message> {
             // getting child padding weights, zero if none, ie PositionConstraint::Floating
             let child_padding_weights = match child_entry.position_constraint {
                 PositionConstraint::ParentDetermined(pw) => pw,
-                _ => PaddingWeights::NONE,
+                PositionConstraint::Floating(_, _) => PaddingWeights::NONE,
             };
 
             // incrementing cursor by start padding offset
@@ -486,18 +482,29 @@ impl<Message> WidgetStore<Message> {
                     child_region
                 }
                 PositionConstraint::Floating(x, y) => {
-                    let child_half_width = child_dimensions.width / 2i32;
-                    let child_half_height = child_dimensions.height / 2i32;
+                    // let child_half_width = child_dimensions.width / 2i32;
+                    // let child_half_height = child_dimensions.height / 2i32;
+
+                    // Rectangle::new(
+                    //     x - child_half_width,
+                    //     // has to be done like this as odd number widths/heights will have a pixel
+                    //     // dropped when dividing them by two
+                    //     x - child_half_width + child_dimensions.width,
+                    //     y - child_half_height,
+                    //     // has to be done like this as odd number widths/heights will have a pixel
+                    //     // dropped when dividing them by two
+                    //     y - child_half_height + child_dimensions.height,
+                    // )
 
                     Rectangle::new(
-                        x - child_half_width,
+                        x,
                         // has to be done like this as odd number widths/heights will have a pixel
                         // dropped when dividing them by two
-                        x - child_half_width + child_dimensions.width,
-                        y - child_half_height,
+                        x + child_dimensions.width,
+                        y,
                         // has to be done like this as odd number widths/heights will have a pixel
                         // dropped when dividing them by two
-                        y - child_half_height + child_dimensions.height,
+                        y + child_dimensions.height,
                     )
                 }
             };
@@ -778,7 +785,7 @@ impl<Message> WidgetStore<Message> {
     }
 
     /// Deletes the children of the widget from the widget store, and unparents the deleted
-    /// children. This functions recursively TODO.
+    /// children. This functions recursively.
     pub fn widget_delete_children(&mut self, widget_id: &WidgetId) -> Result<(), ()> {
         // getting the WidgetEntry
         let entry = match self.get_mut(widget_id) {

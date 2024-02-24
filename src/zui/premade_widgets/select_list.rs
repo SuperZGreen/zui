@@ -5,7 +5,7 @@ struct Element<Message> {
 
 pub struct SelectList<Message>
 where
-    Message: Clone + Copy,
+    Message: Clone,
 {
     elements: Vec<Element>,
 }

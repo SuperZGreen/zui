@@ -147,7 +147,7 @@ where
 
 impl<'a, T, Message> Into<Box<dyn Widget<Message> + 'a>> for FillBar<'a, T, Message>
 where
-    Message: Clone + Copy + 'a,
+    Message: Clone + 'a,
     T: 'a + std::convert::From<f32> + std::cmp::PartialEq + std::fmt::Display + Copy,
     f32: From<T>,
 {
@@ -158,7 +158,7 @@ where
 
 impl<'a, T, Message> Widget<Message> for FillBar<'a, T, Message>
 where
-    Message: Copy + Clone,
+    Message: Clone,
     T: std::convert::From<f32> + std::cmp::PartialEq + std::fmt::Display + 'a + Copy,
     f32: From<T>,
 {

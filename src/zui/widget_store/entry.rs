@@ -50,6 +50,7 @@ impl Default for EntryChildren {
 }
 
 /// The override descriptor for an Entry
+#[derive(Clone)]
 pub struct EntryOverrideDescriptor {
     /// The children of the widget
     pub children: Option<EntryChildren>,

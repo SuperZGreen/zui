@@ -6,7 +6,8 @@ pub enum PositionConstraint {
     /// Indicates that the position of the widget is controlled by the parent widget.
     ParentDetermined(PaddingWeights),
 
-    /// Indicates that the position of the widget is floating
+    /// Indicates that the position of the widget is floating. The (x, y) values specify the
+    /// bottom-left corner of the floating element
     Floating(i32, i32),
 }
 

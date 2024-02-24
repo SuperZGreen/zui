@@ -304,13 +304,13 @@ impl Scene for BaseScene {
                     .with_configuration(TextConfiguration {
                         line_wrapping: zui::LineWrapping::Word,
                         horizontal_alignment: zui::TextAlignmentHorizontal::Centre,
-                        // vertical_alignment: zui::text::TextAlignmentVertical::Centre,
+                        vertical_alignment: zui::text::TextAlignmentVertical::Centre,
                         ..Default::default()
                     }),
             ),
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1f32))),
-                // height_constraint: Some(SpanConstraint::ParentHeight(ParentHeight::new(1f32))),
+                height_constraint: Some(SpanConstraint::ParentHeight(ParentHeight::new(1f32))),
                 position_constraint: Some(PositionConstraint::ParentDetermined(
                     PaddingWeights::NONE,
                 )),
