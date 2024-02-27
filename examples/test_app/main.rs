@@ -4,7 +4,8 @@ use scenes::BaseSceneMessage;
 use winit::{
     event::{DeviceEvent, Event, WindowEvent},
     event_loop::{EventLoop, EventLoopWindowTarget},
-    window::WindowBuilder,
+    monitor::VideoMode,
+    window::{Fullscreen, WindowBuilder},
 };
 
 #[macro_use]
@@ -22,6 +23,7 @@ mod scenes;
 #[derive(Clone, Copy, Debug)]
 pub enum UiMessage {
     BaseSceneMessage(BaseSceneMessage),
+    ToggleFullscreen,
     Exit,
 }
 
@@ -76,9 +78,19 @@ fn main() {
                         // solving user behaviour
                         while let Some(message) = scene_handle.pop_external_message() {
                             match message {
-                                UiMessage::Exit => exit(elwt),
+                                UiMessage::Exit => {
+                                    exit(elwt);
+                                }
+                                UiMessage::ToggleFullscreen => {
+                                    let fullscreen = match window.fullscreen() {
+                                        Some(_) => None,
+                                        None => Some(Fullscreen::Borderless(None)),
+                                    };
+
+                                    window.set_fullscreen(fullscreen);
+                                }
                                 _ => {
-                                    println!("unhandled message!")
+                                    println!("unhandled message!");
                                 }
                             }
                         }

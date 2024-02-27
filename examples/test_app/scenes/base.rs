@@ -66,6 +66,10 @@ impl Scene for BaseScene {
                 (Some(UiMessage::Exit), false)
             },
 
+            UiMessage::ToggleFullscreen => {
+                (Some(UiMessage::ToggleFullscreen), false)
+            },
+
             UiMessage::BaseSceneMessage(bsm) => match bsm {
                 BaseSceneMessage::MoveCursor(Some(physical_position)) => {
                     _ = widget_store.widget_set_position_constraint(
@@ -218,6 +222,23 @@ impl Scene for BaseScene {
             },
         );
 
+        let toggle_fullscreen_button = widget_store.add(
+            Button::new(
+                UiMessage::ToggleFullscreen,
+                zui::named_colours::Amazon,
+                zui::named_colours::AmbrosialOceanside,
+            )
+            .with_text(Text::new().push_segment(TextSegment::new("Toggle Fullscreen", Colour::WHITE))),
+            EntryOverrideDescriptor {
+                width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1f32))),
+                height_constraint: Some(SpanConstraint::FitContents),
+                position_constraint: Some(PositionConstraint::ParentDetermined(
+                    PaddingWeights::new(10f32, 0f32, 0f32, 0f32),
+                )),
+                ..Default::default()
+            },
+        );
+
         let exit_button = widget_store.add(
             Button::new(
                 UiMessage::Exit,
@@ -231,7 +252,7 @@ impl Scene for BaseScene {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1f32))),
                 height_constraint: Some(SpanConstraint::FitContents),
                 position_constraint: Some(PositionConstraint::ParentDetermined(
-                    PaddingWeights::new(10f32, 0f32, 0f32, 0f32),
+                    PaddingWeights::NONE
                 )),
                 ..Default::default()
             },
@@ -342,6 +363,7 @@ impl Scene for BaseScene {
         self.demo_navigation_buttons.push(text_demo_button);
         self.demo_navigation_buttons.push(button_demo_button);
 
+        _ = widget_store.widget_add_child(&sidebar, toggle_fullscreen_button);
         _ = widget_store.widget_add_child(&sidebar, exit_button);
 
         _ = widget_store.widget_add_child(&root, sidebar);
