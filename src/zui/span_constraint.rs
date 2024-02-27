@@ -99,9 +99,12 @@ impl ViewMin {
 }
 
 impl IntoPixelSpan for ViewMin {
-    fn into_pixel_span(&self, _context: &Context) -> f32 {
-        // TODO
-        todo!()
+    fn into_pixel_span(&self, context: &Context) -> f32 {
+        if context.viewport_dimensions_px.width < context.viewport_dimensions_px.height {
+            ViewWidth::new(self.value).into_pixel_span(context)
+        } else {
+            ViewHeight::new(self.value).into_pixel_span(context)
+        }
     }
 }
 
