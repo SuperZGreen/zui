@@ -7,48 +7,40 @@ use super::primitives::Dimensions;
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
 pub enum SpanConstraint {
-    //
-    //  Fixed Spans: can be calculated given some environmental constants (viewport dimensions),
-    //               and the Span value itself
-    //
-    /// Fixed Span, Size as a portion of the view height, ie. the height of the application window
-    /// surface is 1
+    /// The span will be this portion of the view width, ie. the width of the application window
+    /// surface if 1
     ViewWidth(ViewWidth),
 
-    /// Fixed Span: Size as a portion of the view width, ie. the width of the application window
-    /// surface is 1
+    /// The span will be this portion of the view height, ie. the height of the application window
+    /// surface if 1
     ViewHeight(ViewHeight),
 
-    /// Fixed Span: Relative size with respect to the minimum dimension of the wgpu viewport
+    /// The span will be this portion of the minimal (height/width) dimension of the wgpu viewport
     ViewMin(ViewMin),
 
-    /// Fixed Span: The length in pixels of the Span
+    /// The span will be this length in pixels.
     Pixels(f32),
 
-    /// ALlows the widget to determine its own size
+    /// ALlows the widget to determine its own size. Useful for text and other widgets of variable/
+    /// unknown size.
     FitContents,
 
-    /// Fits the children of the widget
+    /// Shrinks to fit the widget's children.
     FitChildren,
 
-    // TODO: ViewMax?
-
-    //
-    //  Parent-based Sizes, dynamically resizes depending on the size of the parent widget
-    //
-    /// Weighted measure of the remaining space after other children widgets have been laid out.
+    /// Weighted portion of the remaining space after other children widgets have been laid out.
     /// Will be zero pixels if the parent container is overflowing. The remaining space in the
     /// parent container is divided amongst all children with Span::ParentWeight along the parent's
     /// axis according to their weights.
     ParentWeight(f32),
 
-    /// Gives as a portion of the parent widget's width
+    /// The resulting span will be the parent's width multiplied by this value.
     ParentWidth(ParentWidth),
 
-    /// Gives as a portion of the parent widget's width
+    /// The resulting span will be the parent's height multiplied by this value
     ParentHeight(ParentHeight),
 
-    /// Looks at the opposite (vorizontal/vertical) span, and multiplies this value by the aspect
+    /// The resulting span will be the opposite (horizontal/vertical) span, multiplied by this
     /// value.
     Aspect(f32),
 }
