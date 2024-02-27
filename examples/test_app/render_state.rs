@@ -1,8 +1,8 @@
-use wgpu::{CommandEncoder, RenderPass, SurfaceTexture, TextureView};
+use wgpu::{CommandEncoder, RenderPass, StoreOp, SurfaceTargetUnsafe, SurfaceTexture, TextureView};
 
-pub struct RenderState {
+pub struct RenderState<'a> {
     _adapter: wgpu::Adapter,
-    surface: wgpu::Surface,
+    surface: wgpu::Surface<'a>,
     _surface_format: wgpu::TextureFormat,
     surface_configuration: wgpu::SurfaceConfiguration,
     pub device: wgpu::Device,
@@ -15,7 +15,7 @@ pub struct RenderState {
     surface_texture: Option<SurfaceTexture>,
 }
 
-impl RenderState {
+impl<'a> RenderState<'a> {
     pub async fn new(window: &winit::window::Window) -> Self {
         let window_size = window.inner_size();
 
@@ -25,11 +25,13 @@ impl RenderState {
         // let instance = wgpu::Instance::default();
 
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-            backends: wgpu::Backends::VULKAN,
+            backends: wgpu::Backends::PRIMARY,
             ..Default::default()
         });
 
-        let surface = match unsafe { instance.create_surface(&window) } {
+        let surface = match unsafe {
+            instance.create_surface_unsafe(SurfaceTargetUnsafe::from_window(window).unwrap())
+        } {
             Ok(s) => s,
             Err(_) => {
                 error!("failed to create surface!");
@@ -56,8 +58,8 @@ impl RenderState {
         let (device, queue) = adapter
             .request_device(
                 &wgpu::DeviceDescriptor {
-                    features: wgpu::Features::empty(),
-                    limits: if cfg!(target_arch = "wasm32") {
+                    required_features: wgpu::Features::empty(),
+                    required_limits: if cfg!(target_arch = "wasm32") {
                         wgpu::Limits::downlevel_webgl2_defaults()
                     } else {
                         wgpu::Limits::default()
@@ -86,6 +88,7 @@ impl RenderState {
         };
 
         let surface_configuration = wgpu::SurfaceConfiguration {
+            desired_maximum_frame_latency: 2,
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format: *format,
             width: window_size.width,
@@ -170,15 +173,17 @@ impl RenderState {
 
                                 wgpu::Color { r, g, b, a }
                             }),
-                            store: true,
+                            store: StoreOp::Store,
                         },
                     })],
                     depth_stencil_attachment: None,
+                    timestamp_writes: None,    // TODO: check this
+                    occlusion_query_set: None, // TODO: check this
                 },
             );
 
             // Do rendering
-            return Some(render_pass);
+            Some(render_pass)
         }
 
         // self.queue.submit(std::iter::once(
@@ -186,7 +191,6 @@ impl RenderState {
         // ));
         // self.surface_texture.take().unwrap().present();
     }
-
 
     /// Submits the previously created RenderPass/Command encoder, must be done before presenting
     pub fn submit_command_encoder(&mut self) {

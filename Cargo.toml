@@ -14,6 +14,8 @@ env_logger = "0.9.0"
 glam = "0.24.0"
 fontdue = { version = "0.7.2" }
 rustc-hash = { version = "1.1.0" }
-crunch = { version = "0.5.3" }
 image = { version = "0.24", default-features = false, features = ["png"] }
 rand = { version = "0.8.5" }
+
+# removing crunch for now, may be added back when images are implemented
+# crunch = { version = "0.5.3" }
