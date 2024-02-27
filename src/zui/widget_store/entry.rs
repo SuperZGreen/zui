@@ -5,7 +5,8 @@ pub struct Entry<Message> {
     /// The user-implemented Widget trait object
     pub widget: Box<dyn Widget<Message>>,
 
-    /// The size of the widget and its position
+    /// The size of the widget and its position, derived from its width, height and position
+    /// constraints.
     pub layout: Layout,
 
     /// The children of the widget
@@ -27,7 +28,8 @@ pub struct EntryChildren {
     /// The axis that the controlled children are to be added along
     pub axis: Axis,
 
-    /// Children of the widget, including Floating and ParentDetermined
+    /// Children of the widget, contains both Floating and ParentDetermined widgets. Render order is
+    /// determined by position in this list, with the earlier entries being rendered first. 
     pub ids: Vec<WidgetId>,
 }
 

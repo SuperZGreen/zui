@@ -13,7 +13,7 @@ use crate::{
     Event, PaddingWeights, PositionConstraint, SpanConstraint,
 };
 
-// A basic widget that contains text
+/// A widget that contains and displays a block of text.
 pub struct TextContainer {
     /// The text that the text container contains.
     text: Option<Text>,

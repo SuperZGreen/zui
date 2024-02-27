@@ -13,16 +13,15 @@ use crate::{
     PaddingWeights,
 };
 
+/// A widget that contains other widgets
 pub struct Container {
-    // The name/tag of the Container, usually for debugging purposes
+    /// The name/tag of the Container, usually for debugging purposes
     pub name: Option<String>,
 
     /// The background of the Container, None is comletely transparent, a Colour will cause the
     /// container to render vertices of that Colour in the region of its Layout's clip Rectangle
     pub background: Option<Colour>,
 
-    /// Flag that describes whether the container is overflowing or not
-    pub overflowing: bool,
     // /// A test toggle that inverts the background colour when true
     // test_toggle: bool,
 }
@@ -32,7 +31,6 @@ impl Container {
         Self {
             name: None,
             background: None,
-            overflowing: false,
             // test_toggle: false,
         }
     }

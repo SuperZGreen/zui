@@ -300,9 +300,9 @@ impl Scene for BaseScene {
         let text_none = widget_store.add(
             TextContainer::new().with_text(
                 Text::new()
-                    .push_segment(TextSegment::new("No demo scene selected!", Colour::WHITE))
+                    .push_segment(TextSegment::new("DemoSceneTextClippingTest!DemoSceneTextClippingTest!DemoSceneTextClippingTest!DemoSceneTextClippingTest!DemoSceneTextClippingTest!DemoSceneTextClippingTest!DemoSceneTextClippingTest!", Colour::WHITE))
                     .with_configuration(TextConfiguration {
-                        line_wrapping: zui::LineWrapping::Word,
+                        line_wrapping: zui::LineWrapping::None,
                         horizontal_alignment: zui::TextAlignmentHorizontal::Centre,
                         vertical_alignment: zui::text::TextAlignmentVertical::Centre,
                         ..Default::default()
