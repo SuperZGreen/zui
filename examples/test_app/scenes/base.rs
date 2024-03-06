@@ -18,11 +18,19 @@ pub enum BaseSceneMessage {
     AddSidebarText,
     ClearSidebarText,
     ChangeScene(SceneIdentifier),
+    UpdateFrameTime(f32),
 }
 
 pub struct BaseScene {
+    /// The WidgetId of the display area for the demos
     display_area: Option<WidgetId>,
+
+    /// The WidgetId of the sidebar container
     sidebar: Option<WidgetId>,
+
+    /// The WidgetId of the frame time TextContainer
+    frame_time_id: Option<WidgetId>,
+
     counter: i32,
 
     // The id of the widget that tracks the cursor
@@ -41,6 +49,9 @@ impl BaseScene {
             display_area: None,
 
             sidebar: None,
+
+            frame_time_id: None,
+
             counter: 0i32,
 
             cursor_widget_id: None,
@@ -60,15 +71,10 @@ impl Scene for BaseScene {
         widget_store: &mut WidgetStore<Self::Message>,
         message: Self::Message,
     ) -> (Option<Self::Message>, bool) {
-
         match message {
-            UiMessage::Exit => {
-                (Some(UiMessage::Exit), false)
-            },
+            UiMessage::Exit => (Some(UiMessage::Exit), false),
 
-            UiMessage::ToggleFullscreen => {
-                (Some(UiMessage::ToggleFullscreen), false)
-            },
+            UiMessage::ToggleFullscreen => (Some(UiMessage::ToggleFullscreen), false),
 
             UiMessage::BaseSceneMessage(bsm) => match bsm {
                 BaseSceneMessage::MoveCursor(Some(physical_position)) => {
@@ -133,7 +139,6 @@ impl Scene for BaseScene {
 
                         self.child_scene = match scene_identifier {
                             SceneIdentifier::ContainerDemo => {
-
                                 // creating a new instance of the scene
                                 let mut scene = Box::new(container_demo::ContainerScene::new());
 
@@ -158,8 +163,25 @@ impl Scene for BaseScene {
 
                     (None, true)
                 }
-            },
 
+                BaseSceneMessage::UpdateFrameTime(frame_time) => {
+                    if let Some(frame_time_id) = self.frame_time_id {
+                        if let Some(widget_entry) = widget_store.get_mut(&frame_time_id) {
+                            let text_container: &mut TextContainer =
+                                widget_entry.widget.as_any_mut().downcast_mut().unwrap();
+                            text_container.set_text(Text::new().push_segment(TextSegment::new(
+                                &format!("frame_time: {:.2} ms", frame_time * 1000f32),
+                                Colour::WHITE,
+                            )).with_configuration(TextConfiguration {
+                                size_px: 16,
+                                ..Default::default()
+                            }));
+                        }
+                    }
+
+                    (None, true)
+                }
+            },
             // _ => (Some(message), false),
         }
     }
@@ -190,7 +212,9 @@ impl Scene for BaseScene {
 
         let container_demo_button = widget_store.add(
             Button::new(
-                UiMessage::BaseSceneMessage(BaseSceneMessage::ChangeScene(SceneIdentifier::ContainerDemo)),
+                UiMessage::BaseSceneMessage(BaseSceneMessage::ChangeScene(
+                    SceneIdentifier::ContainerDemo,
+                )),
                 zui::named_colours::BonneNuit,
                 zui::named_colours::Botanical,
             )
@@ -207,7 +231,9 @@ impl Scene for BaseScene {
 
         let button_demo_button = widget_store.add(
             Button::new(
-                UiMessage::BaseSceneMessage(BaseSceneMessage::ChangeScene(SceneIdentifier::ButtonDemo)),
+                UiMessage::BaseSceneMessage(BaseSceneMessage::ChangeScene(
+                    SceneIdentifier::ButtonDemo,
+                )),
                 zui::named_colours::BonneNuit,
                 zui::named_colours::Botanical,
             )
@@ -228,7 +254,9 @@ impl Scene for BaseScene {
                 zui::named_colours::Amazon,
                 zui::named_colours::AmbrosialOceanside,
             )
-            .with_text(Text::new().push_segment(TextSegment::new("Toggle Fullscreen", Colour::WHITE))),
+            .with_text(
+                Text::new().push_segment(TextSegment::new("Toggle Fullscreen", Colour::WHITE)),
+            ),
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1f32))),
                 height_constraint: Some(SpanConstraint::FitContents),
@@ -252,7 +280,7 @@ impl Scene for BaseScene {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1f32))),
                 height_constraint: Some(SpanConstraint::FitContents),
                 position_constraint: Some(PositionConstraint::ParentDetermined(
-                    PaddingWeights::NONE
+                    PaddingWeights::NONE,
                 )),
                 ..Default::default()
             },
@@ -260,7 +288,9 @@ impl Scene for BaseScene {
 
         let text_demo_button = widget_store.add(
             Button::new(
-                UiMessage::BaseSceneMessage(BaseSceneMessage::ChangeScene(SceneIdentifier::TextDemo)),
+                UiMessage::BaseSceneMessage(BaseSceneMessage::ChangeScene(
+                    SceneIdentifier::TextDemo,
+                )),
                 zui::named_colours::BonneNuit,
                 zui::named_colours::Botanical,
             )
@@ -284,6 +314,24 @@ impl Scene for BaseScene {
                     line_wrapping: zui::LineWrapping::Word,
                     ..Default::default()
                 }),
+            ),
+            EntryOverrideDescriptor {
+                width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1f32))),
+                position_constraint: Some(PositionConstraint::ParentDetermined(
+                    PaddingWeights::NONE,
+                )),
+                ..Default::default()
+            },
+        );
+
+        let frame_time_text = widget_store.add(
+            TextContainer::new().with_text(
+                Text::new()
+                    .push_segment(TextSegment::new("Frame time:", Colour::WHITE))
+                    .with_configuration(TextConfiguration {
+                        line_wrapping: zui::LineWrapping::Symbol,
+                        ..Default::default()
+                    }),
             ),
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1f32))),
@@ -352,7 +400,9 @@ impl Scene for BaseScene {
         self.cursor_widget_id = Some(cursor);
         self.display_area = Some(display_area);
         self.sidebar = Some(sidebar);
+        self.frame_time_id = Some(frame_time_text);
 
+        _ = widget_store.widget_add_child(&sidebar, frame_time_text);
         _ = widget_store.widget_add_child(&sidebar, info_text);
 
         _ = widget_store.widget_add_child(&sidebar, container_demo_button);

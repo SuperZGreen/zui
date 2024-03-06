@@ -60,10 +60,6 @@ impl<Message> Widget<Message> for Container
 where
     Message: Clone,
 {
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
     fn handle_event(
         &mut self,
         event: &Event,
@@ -135,6 +131,14 @@ where
             height_constraint: SpanConstraint::ParentWeight(1f32),
             position_constraint: crate::PositionConstraint::ParentDetermined(PaddingWeights::NONE),
         }
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
     }
 }
 

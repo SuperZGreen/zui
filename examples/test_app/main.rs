@@ -4,7 +4,6 @@ use scenes::BaseSceneMessage;
 use winit::{
     event::{DeviceEvent, Event, WindowEvent},
     event_loop::{EventLoop, EventLoopWindowTarget},
-    monitor::VideoMode,
     window::{Fullscreen, WindowBuilder},
 };
 
@@ -59,6 +58,7 @@ fn main() {
 
     // setting up the scenes
     let mut scene_handle = SceneHandle::new(Box::new(BaseScene::new()));
+    let mut old_instant = std::time::Instant::now();
 
     _ = event_loop.run(move |event, elwt| {
         match event {
@@ -68,6 +68,16 @@ fn main() {
             } if window_id == window.id() => {
                 match event {
                     WindowEvent::RedrawRequested => {
+                        // getting the new frame time
+                        let current_instant = std::time::Instant::now();
+                        let frame_time = (current_instant - old_instant).as_secs_f32();
+                        old_instant = current_instant;
+
+                        // updating the scene to show the frame time
+                        scene_handle.handle_message(UiMessage::BaseSceneMessage(
+                            BaseSceneMessage::UpdateFrameTime(frame_time),
+                        ));
+
                         // updating the scene handle
                         scene_handle.update(
                             &mut zui.context_mut_typeface(),

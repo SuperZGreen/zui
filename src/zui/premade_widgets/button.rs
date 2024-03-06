@@ -47,7 +47,7 @@ impl<Message> Button<Message> {
 
 impl<'a, Message> Into<Box<dyn Widget<Message> + 'a>> for Button<Message>
 where
-    Message: Clone + 'a,
+    Message: Clone + 'static
 {
     fn into(self) -> Box<dyn Widget<Message> + 'a> {
         Box::new(self)
@@ -56,7 +56,7 @@ where
 
 impl<Message> Widget<Message> for Button<Message>
 where
-    Message: Clone,
+    Message: Clone + 'static,
 {
     fn handle_event(
         &mut self,
@@ -163,7 +163,11 @@ where
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
-        todo!()
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
     }
 
     fn collect_text(&self, symbol_keys: &mut rustc_hash::FxHashSet<crate::typeface::SymbolKey>) {

@@ -40,16 +40,16 @@ impl TextContainer {
         self.background_colour = colour;
         self
     }
+
+    pub fn set_text(&mut self, text: Text) {
+        self.text = Some(text);
+    }
 }
 
 impl<Message> Widget<Message> for TextContainer
 where
     Message: Clone,
 {
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
     fn handle_event(
         &mut self,
         event: &Event,
@@ -137,6 +137,14 @@ where
             height_constraint: SpanConstraint::FitContents,
             position_constraint: PositionConstraint::ParentDetermined(PaddingWeights::NONE),
         }
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
     }
 }
 
