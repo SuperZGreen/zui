@@ -1,12 +1,15 @@
 mod glyph_origin;
 mod text_configuration;
 mod text_line;
+mod text_descriptor;
 
 use std::fmt::Display;
 
 use glyph_origin::GlyphOrigin;
 use rustc_hash::FxHashSet;
 use text_line::TextLines;
+
+pub use text_descriptor::TextDescriptor;
 
 use super::{
     primitives::{Dimensions, Rectangle},

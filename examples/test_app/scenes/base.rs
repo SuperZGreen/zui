@@ -1,6 +1,7 @@
 use winit::dpi::PhysicalPosition;
 use zui::{
     premade_widgets::{Button, Container, TextContainer},
+    text::TextDescriptor,
     Axis, Colour, EntryChildren, EntryOverrideDescriptor, PaddingWeights, ParentHeight,
     ParentWidth, PositionConstraint, Scene, SpanConstraint, Text, TextConfiguration, TextSegment,
     WidgetId, WidgetStore,
@@ -169,13 +170,17 @@ impl Scene for BaseScene {
                         if let Some(widget_entry) = widget_store.get_mut(&frame_time_id) {
                             let text_container: &mut TextContainer =
                                 widget_entry.widget.as_any_mut().downcast_mut().unwrap();
-                            text_container.set_text(Text::new().push_segment(TextSegment::new(
-                                &format!("frame_time: {:.2} ms", frame_time * 1000f32),
-                                Colour::WHITE,
-                            )).with_configuration(TextConfiguration {
-                                size_px: 16,
-                                ..Default::default()
-                            }));
+                            text_container.set_text(
+                                Text::new()
+                                    .push_segment(TextSegment::new(
+                                        &format!("frame_time: {:.2} ms", frame_time * 1000f32),
+                                        Colour::WHITE,
+                                    ))
+                                    .with_configuration(TextConfiguration {
+                                        size_px: 16,
+                                        ..Default::default()
+                                    }),
+                            );
                         }
                     }
 
@@ -325,14 +330,10 @@ impl Scene for BaseScene {
         );
 
         let frame_time_text = widget_store.add(
-            TextContainer::new().with_text(
-                Text::new()
-                    .push_segment(TextSegment::new("Frame time:", Colour::WHITE))
-                    .with_configuration(TextConfiguration {
-                        line_wrapping: zui::LineWrapping::Symbol,
-                        ..Default::default()
-                    }),
-            ),
+            TextContainer::new().with_text(Text::from(TextDescriptor {
+                segments: vec![TextSegment::new("Frame time: N/A", Colour::WHITE)],
+                ..Default::default()
+            })),
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1f32))),
                 position_constraint: Some(PositionConstraint::ParentDetermined(
