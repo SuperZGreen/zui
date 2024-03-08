@@ -41,6 +41,15 @@ impl TextSegment {
     }
 }
 
+impl From<&str> for TextSegment {
+    fn from(value: &str) -> Self {
+        Self {
+            string: String::from(value),
+            ..Default::default()
+        }
+    }
+}
+
 impl Default for TextSegment {
     fn default() -> Self {
         Self {

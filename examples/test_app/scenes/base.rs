@@ -1,6 +1,6 @@
 use winit::dpi::PhysicalPosition;
 use zui::{
-    premade_widgets::{Button, Container, TextContainer},
+    premade_widgets::{Button, Container, TextContainer, TextContainerDescriptor},
     text::TextDescriptor,
     Axis, Colour, EntryChildren, EntryOverrideDescriptor, PaddingWeights, ParentHeight,
     ParentWidth, PositionConstraint, Scene, SpanConstraint, Text, TextConfiguration, TextSegment,
@@ -170,6 +170,7 @@ impl Scene for BaseScene {
                         if let Some(widget_entry) = widget_store.get_mut(&frame_time_id) {
                             let text_container: &mut TextContainer =
                                 widget_entry.widget.as_any_mut().downcast_mut().unwrap();
+
                             text_container.set_text(
                                 Text::new()
                                     .push_segment(TextSegment::new(
@@ -311,14 +312,9 @@ impl Scene for BaseScene {
         );
 
         let info_text = widget_store.add(
-            TextContainer::new().with_text(
-                Text::new().push_segment(TextSegment::new(
-                        "Press keys 1-3 to swap the active scene. 'a' will add text to this sidebar, and 'd' will delete it. Press 'x' to exit!"
-                        , Colour::WHITE))
-                .with_configuration(TextConfiguration {
-                    line_wrapping: zui::LineWrapping::Word,
-                    ..Default::default()
-                }),
+            TextContainer::from(
+                "Press keys 1-3 to swap the active scene. 'a' will add text to this sidebar, and \
+                'd' will delete it. Press 'x' to exit!",
             ),
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1f32))),
@@ -330,10 +326,7 @@ impl Scene for BaseScene {
         );
 
         let frame_time_text = widget_store.add(
-            TextContainer::new().with_text(Text::from(TextDescriptor {
-                segments: vec![TextSegment::new("Frame time: N/A", Colour::WHITE)],
-                ..Default::default()
-            })),
+            TextContainer::from("Frame time: N/A"),
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1f32))),
                 position_constraint: Some(PositionConstraint::ParentDetermined(
@@ -370,7 +363,12 @@ impl Scene for BaseScene {
         let text_none = widget_store.add(
             TextContainer::new().with_text(
                 Text::new()
-                    .push_segment(TextSegment::new("DemoSceneTextClippingTest!DemoSceneTextClippingTest!DemoSceneTextClippingTest!DemoSceneTextClippingTest!DemoSceneTextClippingTest!DemoSceneTextClippingTest!DemoSceneTextClippingTest!", Colour::WHITE))
+                    .push_segment(TextSegment::new(
+                        "DemoSceneTextClippingTest!DemoSceneTextClippingTest!DemoSceneTextClippingT\
+                        est!DemoSceneTextClippingTest!DemoSceneTextClippingTest!DemoSceneTextClippi\
+                        ngTest!DemoSceneTextClippingTest!",
+                        Colour::WHITE,
+                    ))
                     .with_configuration(TextConfiguration {
                         line_wrapping: zui::LineWrapping::None,
                         horizontal_alignment: zui::TextAlignmentHorizontal::Centre,

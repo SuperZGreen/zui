@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use crate::{
-    zui::{
+    text::TextDescriptor, zui::{
         primitives::Dimensions,
         render_layer::RenderLayer,
         simple_renderer::SimpleVertex,
@@ -9,8 +9,7 @@ use crate::{
         widget::{Bounds, LayoutBoundaries},
         widget_store::EntryDefaultDescriptor,
         Colour, Context, Rectangle, Text, Widget,
-    },
-    Event, PaddingWeights, PositionConstraint, SpanConstraint,
+    }, Event, PaddingWeights, PositionConstraint, SpanConstraint, TextSegment
 };
 
 /// A widget that contains and displays a block of text.
@@ -31,8 +30,8 @@ impl TextContainer {
         }
     }
 
-    pub fn with_text(mut self, text: Text) -> Self {
-        self.text = Some(text);
+    pub fn with_text(mut self, text: impl Into<Text>) -> Self {
+        self.text = Some(text.into());
         self
     }
 
@@ -43,6 +42,15 @@ impl TextContainer {
 
     pub fn set_text(&mut self, text: Text) {
         self.text = Some(text);
+    }
+}
+
+impl Default for TextContainer {
+    fn default() -> Self {
+        Self {
+            text: None,
+            background_colour: None,
+        }
     }
 }
 
@@ -154,5 +162,54 @@ where
 {
     fn into(self) -> Box<dyn Widget<Message> + 'a> {
         Box::new(self)
+    }
+}
+
+impl From<&str> for TextContainer {
+    fn from(value: &str) -> Self {
+        Self {
+            text: Some(Text::from(TextDescriptor {
+                segments: vec![TextSegment::from(value)],
+                ..Default::default()
+            })),
+            ..Default::default()
+        }
+    }
+}
+
+
+/// A descriptor for a TextContainer
+pub struct TextContainerDescriptor {
+    /// The text that the text container contains
+    pub text: Option<Text>,
+
+    /// The background colour of the text container.
+    pub background_colour: Option<Colour>,
+}
+
+impl Default for TextContainerDescriptor {
+    fn default() -> Self {
+        Self {
+            text: None,
+            background_colour: None,
+        }
+    }
+}
+
+impl From<TextContainerDescriptor> for TextContainer {
+    fn from(descriptor: TextContainerDescriptor) -> Self {
+        Self {
+            text: descriptor.text,
+            background_colour: descriptor.background_colour,
+        }
+    }
+}
+
+impl<'a, Message> Into<Box<dyn Widget<Message> + 'a>> for TextContainerDescriptor
+where
+    Message: Clone + 'a,
+{
+    fn into(self) -> Box<dyn Widget<Message> + 'a> {
+        Box::new(TextContainer::from(self))
     }
 }
