@@ -16,6 +16,7 @@ fontdue = { version = "0.7.2" }
 rustc-hash = { version = "1.1.0" }
 image = { version = "0.24", default-features = false, features = ["png"] }
 rand = { version = "0.8.5" }
+crunch = "0.5.3"
 
 # removing crunch for now, may be added back when images are implemented
 # crunch = { version = "0.5.3" }
