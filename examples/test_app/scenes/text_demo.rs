@@ -1,7 +1,9 @@
 use zui::{
-    premade_widgets::{Container, TextContainer},
+    premade_widgets::{Container, TextContainer, TextContainerDescriptor},
+    text::TextDescriptor,
+    typeface::FontStyle,
     Axis, Colour, EntryChildren, EntryOverrideDescriptor, PaddingWeights, ParentHeight,
-    ParentWidth, PositionConstraint, Scene, SpanConstraint, Text, TextConfiguration, TextSegment, typeface::FontStyle,
+    ParentWidth, PositionConstraint, Scene, SpanConstraint, Text, TextConfiguration, TextSegment,
 };
 
 use crate::UiMessage;
@@ -39,19 +41,23 @@ impl Scene for TextScene {
         );
 
         let title = widget_store.add(
-            TextContainer::new().with_text(
-                Text::new()
-                    .push_segment(TextSegment {
-                        string: String::from("Text/TextContainer Demo"),
-                        colour: Colour::WHITE,
-                        style: FontStyle::Bold,
-                    })
-                    .with_configuration(TextConfiguration {
-                        line_wrapping: zui::LineWrapping::Word,
-                        size_px: 64,
-                        ..Default::default()
-                    }),
-            ),
+            TextContainerDescriptor {
+                text: Some(
+                    TextDescriptor {
+                        segments: vec![TextSegment {
+                            string: String::from("Text and TextContainer Widget Demo"),
+                            style: FontStyle::Bold,
+                            ..Default::default()
+                        }],
+                        configuration: TextConfiguration {
+                            size_px: 64,
+                            ..Default::default()
+                        },
+                    }
+                    .into(),
+                ),
+                background_colour: None,
+            },
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1f32))),
                 position_constraint: Some(PositionConstraint::ParentDetermined(
@@ -83,27 +89,23 @@ impl Scene for TextScene {
         );
 
         let alignment_left = widget_store.add(
-            TextContainer::new().with_text(
-                Text::new()
-                    .push_segment(TextSegment::new(
-                        "To the ",
-                        Colour::WHITE,
-                    ))
-                    .push_segment(TextSegment {
-                        string: String::from("left"),
-                        colour: Colour::WHITE,
-                        style: FontStyle::Italic,
-                    })
-                    .push_segment(TextSegment::new(
-                        ",",
-                        Colour::WHITE,
-                    ))
-                    .with_configuration(TextConfiguration {
-                        line_wrapping: zui::LineWrapping::Word,
-                        horizontal_alignment: zui::TextAlignmentHorizontal::Left,
-                        ..Default::default()
-                    }),
-            ).with_background_colour(Some(zui::named_colours::RedTape)),
+            TextContainer::new()
+                .with_text(
+                    Text::new()
+                        .push_segment(TextSegment::new("To the ", Colour::WHITE))
+                        .push_segment(TextSegment {
+                            string: String::from("left"),
+                            colour: Colour::WHITE,
+                            style: FontStyle::Italic,
+                        })
+                        .push_segment(TextSegment::new(",", Colour::WHITE))
+                        .with_configuration(TextConfiguration {
+                            line_wrapping: zui::LineWrapping::Word,
+                            horizontal_alignment: zui::TextAlignmentHorizontal::Left,
+                            ..Default::default()
+                        }),
+                )
+                .with_background_colour(Some(zui::named_colours::RedTape)),
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1f32))),
                 position_constraint: Some(PositionConstraint::ParentDetermined(
@@ -113,27 +115,23 @@ impl Scene for TextScene {
             },
         );
         let alignment_centre = widget_store.add(
-            TextContainer::new().with_text(
-                Text::new()
-                    .push_segment(TextSegment::new(
-                        "in the ",
-                        Colour::WHITE,
-                    ))
-                    .push_segment(TextSegment {
-                        string: String::from("centre"),
-                        colour: Colour::WHITE,
-                        style: FontStyle::Italic,
-                    })
-                    .push_segment(TextSegment::new(
-                        ",",
-                        Colour::WHITE,
-                    ))
-                    .with_configuration(TextConfiguration {
-                        line_wrapping: zui::LineWrapping::Word,
-                        horizontal_alignment: zui::TextAlignmentHorizontal::Centre,
-                        ..Default::default()
-                    }),
-            ).with_background_colour(Some(zui::named_colours::GreenEnvy)),
+            TextContainer::new()
+                .with_text(
+                    Text::new()
+                        .push_segment(TextSegment::new("in the ", Colour::WHITE))
+                        .push_segment(TextSegment {
+                            string: String::from("centre"),
+                            colour: Colour::WHITE,
+                            style: FontStyle::Italic,
+                        })
+                        .push_segment(TextSegment::new(",", Colour::WHITE))
+                        .with_configuration(TextConfiguration {
+                            line_wrapping: zui::LineWrapping::Word,
+                            horizontal_alignment: zui::TextAlignmentHorizontal::Centre,
+                            ..Default::default()
+                        }),
+                )
+                .with_background_colour(Some(zui::named_colours::GreenEnvy)),
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1f32))),
                 position_constraint: Some(PositionConstraint::ParentDetermined(
@@ -143,27 +141,23 @@ impl Scene for TextScene {
             },
         );
         let alignment_right = widget_store.add(
-            TextContainer::new().with_text(
-                Text::new()
-                    .push_segment(TextSegment::new(
-                        "or to the ",
-                        Colour::WHITE,
-                    ))
-                    .push_segment(TextSegment {
-                        string: String::from("right"),
-                        colour: Colour::WHITE,
-                        style: FontStyle::Italic,
-                    })
-                    .push_segment(TextSegment::new(
-                        ".",
-                        Colour::WHITE,
-                    ))
-                    .with_configuration(TextConfiguration {
-                        line_wrapping: zui::LineWrapping::Word,
-                        horizontal_alignment: zui::TextAlignmentHorizontal::Right,
-                        ..Default::default()
-                    }),
-            ).with_background_colour(Some(zui::named_colours::BlueChip)),
+            TextContainer::new()
+                .with_text(
+                    Text::new()
+                        .push_segment(TextSegment::new("or to the ", Colour::WHITE))
+                        .push_segment(TextSegment {
+                            string: String::from("right"),
+                            colour: Colour::WHITE,
+                            style: FontStyle::Italic,
+                        })
+                        .push_segment(TextSegment::new(".", Colour::WHITE))
+                        .with_configuration(TextConfiguration {
+                            line_wrapping: zui::LineWrapping::Word,
+                            horizontal_alignment: zui::TextAlignmentHorizontal::Right,
+                            ..Default::default()
+                        }),
+                )
+                .with_background_colour(Some(zui::named_colours::BlueChip)),
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1f32))),
                 position_constraint: Some(PositionConstraint::ParentDetermined(
@@ -205,19 +199,18 @@ impl Scene for TextScene {
         );
 
         let vertical_alignment_bottom = widget_store.add(
-            TextContainer::new().with_text(
-                Text::new()
-                    .push_segment(TextSegment::new(
-                        "At the bottom,",
-                        Colour::WHITE,
-                    ))
-                    .with_configuration(TextConfiguration {
-                        line_wrapping: zui::LineWrapping::Word,
-                        horizontal_alignment: zui::TextAlignmentHorizontal::Centre,
-                        vertical_alignment: zui::TextAlignmentVertical::Bottom,
-                        ..Default::default()
-                    }),
-            ).with_background_colour(Some(zui::named_colours::RedTape)),
+            TextContainer::new()
+                .with_text(
+                    Text::new()
+                        .push_segment(TextSegment::new("At the bottom,", Colour::WHITE))
+                        .with_configuration(TextConfiguration {
+                            line_wrapping: zui::LineWrapping::Word,
+                            horizontal_alignment: zui::TextAlignmentHorizontal::Centre,
+                            vertical_alignment: zui::TextAlignmentVertical::Bottom,
+                            ..Default::default()
+                        }),
+                )
+                .with_background_colour(Some(zui::named_colours::RedTape)),
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(0.2f32))),
                 height_constraint: Some(SpanConstraint::Aspect(1f32)),
@@ -229,28 +222,24 @@ impl Scene for TextScene {
         );
 
         let vertical_alignment_centre = widget_store.add(
-            TextContainer::new().with_text(
-                Text::new()
-                    .push_segment(TextSegment::new(
-                        "in the ",
-                        Colour::WHITE,
-                    ))
-                    .push_segment(TextSegment {
-                        string: String::from("centre"),
-                        colour: Colour::WHITE,
-                        style: FontStyle::Italic,
-                    })
-                    .push_segment(TextSegment::new(
-                        ".",
-                        Colour::WHITE,
-                    ))
-                    .with_configuration(TextConfiguration {
-                        line_wrapping: zui::LineWrapping::Word,
-                        horizontal_alignment: zui::TextAlignmentHorizontal::Centre,
-                        vertical_alignment: zui::TextAlignmentVertical::Centre,
-                        ..Default::default()
-                    }),
-            ).with_background_colour(Some(zui::named_colours::GreenEnvy)),
+            TextContainer::new()
+                .with_text(
+                    Text::new()
+                        .push_segment(TextSegment::new("in the ", Colour::WHITE))
+                        .push_segment(TextSegment {
+                            string: String::from("centre"),
+                            colour: Colour::WHITE,
+                            style: FontStyle::Italic,
+                        })
+                        .push_segment(TextSegment::new(".", Colour::WHITE))
+                        .with_configuration(TextConfiguration {
+                            line_wrapping: zui::LineWrapping::Word,
+                            horizontal_alignment: zui::TextAlignmentHorizontal::Centre,
+                            vertical_alignment: zui::TextAlignmentVertical::Centre,
+                            ..Default::default()
+                        }),
+                )
+                .with_background_colour(Some(zui::named_colours::GreenEnvy)),
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(0.2f32))),
                 height_constraint: Some(SpanConstraint::Aspect(1.0f32)),
@@ -262,24 +251,23 @@ impl Scene for TextScene {
         );
 
         let vertical_alignment_top = widget_store.add(
-            TextContainer::new().with_text(
-                Text::new()
-                    .push_segment(TextSegment::new(
-                        "or at the top.",
-                        Colour::WHITE,
-                    ))
-                    .with_configuration(TextConfiguration {
-                        line_wrapping: zui::LineWrapping::Word,
-                        horizontal_alignment: zui::TextAlignmentHorizontal::Centre,
-                        vertical_alignment: zui::TextAlignmentVertical::Top,
-                        ..Default::default()
-                    }),
-            ).with_background_colour(Some(zui::named_colours::BlueChip)),
+            TextContainer::new()
+                .with_text(
+                    Text::new()
+                        .push_segment(TextSegment::new("or at the top.", Colour::WHITE))
+                        .with_configuration(TextConfiguration {
+                            line_wrapping: zui::LineWrapping::Word,
+                            horizontal_alignment: zui::TextAlignmentHorizontal::Centre,
+                            vertical_alignment: zui::TextAlignmentVertical::Top,
+                            ..Default::default()
+                        }),
+                )
+                .with_background_colour(Some(zui::named_colours::BlueChip)),
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(0.2f32))),
                 height_constraint: Some(SpanConstraint::Aspect(1f32)),
                 position_constraint: Some(PositionConstraint::ParentDetermined(
-                    PaddingWeights::NONE
+                    PaddingWeights::NONE,
                 )),
                 ..Default::default()
             },
@@ -291,32 +279,34 @@ impl Scene for TextScene {
                     .push_segment(TextSegment {
                         string: String::from("Text segments can be "),
                         colour: Colour::WHITE,
-                        style: FontStyle::Regular
+                        style: FontStyle::Regular,
                     })
                     .push_segment(TextSegment {
                         string: String::from("different "),
                         colour: Colour::WHITE,
-                        style: FontStyle::Bold
+                        style: FontStyle::Bold,
                     })
                     .push_segment(TextSegment {
                         string: String::from("styles"),
                         colour: Colour::WHITE,
-                        style: FontStyle::Italic
+                        style: FontStyle::Italic,
                     })
                     .push_segment(TextSegment {
-                        string: String::from(" if bold or italic fonts have been loaded. Text segments can also be "),
+                        string: String::from(
+                            " if bold or italic fonts have been loaded. Text segments can also be ",
+                        ),
                         colour: Colour::WHITE,
-                        style: FontStyle::Regular
+                        style: FontStyle::Regular,
                     })
                     .push_segment(TextSegment {
                         string: String::from("different"),
                         colour: zui::named_colours::GreenEnvy,
-                        style: FontStyle::Regular
+                        style: FontStyle::Regular,
                     })
                     .push_segment(TextSegment {
                         string: String::from(" colours"),
                         colour: zui::named_colours::RedTape,
-                        style: FontStyle::Regular
+                        style: FontStyle::Regular,
                     })
                     .with_configuration(TextConfiguration {
                         line_wrapping: zui::LineWrapping::Word,
@@ -331,7 +321,6 @@ impl Scene for TextScene {
                 ..Default::default()
             },
         );
-
 
         _ = widget_store.widget_add_child(&root, title);
 
