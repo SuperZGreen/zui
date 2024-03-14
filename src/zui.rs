@@ -1,4 +1,5 @@
 mod colour;
+mod renderers;
 mod position_constraint;
 pub mod premade_widgets;
 mod primitives;
@@ -6,11 +7,9 @@ mod render_layer;
 mod renderable;
 mod scene;
 mod scene_handle;
-mod simple_renderer;
 mod span_constraint;
 mod stopwatch;
 pub mod text;
-mod text_renderer;
 mod texture_atlas;
 pub mod typeface;
 pub mod util;
@@ -24,12 +23,10 @@ pub use primitives::{Rectangle, Dimensions};
 pub use renderable::Renderable;
 pub use scene::Scene;
 pub use scene_handle::SceneHandle;
-use simple_renderer::SimpleRenderer;
 pub use span_constraint::{ParentHeight, ParentWidth, SpanConstraint, ViewHeight, ViewWidth};
 pub use text::{
     LineWrapping, Text, TextAlignmentHorizontal, TextAlignmentVertical, TextConfiguration, TextSegment, TextSize,
 };
-use text_renderer::TextRenderer;
 pub use typeface::Typeface;
 pub use widget::{Axis, Event, MouseEvent, Widget};
 pub use widget_store::{EntryOverrideDescriptor, EntryChildren, WidgetId, WidgetStore};
@@ -38,6 +35,7 @@ use winit::{
     dpi::PhysicalPosition,
     event::{ElementState, WindowEvent},
 };
+use renderers::{SimpleRenderer, TextRenderer};
 
 pub struct Zui {
     typeface: Typeface,
@@ -259,7 +257,7 @@ impl Zui {
         }
 
         // Do rendering
-        return Some(render_pass);
+        Some(render_pass)
     }
 
     /// Resizes the zui context

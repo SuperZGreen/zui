@@ -1,9 +1,8 @@
 use rustc_hash::FxHashSet;
 
 use super::{
-    primitives::Dimensions, render_layer::RenderLayer, simple_renderer::SimpleVertex,
-    text_renderer::TextVertex, typeface::SymbolKey, widget_store::EntryDefaultDescriptor,
-    Rectangle,
+    primitives::Dimensions, render_layer::RenderLayer, renderers::SimpleVertex,
+    renderers::TextVertex, typeface::SymbolKey, widget_store::EntryDefaultDescriptor, Rectangle,
 };
 use std::{any::Any, collections::VecDeque};
 

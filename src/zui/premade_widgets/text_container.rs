@@ -4,8 +4,7 @@ use crate::{
     text::TextDescriptor, zui::{
         primitives::Dimensions,
         render_layer::RenderLayer,
-        simple_renderer::SimpleVertex,
-        text_renderer::TextVertex,
+        renderers::{SimpleVertex, TextVertex},
         widget::{Bounds, LayoutBoundaries},
         widget_store::EntryDefaultDescriptor,
         Colour, Context, Rectangle, Text, Widget,

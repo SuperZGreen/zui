@@ -13,7 +13,7 @@ pub use text_descriptor::TextDescriptor;
 
 use super::{
     primitives::{Dimensions, Rectangle},
-    text_renderer::TextVertex,
+    renderers::TextVertex,
     typeface::{FontStyle, SymbolInfo, SymbolKey},
     widget::Bounds,
     Axis, Colour, Typeface,

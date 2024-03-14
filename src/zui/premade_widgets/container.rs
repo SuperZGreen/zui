@@ -4,8 +4,7 @@ use crate::{
     zui::{
         primitives::{Dimensions, Rectangle},
         render_layer::RenderLayer,
-        simple_renderer::SimpleVertex,
-        text_renderer::TextVertex,
+        renderers::{SimpleVertex, TextVertex},
         widget::LayoutBoundaries,
         widget_store::{EntryChildren, EntryDefaultDescriptor},
         Axis, Colour, Context, Event, SpanConstraint, Widget,
@@ -21,7 +20,6 @@ pub struct Container {
     /// The background of the Container, None is comletely transparent, a Colour will cause the
     /// container to render vertices of that Colour in the region of its Layout's clip Rectangle
     pub background: Option<Colour>,
-
     // /// A test toggle that inverts the background colour when true
     // test_toggle: bool,
 }

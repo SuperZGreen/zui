@@ -1,4 +1,7 @@
-use super::{primitives::Rectangle, simple_renderer::SimpleVertex, text_renderer::TextVertex};
+use super::{
+    primitives::Rectangle,
+    renderers::{SimpleVertex, TextVertex},
+};
 
 /// A layer the contains vertices of different types, that will be rendered on top of other layers.
 /// The layer also may contain a clipping rectangle, which will prevent contents outside of this

@@ -4,8 +4,7 @@ use crate::{
     zui::{
         primitives::{Dimensions, Rectangle},
         render_layer::RenderLayer,
-        simple_renderer::SimpleVertex,
-        text_renderer::TextVertex,
+        renderers::{SimpleVertex, TextVertex},
         widget::{Bounds, Event, LayoutBoundaries, MouseEvent, Widget},
         widget_store::EntryDefaultDescriptor,
         Colour, Context,
@@ -47,7 +46,7 @@ impl<Message> Button<Message> {
 
 impl<'a, Message> Into<Box<dyn Widget<Message> + 'a>> for Button<Message>
 where
-    Message: Clone + 'static
+    Message: Clone + 'static,
 {
     fn into(self) -> Box<dyn Widget<Message> + 'a> {
         Box::new(self)

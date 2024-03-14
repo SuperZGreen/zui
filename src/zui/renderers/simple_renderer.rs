@@ -3,7 +3,7 @@ mod simple_vertex;
 pub use simple_vertex::SimpleVertex;
 use wgpu::util::DeviceExt;
 
-use super::util;
+use crate::util;
 
 pub struct SimpleRenderer {
     render_pipeline: wgpu::RenderPipeline,

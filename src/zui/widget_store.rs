@@ -13,8 +13,7 @@ use crate::{
 use super::{
     primitives::Dimensions,
     render_layer::RenderLayer,
-    simple_renderer::SimpleVertex,
-    text_renderer::TextVertex,
+    renderers::{SimpleVertex, TextVertex},
     widget::{Boundary, BoundaryType, Layout, LayoutBoundaries},
 };
 
