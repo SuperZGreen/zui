@@ -409,7 +409,7 @@ impl TextureAtlas {
     }
 }
 
-pub fn texture_from_rgba_image(
+fn texture_from_rgba_image(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
     image: &image::RgbaImage,

@@ -39,7 +39,14 @@ impl PackedSprite {
         &self.name
     }
 
-    /// Converts the region into UVs for rendering
+    /// Converts the region into UVs for rendering. Using y-down:
+    ///
+    ///   0 -----> 1
+    ///          /
+    ///        /
+    ///      /
+    ///    /
+    ///   2 -----> 3
     pub fn uvs(&self) -> [glam::Vec2; 4] {
         [
             glam::Vec2::new(self.region.x_min, self.region.y_min),

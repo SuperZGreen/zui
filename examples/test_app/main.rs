@@ -51,6 +51,7 @@ fn main() {
     let viewport_dimensions_px = window.inner_size();
     let mut zui = Zui::new(
         render_state.device(),
+        &render_state.queue,
         render_state.surface_configuration(),
         viewport_dimensions_px.into(),
     )

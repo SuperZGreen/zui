@@ -1,10 +1,10 @@
 mod colour;
-mod renderers;
 mod position_constraint;
 pub mod premade_widgets;
 mod primitives;
 mod render_layer;
 mod renderable;
+mod renderers;
 mod scene;
 mod scene_handle;
 mod span_constraint;
@@ -19,29 +19,41 @@ mod widget_store;
 pub use colour::named as named_colours;
 pub use colour::Colour;
 pub use position_constraint::{PaddingWeights, PositionConstraint};
-pub use primitives::{Rectangle, Dimensions};
+pub use primitives::{Dimensions, Rectangle};
 pub use renderable::Renderable;
 pub use scene::Scene;
 pub use scene_handle::SceneHandle;
 pub use span_constraint::{ParentHeight, ParentWidth, SpanConstraint, ViewHeight, ViewWidth};
 pub use text::{
-    LineWrapping, Text, TextAlignmentHorizontal, TextAlignmentVertical, TextConfiguration, TextSegment, TextSize,
+    LineWrapping, Text, TextAlignmentHorizontal, TextAlignmentVertical, TextConfiguration,
+    TextSegment, TextSize,
 };
 pub use typeface::Typeface;
 pub use widget::{Axis, Event, MouseEvent, Widget};
-pub use widget_store::{EntryOverrideDescriptor, EntryChildren, WidgetId, WidgetStore};
+pub use widget_store::{EntryChildren, EntryOverrideDescriptor, WidgetId, WidgetStore};
 
+use renderers::{ImageRenderer, SimpleRenderer, TextRenderer};
 use winit::{
     dpi::PhysicalPosition,
     event::{ElementState, WindowEvent},
 };
-use renderers::{SimpleRenderer, TextRenderer};
+
+use self::renderers::image_renderer::ImageRendererBuffer;
+use self::renderers::image_renderer::ImageVertex;
+use self::renderers::image_renderer::{SpriteId, TextureAtlas, TextureAtlasBuilder};
+// use self::texture_atlas::TextureAtlas;
+// use self::texture_atlas::TextureAtlasBuilder;
 
 pub struct Zui {
     typeface: Typeface,
 
-    renderer: SimpleRenderer,
+    simple_renderer: SimpleRenderer,
     text_renderer: TextRenderer,
+    image_renderer: ImageRenderer,
+    image_texture_atlas: TextureAtlas,
+
+    test_sprite_id: SpriteId,
+    test_image_buffer: ImageRendererBuffer,
 
     viewport_dimensions_px: Dimensions<u32>,
     aspect_ratio: f32,
@@ -51,6 +63,7 @@ pub struct Zui {
 impl Zui {
     pub fn new(
         device: &wgpu::Device,
+        queue: &wgpu::Queue,
         surface_configuration: &wgpu::SurfaceConfiguration,
         viewport_dimensions_px: Dimensions<u32>,
     ) -> Result<Self, ()> {
@@ -64,16 +77,38 @@ impl Zui {
             Err(_) => return Err(()),
         };
 
-        let text_renderer = TextRenderer::new(
+        let mut image_texture_atlas_builder =
+            TextureAtlasBuilder::new(1, "resources/zui/images/fallback_sprite.png");
+        let test_sprite_id =
+            image_texture_atlas_builder.add_sprite("resources/zui/images/test_sprite.png");
+        let image_texture_atlas = image_texture_atlas_builder
+            .build(2024, device, queue)
+            .expect("failed to build image texture atlas!");
+        let test_image_buffer = ImageRendererBuffer::upload(
             device,
-            surface_configuration,
-            typeface.texture_atlas.bind_group_layout(),
+            &ImageVertex::from_rectangle_and_packed_sprite(
+                Rectangle::new(100, 100 + 256, 100, 100 + 256),
+                viewport_dimensions_px,
+                image_texture_atlas.get(test_sprite_id),
+            ),
         );
 
         Ok(Self {
+            simple_renderer: SimpleRenderer::new(device, surface_configuration),
+            text_renderer: TextRenderer::new(
+                device,
+                surface_configuration,
+                typeface.texture_atlas.bind_group_layout(),
+            ),
+            image_renderer: ImageRenderer::new(
+                device,
+                surface_configuration,
+                image_texture_atlas.bind_group_layout(),
+            ),
+            image_texture_atlas,
+            test_sprite_id,
+            test_image_buffer,
             typeface,
-            renderer: SimpleRenderer::new(device, surface_configuration),
-            text_renderer,
             viewport_dimensions_px,
             aspect_ratio: viewport_dimensions_px.width as f32
                 / viewport_dimensions_px.height as f32,
@@ -128,7 +163,7 @@ impl Zui {
     fn try_render_pass_draw(&self, render_pass_opt: Option<wgpu::RenderPass>) {
         match render_pass_opt {
             Some(mut rp) => {
-                self.renderer.render(&mut rp);
+                self.simple_renderer.render(&mut rp);
                 self.text_renderer
                     .render(&mut rp, &self.typeface.texture_atlas);
             }
@@ -191,7 +226,8 @@ impl Zui {
 
             match render_layer_behaviour {
                 RenderLayerBehaviour::WithFramebufferClipRectangle(fcr) => {
-                    self.renderer.upload(device, &render_layer.simple_vertices);
+                    self.simple_renderer
+                        .upload(device, &render_layer.simple_vertices);
                     self.text_renderer
                         .upload(device, &render_layer.text_vertices);
 
@@ -203,7 +239,8 @@ impl Zui {
                     self.try_render_pass_draw(render_pass_opt);
                 }
                 RenderLayerBehaviour::WithoutClipRectangle => {
-                    self.renderer.upload(device, &render_layer.simple_vertices);
+                    self.simple_renderer
+                        .upload(device, &render_layer.simple_vertices);
                     self.text_renderer
                         .upload(device, &render_layer.text_vertices);
 
@@ -218,6 +255,14 @@ impl Zui {
                     // Do nothing!
                 }
             };
+        }
+
+        let render_pass_opt = Self::try_render_pass_with_clip_rectangle(command_encoder, output_texture_view, None);
+        if let Some(mut render_pass) = render_pass_opt {
+            self.image_renderer
+                .render(&mut render_pass, &self.image_texture_atlas, &self.test_image_buffer);
+        } else {
+            error!("failed to get render pass");
         }
 
         // Note: command encoder should be submitted by the end user!
@@ -243,7 +288,7 @@ impl Zui {
                 },
             })],
             depth_stencil_attachment: None,
-            timestamp_writes: None, // TODO: check this
+            timestamp_writes: None,    // TODO: check this
             occlusion_query_set: None, // TODO: check this
         });
 
