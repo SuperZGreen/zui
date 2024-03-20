@@ -82,53 +82,6 @@ impl TextureAtlasBuilder {
         atlas_image
     }
 
-    /// Creates a texture from the atlas image
-    fn texture_from_atlas_image(
-        &self,
-        image: &CoverageImage,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-    ) -> wgpu::Texture {
-        let texture_size = wgpu::Extent3d {
-            width: image.width,
-            height: image.height,
-            depth_or_array_layers: 1,
-        };
-
-        // creating a relevant handle to our texture
-        // Note: this causes a severe memory leak if run while window is minimised. This is
-        // currently prevented via early in SceneHandle::solve if view dimensions have zero area.
-        let texture = device.create_texture(&wgpu::TextureDescriptor {
-            size: texture_size,
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::R8Unorm,
-            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-            label: Some("texture_curses"),
-            view_formats: &[],
-        });
-
-        // writing the texture to GPU memory via created handle
-        queue.write_texture(
-            wgpu::ImageCopyTexture {
-                texture: &texture,
-                mip_level: 0,
-                origin: wgpu::Origin3d::ZERO,
-                aspect: wgpu::TextureAspect::All,
-            },
-            &image.coverage,
-            wgpu::ImageDataLayout {
-                offset: 0,
-                bytes_per_row: Some(1 * image.width),
-                rows_per_image: Some(image.height),
-            },
-            texture_size,
-        );
-
-        texture
-    }
-
     /// Generates the packed sprites Vector
     fn generate_packed_sprites(
         &self,
@@ -260,7 +213,7 @@ impl TextureAtlas {
         let atlas_image = builder.image_from_packed_items(&packer_output);
 
         // creating and uploading the wgpu texture
-        let texture = builder.texture_from_atlas_image(&atlas_image, device, queue);
+        let texture = self.try_update_gpu_texture(&atlas_image, device, queue);
 
         // creating texture view
         let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
@@ -290,6 +243,63 @@ impl TextureAtlas {
         self.texture = Some(texture);
         self.bind_group = Some(bind_group);
         self.packed_sprites = Some(packed_sprites);
+    }
+
+    /// Updates the self texture and image fields if required
+    fn try_update_gpu_texture(
+        &mut self,
+        new_image: &CoverageImage,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+    ) -> wgpu::Texture {
+        let texture_size = wgpu::Extent3d {
+            width: new_image.width,
+            height: new_image.height,
+            depth_or_array_layers: 1,
+        };
+
+        // creating a new texture if required, othewise just updating the old texture
+        let texture = match (&self.image, self.texture.take()) {
+            (Some(previous_image), Some(previous_texture))
+                if previous_image.width == new_image.width && previous_image.height == new_image.height =>
+            {
+                previous_texture
+            }
+            _ => {
+                // creating a relevant handle to our texture
+                // Note: this causes a severe memory leak if run while window is minimised. This is
+                // currently prevented via early in SceneHandle::solve if view dimensions have zero area.
+                device.create_texture(&wgpu::TextureDescriptor {
+                    size: texture_size,
+                    mip_level_count: 1,
+                    sample_count: 1,
+                    dimension: wgpu::TextureDimension::D2,
+                    format: wgpu::TextureFormat::R8Unorm,
+                    usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+                    label: Some("zui_glyph_texture_atlas"),
+                    view_formats: &[],
+                })
+            }
+        };
+
+        // writing the texture to GPU memory via created handle
+        queue.write_texture(
+            wgpu::ImageCopyTexture {
+                texture: &texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            &new_image.coverage,
+            wgpu::ImageDataLayout {
+                offset: 0,
+                bytes_per_row: Some(1 * new_image.width),
+                rows_per_image: Some(new_image.height),
+            },
+            texture_size,
+        );
+
+        texture
     }
 
     /// Saves the texture atlas image to disk, for debugging
