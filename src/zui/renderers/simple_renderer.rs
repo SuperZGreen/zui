@@ -18,21 +18,21 @@ impl SimpleRenderer {
     ) -> Self {
         let shader_module = util::shader_module_from_file_path(
             device,
-            "resources/zui/renderer.wgsl",
-            "zui_shader_module",
+            "resources/zui/simple_renderer.wgsl",
+            "zui_simple_renderer_shader_module",
         )
         .expect("failed to load zui shader!");
 
         let vertex_buffer_layout = SimpleVertex::vertex_buffer_layout();
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("zui_renderer_pipeline_layout"),
+            label: Some("zui_simple_renderer_pipeline_layout"),
             bind_group_layouts: &[],
             push_constant_ranges: &[],
         });
 
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("zui_renderer_render_pipeline"),
+            label: Some("zui_simple_renderer_render_pipeline"),
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader_module,
@@ -67,7 +67,7 @@ impl SimpleRenderer {
         });
         
         let vertices_buffer = device.create_buffer(&wgpu::BufferDescriptor{
-            label: Some("zui_vertices_buffer"),
+            label: Some("zui_simple_renderer_vertices_buffer"),
             size: 0,
             usage: wgpu::BufferUsages::VERTEX,
             mapped_at_creation: false,
@@ -86,7 +86,7 @@ impl SimpleRenderer {
         // uploading vertices buffer
         let vertices_bytes = unsafe { util::slice_as_u8_slice(&vertices) };
         let vertices_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("zui_vertices_buffer"),
+            label: Some("zui_simple_renderer_vertices_buffer"),
             contents: vertices_bytes,
             usage: wgpu::BufferUsages::VERTEX,
         });
