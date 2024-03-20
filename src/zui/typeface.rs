@@ -208,7 +208,7 @@ impl Typeface {
         // let build_stopwatch = Stopwatch::start();
         // rebuilding the texture atlas and uploading texture
         self.texture_atlas
-            .build(texture_atlas_builder, device, queue);
+            .update_via_builder(texture_atlas_builder, device, queue);
         // trace!("building atlas took: {:.2}ms", build_stopwatch.elapsed() * 1000f32);
 
         // clearing self symbols as the information will be out of date with the new TextureAtlas

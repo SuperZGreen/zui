@@ -11,7 +11,7 @@ struct UnpackedSprite {
 }
 
 /// Used to build the TextureAtlas' texture, TODO: can be removed and simplified so that the
-/// TextureAtlas simply takes in an array of CoverageImages for it's build. This would be more
+/// TextureAtlas simply takes in an array of CoverageImages for its build. This would be more
 /// memory efficient as the vec could be allocated to the length of the initial glyph buffer
 pub struct TextureAtlasBuilder {
     unpacked_sprites: Vec<UnpackedSprite>,
@@ -28,7 +28,7 @@ pub struct PackedSprite {
 
 impl TextureAtlasBuilder {
     /// The number of pixels a sprite is padded by
-    /// TODO: this isn't used, as text can render correctly without it as it is pixel aligned
+    /// Note: this isn't used, as text can render correctly without it as it is pixel aligned
     const PADDING: u32 = 0u32;
 
     pub fn new(reserved_sprites_length: usize) -> Self {
@@ -40,9 +40,7 @@ impl TextureAtlasBuilder {
     /// Adds a sprite to be built into the texture atlas
     pub fn add_sprite(&mut self, image: CoverageImage) -> usize {
         let index = self.unpacked_sprites.len();
-        self.unpacked_sprites.push(UnpackedSprite {
-            image,
-        });
+        self.unpacked_sprites.push(UnpackedSprite { image });
 
         index
     }
@@ -62,10 +60,7 @@ impl TextureAtlasBuilder {
     }
 
     /// Copies all of the packed items into an image
-    fn image_from_packed_items(
-        &self,
-        packer_output: &packer::Output,
-    ) -> CoverageImage {
+    fn image_from_packed_items(&self, packer_output: &packer::Output) -> CoverageImage {
         let atlas_width = packer_output.span;
         let atlas_height = packer_output.span;
         let mut atlas_image = CoverageImage::new(atlas_width, atlas_height);
@@ -75,11 +70,13 @@ impl TextureAtlasBuilder {
             // info!("rect id: {}", rect_id);
             let unpacked_sprite = &self.unpacked_sprites[item.input_item_index];
 
-            atlas_image.copy_from(
-                &unpacked_sprite.image,
-                item.rectangle.x_min as u32 + Self::PADDING,
-                item.rectangle.y_min as u32 + Self::PADDING,
-            ).expect("failed to copy symbol coverage to atlas!");
+            atlas_image
+                .copy_from(
+                    &unpacked_sprite.image,
+                    item.rectangle.x_min as u32 + Self::PADDING,
+                    item.rectangle.y_min as u32 + Self::PADDING,
+                )
+                .expect("failed to copy symbol coverage to atlas!");
         }
 
         atlas_image
@@ -99,7 +96,8 @@ impl TextureAtlasBuilder {
         };
 
         // creating a relevant handle to our texture
-        // TODO: this causes a severe memory leak if run while window is minimised?
+        // Note: this causes a severe memory leak if run while window is minimised. This is
+        // currently prevented via early in SceneHandle::solve if view dimensions have zero area.
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             size: texture_size,
             mip_level_count: 1,
@@ -238,15 +236,12 @@ impl TextureAtlas {
     }
 
     /// Builds the atlas based on the provided TextureAtlasBuilder, uploads the texture to GPU, etc.
-    pub fn build(
+    pub fn update_via_builder(
         &mut self,
         builder: TextureAtlasBuilder,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
     ) {
-        // // getting the list of sprites to place in crunch
-        // let items_to_place = builder.prepare_crunch_items();
-
         let input_items = builder.prepare_items_to_place();
 
         // packing the items
@@ -287,11 +282,8 @@ impl TextureAtlas {
         });
 
         // creating packed sprites list
-        let packed_sprites = builder.generate_packed_sprites(
-            &packer_output,
-            atlas_image.width,
-            atlas_image.height,
-        );
+        let packed_sprites =
+            builder.generate_packed_sprites(&packer_output, atlas_image.width, atlas_image.height);
 
         // assignments
         self.image = Some(atlas_image);
@@ -303,11 +295,8 @@ impl TextureAtlas {
     /// Saves the texture atlas image to disk, for debugging
     pub fn save_texture_to_disk(&self, path: &str) -> Result<(), ()> {
         if let Some(image) = self.image.as_ref() {
-            image::GrayImage::from_raw(
-                    image.width,
-                    image.height,
-                    image.coverage.to_vec(),
-                ).expect("failed to convert from CoverageImage to GrayImage")
+            image::GrayImage::from_raw(image.width, image.height, image.coverage.to_vec())
+                .expect("failed to convert from CoverageImage to GrayImage")
                 .save_with_format(path, image::ImageFormat::Png)
                 .expect("failed to save!");
             Ok(())

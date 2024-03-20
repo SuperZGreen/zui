@@ -62,6 +62,11 @@ where
             }
         }
 
+        // early exit, not bothering to calculate layouts etc when minimised
+        if !context.viewport_dimensions_px.has_non_zero_area() {
+            return;
+        }
+
         // collecting all text
         let symbol_keys = self.widget_store.collect_text();
 

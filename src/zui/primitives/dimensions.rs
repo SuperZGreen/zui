@@ -1,8 +1,6 @@
-
 use winit::dpi::PhysicalSize;
 
 use crate::{Axis, Rectangle};
-
 
 /// A width and height pair, basically a Rectangle without a position
 #[derive(Copy, Clone, Debug)]
@@ -25,6 +23,13 @@ where
             Axis::Vertical => self.height,
             Axis::Horizontal => self.width,
         }
+    }
+}
+
+/// Returns true if both of the dimensions are non-zero.
+impl Dimensions<u32> {
+    pub fn has_non_zero_area(&self) -> bool {
+        self.width > 0u32 && self.height > 0u32
     }
 }
 

@@ -257,10 +257,14 @@ impl Zui {
             };
         }
 
-        let render_pass_opt = Self::try_render_pass_with_clip_rectangle(command_encoder, output_texture_view, None);
+        let render_pass_opt =
+            Self::try_render_pass_with_clip_rectangle(command_encoder, output_texture_view, None);
         if let Some(mut render_pass) = render_pass_opt {
-            self.image_renderer
-                .render(&mut render_pass, &self.image_texture_atlas, &self.test_image_buffer);
+            self.image_renderer.render(
+                &mut render_pass,
+                &self.image_texture_atlas,
+                &self.test_image_buffer,
+            );
         } else {
             error!("failed to get render pass");
         }
