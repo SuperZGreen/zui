@@ -4,6 +4,17 @@ version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[profile.release]
+debug = false
+
+# enabling optimisation for all dependencies for development build
+[profile.dev.package."*"]
+opt-level = 3
+
+# enabling minor optimisations in debug mode
+[profile.dev]
+opt-level = 1
+
 
 [dependencies]
 winit = "0.29"
