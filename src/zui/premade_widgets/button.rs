@@ -99,7 +99,6 @@ where
         context: &Context,
         simple_vertices: &mut Vec<SimpleVertex>,
         text_vertices: &mut Vec<TextVertex>,
-        _render_layers: &mut VecDeque<RenderLayer>,
     ) {
         // adding own text vertices
         if let Some(text) = &self.text {

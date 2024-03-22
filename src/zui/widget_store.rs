@@ -3,7 +3,6 @@ mod entry;
 pub use entry::{Entry, EntryChildren, EntryDefaultDescriptor, EntryOverrideDescriptor};
 use rustc_hash::FxHashSet;
 
-use std::collections::VecDeque;
 
 use crate::{
     typeface::SymbolKey, zui::span_constraint::IntoPixelSpan, Axis, Context, PaddingWeights,
@@ -13,7 +12,6 @@ use crate::{
 use super::{
     primitives::Dimensions,
     render_layer::RenderLayer,
-    renderers::{SimpleVertex, TextVertex},
     widget::{Boundary, BoundaryType, Layout, LayoutBoundaries},
 };
 
@@ -104,7 +102,7 @@ impl<Message> WidgetStore<Message> {
                 Ok(())
             }
             None => {
-                return Err(());
+                Err(())
             }
         }
     }
@@ -209,9 +207,8 @@ impl<Message> WidgetStore<Message> {
         &self,
         root_widget_id: &WidgetId,
         context: &Context,
-        simple_vertices: &mut Vec<SimpleVertex>,
-        text_vertices: &mut Vec<TextVertex>,
-        render_layers: &mut VecDeque<RenderLayer>,
+        render_layers: &mut Vec<RenderLayer>,
+        current_layer_index: usize,
     ) -> Result<(), ()> {
         let entry = match self.get(root_widget_id) {
             Some(we) => we,
@@ -229,12 +226,33 @@ impl<Message> WidgetStore<Message> {
             }
         };
 
+        // if the current widget is overflowing, creates a new layer and sets the children to render
+        // to the new layer.
+        let children_layer_index = if entry.layout.overflowing
+            && entry
+                .layout
+                .clip_rectangle_px
+                .is_some_and(|crpx| crpx.has_non_zero_area())
+        {
+            let index = render_layers.len();
+            render_layers.push(RenderLayer::new(Some(region)));
+            index
+        } else {
+            current_layer_index
+        };
+
+        // renders current widget on the same layer as its parents, allowing children to be on an
+        // entirely new layer. TODO: think of a good reason for this, as opposed to putting the
+        // widget on the same layer as its children.
+        let parent_render_layer = &mut render_layers[current_layer_index];
+        let parent_simple_vertices = &mut parent_render_layer.simple_vertices;
+        let parent_text_vertices = &mut parent_render_layer.text_vertices;
+
         entry.widget.to_vertices(
             region,
             context,
-            simple_vertices,
-            text_vertices,
-            render_layers,
+            parent_simple_vertices,
+            parent_text_vertices,
         );
 
         let child_ids = match entry.children.as_ref() {
@@ -248,9 +266,8 @@ impl<Message> WidgetStore<Message> {
             _ = self.widget_to_vertices(
                 child_id,
                 context,
-                simple_vertices,
-                text_vertices,
                 render_layers,
+                children_layer_index,
             );
         }
 
@@ -386,6 +403,7 @@ impl<Message> WidgetStore<Message> {
                 }
             };
 
+            // the pixels perpendicular to the axis used
             let perpendicular_pixels_per_parent_weight =
                 Self::calculate_pixels_per_parent_weight(self, &region, axis.other(), &[child_id]);
 
@@ -520,6 +538,24 @@ impl<Message> WidgetStore<Message> {
 
             // placing the child
             _ = self.widget_place(&child_id, child_region, context);
+        }
+
+        // setting the overflowing flag if the cursor is past the end of the parent region
+        let overflowing = match axis {
+            Axis::Vertical => (cursor.y as i32) < region.y_min,
+            Axis::Horizontal => cursor.x as i32 > region.x_max,
+        };
+
+        if overflowing {
+            let entry = match self.get_mut(widget_id) {
+                Some(we) => we,
+                None => {
+                    warn!("failed to find widget with id: {widget_id}!");
+                    return Err(());
+                }
+            };
+
+            entry.layout.overflowing = overflowing;
         }
 
         Ok(())

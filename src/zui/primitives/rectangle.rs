@@ -161,6 +161,10 @@ impl Rectangle<i32> {
             && (position.y as i32) >= self.y_min
             && (position.y as i32) < self.y_max
     }
+
+    pub fn has_non_zero_area(&self) -> bool {
+        self.width() > 0i32 && self.height() > 0i32
+    }
 }
 
 impl Rectangle<f32> {

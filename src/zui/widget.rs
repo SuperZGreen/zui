@@ -107,7 +107,6 @@ pub trait Widget<Message> {
         context: &Context,
         simple_vertices: &mut Vec<SimpleVertex>,
         text_vertices: &mut Vec<TextVertex>,
-        render_layers: &mut VecDeque<RenderLayer>,
     ) {
         // Do nothing by default
     }
@@ -201,8 +200,11 @@ pub struct Layout {
     pub minimum_dimensions_px: Option<Dimensions<i32>>,
 
     /// The rectangle that has been given to the widget by its parents to be placed in. This
-    /// describes the widget's placement on the viewport/screen.
+    /// describes the widget's absolute placement on the viewport/screen.
     pub clip_rectangle_px: Option<Rectangle<i32>>,
+
+    /// Set by zui if the layout is overflowing
+    pub overflowing: bool,
 }
 
 impl Layout {
@@ -210,6 +212,7 @@ impl Layout {
         Self {
             minimum_dimensions_px: None,
             clip_rectangle_px: None,
+            overflowing: false,
         }
     }
 }

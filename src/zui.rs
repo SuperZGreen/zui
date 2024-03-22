@@ -117,12 +117,12 @@ impl Zui {
     }
 
     /// Converts a clip rectangle from f32 to u32
-    fn rectangle_f32_to_u32(rect: &Rectangle<f32>) -> Rectangle<u32> {
+    fn rectangle_i32_to_u32(rect: &Rectangle<i32>) -> Rectangle<u32> {
         Rectangle::new(
-            rect.x_min.round() as u32,
-            rect.x_max.round() as u32,
-            rect.y_min.round() as u32,
-            rect.y_max.round() as u32,
+            rect.x_min as u32,
+            rect.x_max as u32,
+            rect.y_min as u32,
+            rect.y_max as u32,
         )
     }
 
@@ -196,8 +196,14 @@ impl Zui {
             // determining whether the layer should be rendered or not
             let render_layer_behaviour = match render_layer.clip_rectangle {
                 Some(clip_rect) => {
-                    // converting to whole-pixel u32 coordinates
-                    let clip_rect = Self::rectangle_f32_to_u32(&clip_rect);
+                    // converting the i32 rectangles to valid (TODO: check this for screen upper
+                    // bounds) u32 clipping rectangles
+                    let clip_rect = Rectangle::<u32> {
+                        x_min: i32::max(clip_rect.x_min, 0) as u32,
+                        x_max: clip_rect.x_max as u32,
+                        y_min: i32::max(clip_rect.y_min, 0) as u32,
+                        y_max: clip_rect.y_max as u32,
+                    };
 
                     // getting intersection with the viewport
                     match Self::rectangle_viewport_intersection(

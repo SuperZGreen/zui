@@ -89,8 +89,7 @@ where
         region: Rectangle<i32>,
         context: &Context,
         simple_vertices: &mut Vec<SimpleVertex>,
-        _text_vertices: &mut Vec<TextVertex>,
-        _render_layers: &mut VecDeque<RenderLayer>,
+        text_vertices: &mut Vec<TextVertex>,
     ) {
         // adding own rectangle/simple vertices
         if let Some(base_colour) = self.background {

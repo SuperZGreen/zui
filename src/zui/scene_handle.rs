@@ -159,21 +159,15 @@ impl<Message> Renderable for SceneHandle<Message>
 where
     Message: Clone,
 {
-    fn to_render_layers(&self, context: &Context) -> VecDeque<RenderLayer> {
-        let mut render_layers = VecDeque::new();
-        let mut simple_vertices = Vec::new();
-        let mut text_vertices = Vec::new();
+    fn to_render_layers(&self, context: &Context) -> Vec<RenderLayer> {
+        let mut render_layers = Vec::new();
+        render_layers.push(RenderLayer::new(None));
 
         _ = self.widget_store.widget_to_vertices(
             &self.root_widget_id,
             context,
-            &mut simple_vertices,
-            &mut text_vertices,
             &mut render_layers,
-        );
-
-        render_layers.push_front(
-            RenderLayer::new(simple_vertices, text_vertices, None).with_name(Some("root_layer")),
+            0usize,
         );
 
         // for (render_layer_index, render_layer) in render_layers.iter().enumerate() {
