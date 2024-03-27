@@ -13,17 +13,17 @@ use crate::{util, zui::texture_atlas::TextureAtlas, Dimensions, Rectangle};
 #[derive(Copy, Clone, Debug)]
 pub struct TextVertex {
     // The colour of the text to be rendered
-    colour: glam::Vec4,
+    pub colour: glam::Vec4,
 
     // The UV of the TextVertex on the text texture atlas texture
-    uv: glam::Vec2,
+    pub uv: glam::Vec2,
 
     // The screen space position of the text vertex
-    position: glam::Vec2,
+    pub position: glam::Vec2,
 
     // The bounds of the parent widget rectangle that contains the text, used for clipping text to
     // prevent visual overflow
-    clip_bounds: glam::Vec4,
+    pub clip_bounds: glam::Vec4,
 }
 
 impl TextVertex {
@@ -59,6 +59,23 @@ impl TextVertex {
             attributes: &VERTEX_ATTRIBUTES,
         };
         vertex_buffer_layout
+    }
+
+    /// Translates the vertex by pixels
+    pub fn translate_by_pixels(&mut self, pixel_translation: glam::IVec2, viewport_dimensions_px: Dimensions<u32>) {
+        let screen_space_pixel_height = 2f32 / viewport_dimensions_px.height as f32;
+        let screen_space_pixel_width = 2f32 / viewport_dimensions_px.height as f32;
+
+        let screen_space_translation = glam::Vec2::new(
+            screen_space_pixel_width * pixel_translation.x as f32,
+            screen_space_pixel_height * pixel_translation.y as f32,
+        );
+
+        self.position += screen_space_translation;
+        self.clip_bounds.x += pixel_translation.x as f32;
+        self.clip_bounds.y += pixel_translation.x as f32;
+        self.clip_bounds.z -= pixel_translation.y as f32;
+        self.clip_bounds.w -= pixel_translation.y as f32;
     }
 }
 

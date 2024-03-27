@@ -41,6 +41,10 @@ pub enum MouseEvent {
     /// Event for when the mouse cursor is moved, the position of the cursor is provided in the
     /// provided context
     CursorMoved,
+
+    /// Event for when the wheel is scolled, contains the pixel/line translation that should be
+    /// performed
+    Scroll(glam::IVec2),
 }
 
 /// An event that is passed to a Widget from the outside context, for the widget to deal with and/or
@@ -203,8 +207,8 @@ pub struct Layout {
     /// describes the widget's absolute placement on the viewport/screen.
     pub clip_rectangle_px: Option<Rectangle<i32>>,
 
-    /// Set by zui if the layout is overflowing
-    pub overflowing: bool,
+    /// Set by zui if the layout is overflowing, and carries the data relevant to overflows
+    pub overflowing: OverflowState,
 }
 
 impl Layout {
@@ -212,7 +216,43 @@ impl Layout {
         Self {
             minimum_dimensions_px: None,
             clip_rectangle_px: None,
-            overflowing: false,
+            overflowing: OverflowState::None,
         }
+    }
+
+    /// clears the transient (frame-specific) variables for the layout
+    pub fn reset_transients(&mut self) {
+        self.minimum_dimensions_px = None;
+        self.clip_rectangle_px = None;
+    }
+}
+
+/// Describes whether a widget's children are overflowing, and holds the data required if this is
+/// the case.
+#[derive(Clone)]
+pub enum OverflowState {
+    None,
+    Overflowing {
+        /// The translation of the child widgets of the layout for scrolling (in pixels).
+        translation: glam::IVec2,
+    },
+}
+
+impl OverflowState {
+    /// Updates state without resetting member variables if suitable
+    pub fn update_state(&mut self, overflowing: bool) {
+        match (self.clone(), overflowing) {
+            (OverflowState::None, true) => {
+                info!("setting overflow");
+                *self = OverflowState::Overflowing {
+                    translation: glam::IVec2::ZERO,
+                };
+            }
+            (OverflowState::Overflowing { .. }, false) => {
+                info!("setting overflow");
+                *self = OverflowState::None;
+            }
+            _ => {}
+        };
     }
 }

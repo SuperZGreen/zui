@@ -216,6 +216,7 @@ impl<'a> RenderState<'a> {
                 return Ok(());
             }
         };
+
         Ok(surface_texture.present())
     }
 

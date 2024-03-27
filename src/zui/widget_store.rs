@@ -3,7 +3,6 @@ mod entry;
 pub use entry::{Entry, EntryChildren, EntryDefaultDescriptor, EntryOverrideDescriptor};
 use rustc_hash::FxHashSet;
 
-
 use crate::{
     typeface::SymbolKey, zui::span_constraint::IntoPixelSpan, Axis, Context, PaddingWeights,
     PositionConstraint, Rectangle, SpanConstraint, Widget,
@@ -12,7 +11,7 @@ use crate::{
 use super::{
     primitives::Dimensions,
     render_layer::RenderLayer,
-    widget::{Boundary, BoundaryType, Layout, LayoutBoundaries},
+    widget::{Boundary, BoundaryType, Layout, LayoutBoundaries, OverflowState},
 };
 
 /// The ID of a Widget that is stored in the WidgetStore, this is used to access the corresponding
@@ -101,9 +100,7 @@ impl<Message> WidgetStore<Message> {
                 *we = None;
                 Ok(())
             }
-            None => {
-                Err(())
-            }
+            None => Err(()),
         }
     }
 
@@ -209,6 +206,7 @@ impl<Message> WidgetStore<Message> {
         context: &Context,
         render_layers: &mut Vec<RenderLayer>,
         current_layer_index: usize,
+        translation_px: glam::IVec2,
     ) -> Result<(), ()> {
         let entry = match self.get(root_widget_id) {
             Some(we) => we,
@@ -228,17 +226,23 @@ impl<Message> WidgetStore<Message> {
 
         // if the current widget is overflowing, creates a new layer and sets the children to render
         // to the new layer.
-        let children_layer_index = if entry.layout.overflowing
-            && entry
-                .layout
-                .clip_rectangle_px
-                .is_some_and(|crpx| crpx.has_non_zero_area())
-        {
-            let index = render_layers.len();
-            render_layers.push(RenderLayer::new(Some(region)));
-            index
-        } else {
-            current_layer_index
+        let (children_layer_index, children_translation) = match entry.layout.overflowing {
+            OverflowState::None => {
+                (current_layer_index, translation_px)
+            }
+            OverflowState::Overflowing { translation } => {
+                if entry.layout.clip_rectangle_px.is_some_and(|crpx| crpx.has_non_zero_area()) {
+                    // creating a new render layer
+                    let index = render_layers.len();
+                    render_layers.push(RenderLayer::new(Some(region)));
+
+                    // info!("translation_px: {translation_px:?}, sum: {}", translation_px + translation);
+
+                    (index, translation_px + translation)
+                } else {
+                    (current_layer_index, translation_px + translation)
+                }
+            }
         };
 
         // renders current widget on the same layer as its parents, allowing children to be on an
@@ -248,6 +252,9 @@ impl<Message> WidgetStore<Message> {
         let parent_simple_vertices = &mut parent_render_layer.simple_vertices;
         let parent_text_vertices = &mut parent_render_layer.text_vertices;
 
+        let parent_simple_vertices_len = parent_simple_vertices.len();
+        let parent_text_vertices_len = parent_text_vertices.len();
+
         entry.widget.to_vertices(
             region,
             context,
@@ -255,6 +262,16 @@ impl<Message> WidgetStore<Message> {
             parent_text_vertices,
         );
 
+        // updating the vertex positions of the widget using the translation
+        for simple_vert in &mut parent_simple_vertices[parent_simple_vertices_len..] {
+            simple_vert.translate_by_pixels(translation_px, context.viewport_dimensions_px);
+        }
+
+        for text_vert in &mut parent_text_vertices[parent_text_vertices_len..] {
+            text_vert.translate_by_pixels(translation_px, context.viewport_dimensions_px);
+        }
+
+        // generating child vertices
         let child_ids = match entry.children.as_ref() {
             Some(children) => &children.ids,
             None => {
@@ -263,12 +280,7 @@ impl<Message> WidgetStore<Message> {
         };
 
         for child_id in child_ids {
-            _ = self.widget_to_vertices(
-                child_id,
-                context,
-                render_layers,
-                children_layer_index,
-            );
+            _ = self.widget_to_vertices(child_id, context, render_layers, children_layer_index, children_translation);
         }
 
         Ok(())
@@ -546,17 +558,15 @@ impl<Message> WidgetStore<Message> {
             Axis::Horizontal => cursor.x as i32 > region.x_max,
         };
 
-        if overflowing {
-            let entry = match self.get_mut(widget_id) {
-                Some(we) => we,
-                None => {
-                    warn!("failed to find widget with id: {widget_id}!");
-                    return Err(());
-                }
-            };
+        let entry = match self.get_mut(widget_id) {
+            Some(we) => we,
+            None => {
+                warn!("failed to find widget with id: {widget_id}!");
+                return Err(());
+            }
+        };
 
-            entry.layout.overflowing = overflowing;
-        }
+        entry.layout.overflowing.update_state(overflowing);
 
         Ok(())
     }
@@ -648,7 +658,7 @@ impl<Message> WidgetStore<Message> {
         (span, weights)
     }
 
-    /// Clears all layouts
+    /// Clears all layouts, Note: except for overflowing information
     pub fn clear_layouts(&mut self) {
         for entry_opt in self.widgets.iter_mut() {
             let entry = match entry_opt {
@@ -656,7 +666,7 @@ impl<Message> WidgetStore<Message> {
                 None => continue,
             };
 
-            entry.layout = Layout::new();
+            entry.layout.reset_transients();
         }
     }
 
@@ -846,6 +856,26 @@ impl<Message> WidgetStore<Message> {
         }
 
         Ok(())
+    }
+
+    // Scrolls the overflowing widgets that are under the cursor. Note: this is a naiive approach
+    // that queries every widget entry
+    pub fn scroll_under_cursor(&mut self, context: &Context, translation: glam::IVec2) {
+        if let Some(cursor_position) = context.cursor_position {
+            for widget_entry_opt in self.widgets.iter_mut() {
+                if let Some(widget_entry) = widget_entry_opt {
+                    if let Some(clip_rectangle) = widget_entry.layout.clip_rectangle_px {
+                        if let OverflowState::Overflowing { translation: current_translation } =
+                            &mut widget_entry.layout.overflowing
+                        {
+                            if clip_rectangle.is_in(&cursor_position) {
+                                *current_translation += translation;
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

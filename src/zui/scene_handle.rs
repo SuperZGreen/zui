@@ -153,6 +153,11 @@ where
     pub fn queue_message(&mut self, message: Message) {
         self.messages.push_back(message);
     }
+
+    /// Scrolls the widgets under the cursor
+    pub fn scroll_under_cursor(&mut self, context: &Context, translation: glam::IVec2) {
+        self.widget_store.scroll_under_cursor(context, translation);
+    }
 }
 
 impl<Message> Renderable for SceneHandle<Message>
@@ -168,6 +173,7 @@ where
             context,
             &mut render_layers,
             0usize,
+            glam::IVec2::ZERO,
         );
 
         // for (render_layer_index, render_layer) in render_layers.iter().enumerate() {

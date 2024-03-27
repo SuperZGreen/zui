@@ -402,6 +402,24 @@ impl Zui {
                 };
                 scene_handle.map(|sh| sh.handle_event(event, &self.context()));
             }
+            WindowEvent::MouseWheel { delta, .. } => {
+
+                // getting the translation required from the mouse event
+                // NOTE: this converts straight from lines to pixels in some cases..
+                let (x, y) = match delta {
+                    winit::event::MouseScrollDelta::LineDelta(x, y) => {
+                        (x.round() as i32, y.round() as i32)
+                    }
+                    winit::event::MouseScrollDelta::PixelDelta(pos) => (pos.x as i32, pos.y as i32),
+                };
+                let translation_px = glam::IVec2::new(x, y) * -40i32;
+
+                // applying the translation to relevant widgets
+                scene_handle.map(|sh| sh.scroll_under_cursor(&self.context(), translation_px));
+
+                // let event = Event::MouseEvent(MouseEvent::Scroll(translation_px));
+                // scene_handle.map(|sh| sh.handle_event(event, &self.context()));
+            }
             _ => {}
         }
     }

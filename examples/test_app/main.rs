@@ -125,14 +125,14 @@ fn main() {
                                 Err(e) => error!("wgpu::SurfaceError: {e}"),
                                 Ok(_) => {}
                             }
-
-                            // NOTE: this poll appears to be required to clean up dropped assets
-                            // used by the program. This appears to fix memory leaks created by
-                            // creating image textures and other wgpu resource-creating calls...
-                            render_state.device.poll(wgpu::Maintain::Poll);
                         } else {
                             std::thread::sleep(Duration::from_millis(1));
                         }
+
+                        // NOTE: this poll appears to be required to clean up dropped assets
+                        // used by the program. This appears to fix memory leaks created by
+                        // creating image textures and other wgpu resource-creating calls...
+                        render_state.device.poll(wgpu::Maintain::Poll);
 
                         window.request_redraw();
                     }

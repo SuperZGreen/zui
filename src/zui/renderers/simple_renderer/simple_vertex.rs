@@ -41,4 +41,17 @@ impl SimpleVertex {
             b, c, d, //
         ]
     }
+
+    /// Translates the vertex by pixels
+    pub fn translate_by_pixels(&mut self, pixel_translation: glam::IVec2, viewport_dimensions_px: Dimensions<u32>) {
+        let screen_space_pixel_height = 2f32 / viewport_dimensions_px.height as f32;
+        let screen_space_pixel_width = 2f32 / viewport_dimensions_px.height as f32;
+
+        let screen_space_translation = glam::Vec2::new(
+            screen_space_pixel_width * pixel_translation.x as f32,
+            screen_space_pixel_height * pixel_translation.y as f32,
+        );
+
+        self.position += screen_space_translation;
+    }
 }
