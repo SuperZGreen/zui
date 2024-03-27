@@ -11,7 +11,7 @@ use crate::{
 use super::{
     primitives::Dimensions,
     render_layer::RenderLayer,
-    widget::{Boundary, BoundaryType, Layout, LayoutBoundaries, OverflowState},
+    widget::{Boundary, BoundaryType, LayoutBoundaries, OverflowState, PlacementInfo},
 };
 
 /// The ID of a Widget that is stored in the WidgetStore, this is used to access the corresponding
@@ -54,7 +54,7 @@ impl<Message> WidgetStore<Message> {
         // the widget entry that will be inserted
         let widget_entry = Some(Entry {
             widget,
-            layout: Layout::new(),
+            placement_info: PlacementInfo::new(),
             children: entry_descriptor.children,
             width_constraint: entry_descriptor.width_constraint,
             height_constraint: entry_descriptor.height_constraint,
@@ -216,7 +216,7 @@ impl<Message> WidgetStore<Message> {
             }
         };
 
-        let region = match entry.layout.clip_rectangle_px {
+        let region = match entry.placement_info.clip_rectangle_px {
             Some(region) => region,
             None => {
                 warn!("widget {root_widget_id} has no clip_rectangle_px!");
@@ -226,24 +226,29 @@ impl<Message> WidgetStore<Message> {
 
         // if the current widget is overflowing, creates a new layer and sets the children to render
         // to the new layer.
-        let (children_layer_index, children_translation) = match entry.layout.overflowing {
-            OverflowState::None => {
-                (current_layer_index, translation_px)
-            }
-            OverflowState::Overflowing { translation } => {
-                if entry.layout.clip_rectangle_px.is_some_and(|crpx| crpx.has_non_zero_area()) {
-                    // creating a new render layer
-                    let index = render_layers.len();
-                    render_layers.push(RenderLayer::new(Some(region)));
+        let (children_layer_index, children_translation) =
+            match entry.children.as_ref().map(|c| &c.overflow_state) {
+                Some(OverflowState::None) => (current_layer_index, translation_px),
+                Some(OverflowState::Overflowing { translation, .. }) => {
+                    let translation = *translation;
+                    if entry
+                        .placement_info
+                        .clip_rectangle_px
+                        .is_some_and(|crpx| crpx.has_non_zero_area())
+                    {
+                        // creating a new render layer
+                        let index = render_layers.len();
+                        render_layers.push(RenderLayer::new(Some(region)));
 
-                    // info!("translation_px: {translation_px:?}, sum: {}", translation_px + translation);
+                        // info!("translation_px: {translation_px:?}, sum: {}", translation_px + translation);
 
-                    (index, translation_px + translation)
-                } else {
-                    (current_layer_index, translation_px + translation)
+                        (index, translation_px + translation)
+                    } else {
+                        (current_layer_index, translation_px + translation)
+                    }
                 }
-            }
-        };
+                None => (current_layer_index, translation_px),
+            };
 
         // renders current widget on the same layer as its parents, allowing children to be on an
         // entirely new layer. TODO: think of a good reason for this, as opposed to putting the
@@ -280,7 +285,13 @@ impl<Message> WidgetStore<Message> {
         };
 
         for child_id in child_ids {
-            _ = self.widget_to_vertices(child_id, context, render_layers, children_layer_index, children_translation);
+            _ = self.widget_to_vertices(
+                child_id,
+                context,
+                render_layers,
+                children_layer_index,
+                children_translation,
+            );
         }
 
         Ok(())
@@ -366,7 +377,7 @@ impl<Message> WidgetStore<Message> {
         // allowing widget to update its internals
         entry.widget.place(&region, context);
 
-        entry.layout.clip_rectangle_px = Some(region);
+        entry.placement_info.clip_rectangle_px = Some(region);
 
         //
         //  Placing children
@@ -407,7 +418,7 @@ impl<Message> WidgetStore<Message> {
             };
 
             // getting the child dimensions
-            let mut child_dimensions = match child_entry.layout.minimum_dimensions_px {
+            let mut child_dimensions = match child_entry.placement_info.minimum_dimensions_px {
                 Some(cd) => cd,
                 None => {
                     warn!("child with id: {child_id} has no dimensions!");
@@ -566,7 +577,15 @@ impl<Message> WidgetStore<Message> {
             }
         };
 
-        entry.layout.overflowing.update_state(overflowing);
+        if let Some(entry_children) = &mut entry.children {
+            entry_children.overflow_state.update_state(
+                overflowing,
+                Dimensions::new(
+                    cursor.x as i32 - region.x_min,
+                    region.y_max - cursor.y as i32,
+                ),
+            );
+        }
 
         Ok(())
     }
@@ -623,7 +642,7 @@ impl<Message> WidgetStore<Message> {
                 _ => continue,
             };
 
-            let minimum_dimensions = match entry.layout.minimum_dimensions_px {
+            let minimum_dimensions = match entry.placement_info.minimum_dimensions_px {
                 Some(min_dims) => min_dims,
                 None => {
                     warn!("could not find layout for widget with id: {child_id}!");
@@ -659,14 +678,14 @@ impl<Message> WidgetStore<Message> {
     }
 
     /// Clears all layouts, Note: except for overflowing information
-    pub fn clear_layouts(&mut self) {
+    pub fn clear_all_placement_info(&mut self) {
         for entry_opt in self.widgets.iter_mut() {
             let entry = match entry_opt {
                 Some(entry) => entry,
                 None => continue,
             };
 
-            entry.layout.reset_transients();
+            entry.placement_info = PlacementInfo::new();
         }
     }
 
@@ -689,7 +708,7 @@ impl<Message> WidgetStore<Message> {
         };
 
         // early exit if minimum dimensions already calculated
-        match entry.layout.minimum_dimensions_px {
+        match entry.placement_info.minimum_dimensions_px {
             Some(min_dims) => return min_dims,
             None => {}
         }
@@ -823,7 +842,7 @@ impl<Message> WidgetStore<Message> {
         };
 
         // updating self
-        entry.layout.minimum_dimensions_px = Some(dims);
+        entry.placement_info.minimum_dimensions_px = Some(dims);
 
         // returning
         dims
@@ -860,21 +879,46 @@ impl<Message> WidgetStore<Message> {
 
     // Scrolls the overflowing widgets that are under the cursor. Note: this is a naiive approach
     // that queries every widget entry
-    pub fn scroll_under_cursor(&mut self, context: &Context, translation: glam::IVec2) {
-        if let Some(cursor_position) = context.cursor_position {
-            for widget_entry_opt in self.widgets.iter_mut() {
-                if let Some(widget_entry) = widget_entry_opt {
-                    if let Some(clip_rectangle) = widget_entry.layout.clip_rectangle_px {
-                        if let OverflowState::Overflowing { translation: current_translation } =
-                            &mut widget_entry.layout.overflowing
-                        {
-                            if clip_rectangle.is_in(&cursor_position) {
-                                *current_translation += translation;
-                            }
-                        }
-                    }
-                }
+    pub fn scroll_under_cursor(&mut self, context: &Context, scroll_translation: glam::IVec2) {
+        let Some(cursor_position) = context.cursor_position else {
+            return;
+        };
+
+        for widget_entry_opt in self.widgets.iter_mut() {
+            let Some(widget_entry) = widget_entry_opt else {
+                continue;
+            };
+
+            let Some(clip_rectangle) = widget_entry.placement_info.clip_rectangle_px else {
+                continue;
+            };
+
+            let Some(entry_children) = &mut widget_entry.children else {
+                continue;
+            };
+
+            let OverflowState::Overflowing {
+                translation: current_translation,
+                children_dimensions,
+            } = &mut entry_children.overflow_state
+            else {
+                continue;
+            };
+
+            if !clip_rectangle.contains_position(&cursor_position) {
+                continue;
             }
+
+            let new_translation = *current_translation + scroll_translation;
+
+            current_translation.x = new_translation.x.clamp(
+                0i32,
+                i32::max(0i32, children_dimensions.width - clip_rectangle.width()),
+            );
+            current_translation.y = new_translation.y.clamp(
+                0i32,
+                i32::max(0i32, children_dimensions.height - clip_rectangle.height()),
+            );
         }
     }
 }

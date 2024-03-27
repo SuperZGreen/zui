@@ -1,4 +1,4 @@
-use crate::{zui::widget::Layout, Axis, PositionConstraint, SpanConstraint, Widget, WidgetId};
+use crate::{zui::widget::{OverflowState, PlacementInfo}, Axis, PositionConstraint, SpanConstraint, Widget, WidgetId};
 
 /// A widget's entry in the WidgetStore
 pub struct Entry<Message> {
@@ -6,8 +6,8 @@ pub struct Entry<Message> {
     pub widget: Box<dyn Widget<Message>>,
 
     /// The size of the widget and its position, derived from its width, height and position
-    /// constraints.
-    pub layout: Layout,
+    /// constraints. Note: this is temporary information and is recalculated every frame.
+    pub placement_info: PlacementInfo,
 
     /// The children of the widget
     pub children: Option<EntryChildren>,
@@ -31,6 +31,10 @@ pub struct EntryChildren {
     /// Children of the widget, contains both Floating and ParentDetermined widgets. Render order is
     /// determined by position in this list, with the earlier entries being rendered first. 
     pub ids: Vec<WidgetId>,
+
+    /// Set by zui if the children are overflowing the parent container and contains information
+    /// relevant to the overflow.
+    pub overflow_state: OverflowState,
 }
 
 impl EntryChildren {
@@ -38,6 +42,7 @@ impl EntryChildren {
         Self {
             axis,
             ids: Vec::new(),
+            overflow_state: OverflowState::None,
         }
     }
 }
@@ -47,6 +52,7 @@ impl Default for EntryChildren {
         Self {
             axis: Axis::Vertical,
             ids: Vec::new(),
+            overflow_state: OverflowState::None,
         }
     }
 }

@@ -94,7 +94,7 @@ where
         };
 
         // clearing all layouts
-        self.widget_store.clear_layouts();
+        self.widget_store.clear_all_placement_info();
 
         // calculating the child dimensions
         let dimensions = self.widget_store.widget_try_update_minimum_dimensions(
@@ -127,7 +127,7 @@ where
     pub fn handle_event(&mut self, event: Event, context: &Context) {
         for widget_entry in self.widget_store.iter_mut() {
             // getting the widget's clip rectangle/region
-            let widget_region = match widget_entry.layout.clip_rectangle_px {
+            let widget_region = match widget_entry.placement_info.clip_rectangle_px {
                 Some(region) => region,
                 None => {
                     warn!("Could not get region for Widget");

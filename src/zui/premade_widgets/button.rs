@@ -66,7 +66,7 @@ where
         match event {
             Event::MouseEvent(MouseEvent::CursorMoved) => {
                 if let Some(cursor_position) = context.cursor_position {
-                    if region.is_in(&cursor_position) {
+                    if region.contains_position(&cursor_position) {
                         self.cursor_is_over = true;
                     } else {
                         self.cursor_is_over = false;

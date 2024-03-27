@@ -197,8 +197,8 @@ pub struct Bounds<T> {
     pub span: T,
 }
 
-/// The layout of a widget
-pub struct Layout {
+/// The constantly recalculated placement information of a widget
+pub struct PlacementInfo {
     /// The minimum dimensions of the contents of the Widget, used for determining placement by a
     /// parent Container.
     pub minimum_dimensions_px: Option<Dimensions<i32>>,
@@ -206,24 +206,14 @@ pub struct Layout {
     /// The rectangle that has been given to the widget by its parents to be placed in. This
     /// describes the widget's absolute placement on the viewport/screen.
     pub clip_rectangle_px: Option<Rectangle<i32>>,
-
-    /// Set by zui if the layout is overflowing, and carries the data relevant to overflows
-    pub overflowing: OverflowState,
 }
 
-impl Layout {
+impl PlacementInfo {
     pub fn new() -> Self {
         Self {
             minimum_dimensions_px: None,
             clip_rectangle_px: None,
-            overflowing: OverflowState::None,
         }
-    }
-
-    /// clears the transient (frame-specific) variables for the layout
-    pub fn reset_transients(&mut self) {
-        self.minimum_dimensions_px = None;
-        self.clip_rectangle_px = None;
     }
 }
 
@@ -235,24 +225,40 @@ pub enum OverflowState {
     Overflowing {
         /// The translation of the child widgets of the layout for scrolling (in pixels).
         translation: glam::IVec2,
+
+        /// The dimensions of the children.
+        children_dimensions: Dimensions<i32>,
     },
 }
 
 impl OverflowState {
     /// Updates state without resetting member variables if suitable
-    pub fn update_state(&mut self, overflowing: bool) {
-        match (self.clone(), overflowing) {
-            (OverflowState::None, true) => {
-                info!("setting overflow");
-                *self = OverflowState::Overflowing {
-                    translation: glam::IVec2::ZERO,
-                };
+    pub fn update_state(&mut self, overflowing: bool, children_dimensions: Dimensions<i32>) {
+        let new_self_opt = match self.clone() {
+            OverflowState::None => {
+                if overflowing {
+                    Some(OverflowState::Overflowing {
+                        translation: glam::IVec2::ZERO,
+                        children_dimensions,
+                    })
+                } else {
+                    None
+                }
             }
-            (OverflowState::Overflowing { .. }, false) => {
-                info!("setting overflow");
-                *self = OverflowState::None;
+            OverflowState::Overflowing { translation, .. } => {
+                if !overflowing {
+                    Some(OverflowState::None)
+                } else {
+                    Some(OverflowState::Overflowing {
+                        translation,
+                        children_dimensions,
+                    })
+                }
             }
-            _ => {}
         };
+
+        if let Some(new_self) = new_self_opt {
+            *self = new_self;
+        }
     }
 }

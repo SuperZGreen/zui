@@ -29,12 +29,12 @@ where
         }
     }
 
-    /// Returns the space width of the rectangle
+    /// Returns the width of the rectangle
     pub fn width(&self) -> T {
         self.x_max - self.x_min
     }
 
-    /// Returns the space width of the rectangle
+    /// Returns the height of the rectangle
     pub fn height(&self) -> T {
         self.y_max - self.y_min
     }
@@ -155,7 +155,7 @@ impl Rectangle<i32> {
     /// Returns true if the PhysicalPosition is within the bounds of the Rectangle
     /// TODO: this will not work correctly for negative values of position (?) Might not be strictly
     /// necessary either, but something to look into for the future
-    pub fn is_in(&self, position: &PhysicalPosition<f64>) -> bool {
+    pub fn contains_position(&self, position: &PhysicalPosition<f64>) -> bool {
         (position.x as i32) >= self.x_min
             && (position.x as i32) < self.x_max
             && (position.y as i32) >= self.y_min
