@@ -354,8 +354,49 @@ impl<Message> WidgetStore<Message> {
         Ok(())
     }
 
-    /// Places a widget and all of its child widgets too
-    pub fn widget_place(
+    /// Places all the widgets of a widget tree, based on the given root widget.
+    pub fn place_widgets(
+        &mut self,
+        root_widget_id: &WidgetId,
+        context: &Context,
+    ) -> Result<(), ()> {
+
+        // getting the main viewport's layout boundaries
+        let layout_boundaries = LayoutBoundaries {
+            horizontal: Boundary::new(
+                BoundaryType::Static,
+                context.viewport_dimensions_px.width as i32,
+            ),
+            vertical: Boundary::new(
+                BoundaryType::Static,
+                context.viewport_dimensions_px.height as i32,
+            ),
+        };
+
+        // clearing all layouts
+        self.clear_all_placement_info();
+
+        // calculating the child dimensions
+        let dimensions = self.widget_try_update_minimum_dimensions(
+            &root_widget_id,
+            &layout_boundaries,
+            context,
+        );
+
+        // getting the region of the entire viewport
+        let region = Rectangle::new(
+            0i32,
+            dimensions.width,
+            context.viewport_dimensions_px.height as i32 - dimensions.height,
+            context.viewport_dimensions_px.height as i32,
+        );
+
+        // starting the recursive widget_place calls
+        self.widget_place(root_widget_id, region, context)
+    }
+
+    /// Places a widget and then all of its child widgets too
+    fn widget_place(
         &mut self,
         widget_id: &WidgetId,
         region: Rectangle<i32>,

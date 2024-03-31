@@ -1,5 +1,10 @@
 use zui::{
-    named_colours, premade_widgets::{Container, TextContainer, TextContainerDescriptor}, text::TextDescriptor, typeface::FontStyle, Axis, Colour, EntryChildren, EntryOverrideDescriptor, PaddingWeights, ParentHeight, ParentWidth, PositionConstraint, Scene, SpanConstraint, Text, TextConfiguration, TextSegment
+    named_colours,
+    premade_widgets::{Button, Container, TextContainer, TextContainerDescriptor},
+    text::TextDescriptor,
+    typeface::FontStyle,
+    Axis, Colour, EntryChildren, EntryOverrideDescriptor, PaddingWeights, ParentHeight,
+    ParentWidth, PositionConstraint, Scene, SpanConstraint, Text, TextConfiguration, TextSegment,
 };
 
 use crate::UiMessage;
@@ -195,13 +200,37 @@ impl Scene for ContainerScene {
             },
         );
 
+        let overflowing_container_button = widget_store.add(
+            Button::new(
+                UiMessage::ToggleFullscreen,
+                zui::Colour::DARK_GREY,
+                zui::Colour::LIGHT_GREY,
+            )
+            .with_text(TextDescriptor {
+                segments: vec![TextSegment::from("Hello")],
+                ..Default::default()
+            }),
+            EntryOverrideDescriptor {
+                width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1f32))),
+                position_constraint: Some(PositionConstraint::ParentDetermined(
+                    PaddingWeights::NONE,
+                )),
+                ..Default::default()
+            },
+        );
+
         _ = widget_store.widget_add_child(&root, title);
         _ = widget_store.widget_add_child(&root, info_text);
 
         _ = widget_store.widget_add_child(&overflowing_container, overflowing_container_title_text);
         _ = widget_store.widget_add_child(&overflowing_container, overflowing_container_info_text);
-        _ = widget_store.widget_add_child(&overflowing_container, overflowing_container_filler_text);
-        _ = widget_store.widget_add_child(&overflowing_container, overflowing_container_filler_text_final);
+        _ = widget_store
+            .widget_add_child(&overflowing_container, overflowing_container_filler_text);
+        _ = widget_store.widget_add_child(
+            &overflowing_container,
+            overflowing_container_filler_text_final,
+        );
+        _ = widget_store.widget_add_child(&overflowing_container, overflowing_container_button);
         _ = widget_store.widget_add_child(&root, overflowing_container);
 
         root

@@ -70,10 +70,12 @@ where
         // collecting all text
         let symbol_keys = self.widget_store.collect_text();
 
+        // rasterise necessary text and calculate their dimensions
         context
             .typeface
             .rasterise_symbol_keys(symbol_keys, device, queue);
 
+        // take the mutability out of the typeface
         let context = &Context {
             typeface: context.typeface,
             aspect_ratio: context.aspect_ratio,
@@ -81,38 +83,10 @@ where
             viewport_dimensions_px: context.viewport_dimensions_px,
         };
 
-        // getting the main viewport's layout boundaries
-        let layout_boundaries = LayoutBoundaries {
-            horizontal: Boundary::new(
-                BoundaryType::Static,
-                context.viewport_dimensions_px.width as i32,
-            ),
-            vertical: Boundary::new(
-                BoundaryType::Static,
-                context.viewport_dimensions_px.height as i32,
-            ),
-        };
-
-        // clearing all layouts
-        self.widget_store.clear_all_placement_info();
-
-        // calculating the child dimensions
-        let dimensions = self.widget_store.widget_try_update_minimum_dimensions(
-            &self.root_widget_id,
-            &layout_boundaries,
-            context,
-        );
-
-        let region = Rectangle::new(
-            0i32,
-            dimensions.width,
-            context.viewport_dimensions_px.height as i32 - dimensions.height,
-            context.viewport_dimensions_px.height as i32,
-        );
-
+        // place all widgets in the root widget's tree
         _ = self
             .widget_store
-            .widget_place(&self.root_widget_id, region, context);
+            .place_widgets(&self.root_widget_id, context);
     }
 
     /// Allows passing a message to the Scene externally, to be dealt with by the UI

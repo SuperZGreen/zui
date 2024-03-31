@@ -1,9 +1,7 @@
-use std::collections::VecDeque;
 
 use crate::{
     zui::{
         primitives::{Dimensions, Rectangle},
-        render_layer::RenderLayer,
         renderers::{SimpleVertex, TextVertex},
         widget::{Bounds, Event, LayoutBoundaries, MouseEvent, Widget},
         widget_store::EntryDefaultDescriptor,
@@ -38,8 +36,8 @@ impl<Message> Button<Message> {
         }
     }
 
-    pub fn with_text(mut self, text: Text) -> Self {
-        self.text = Some(text);
+    pub fn with_text(mut self, text: impl Into<Text>) -> Self {
+        self.text = Some(text.into());
         self
     }
 }
