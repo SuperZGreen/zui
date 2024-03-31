@@ -206,7 +206,6 @@ impl<Message> WidgetStore<Message> {
         context: &Context,
         render_layers: &mut Vec<RenderLayer>,
         current_layer_index: usize,
-        translation_px: glam::IVec2,
     ) -> Result<(), ()> {
         let entry = match self.get(root_widget_id) {
             Some(we) => we,
@@ -226,9 +225,9 @@ impl<Message> WidgetStore<Message> {
 
         // if the current widget is overflowing, creates a new layer and sets the children to render
         // to the new layer.
-        let (children_layer_index, children_translation) =
+        let children_layer_index =
             match entry.children.as_ref().map(|c| &c.overflow_state) {
-                Some(OverflowState::None) => (current_layer_index, translation_px),
+                Some(OverflowState::None) => current_layer_index,
                 Some(OverflowState::Overflowing { translation, .. }) => {
                     let translation = *translation;
                     if entry
@@ -240,14 +239,12 @@ impl<Message> WidgetStore<Message> {
                         let index = render_layers.len();
                         render_layers.push(RenderLayer::new(Some(region)));
 
-                        // info!("translation_px: {translation_px:?}, sum: {}", translation_px + translation);
-
-                        (index, translation_px + translation)
+                        index
                     } else {
-                        (current_layer_index, translation_px + translation)
+                        current_layer_index
                     }
                 }
-                None => (current_layer_index, translation_px),
+                None => current_layer_index,
             };
 
         // renders current widget on the same layer as its parents, allowing children to be on an
@@ -257,24 +254,12 @@ impl<Message> WidgetStore<Message> {
         let parent_simple_vertices = &mut parent_render_layer.simple_vertices;
         let parent_text_vertices = &mut parent_render_layer.text_vertices;
 
-        let parent_simple_vertices_len = parent_simple_vertices.len();
-        let parent_text_vertices_len = parent_text_vertices.len();
-
         entry.widget.to_vertices(
             region,
             context,
             parent_simple_vertices,
             parent_text_vertices,
         );
-
-        // updating the vertex positions of the widget using the translation
-        for simple_vert in &mut parent_simple_vertices[parent_simple_vertices_len..] {
-            simple_vert.translate_by_pixels(translation_px, context.viewport_dimensions_px);
-        }
-
-        for text_vert in &mut parent_text_vertices[parent_text_vertices_len..] {
-            text_vert.translate_by_pixels(translation_px, context.viewport_dimensions_px);
-        }
 
         // generating child vertices
         let child_ids = match entry.children.as_ref() {
@@ -290,7 +275,6 @@ impl<Message> WidgetStore<Message> {
                 context,
                 render_layers,
                 children_layer_index,
-                children_translation,
             );
         }
 
@@ -360,7 +344,6 @@ impl<Message> WidgetStore<Message> {
         root_widget_id: &WidgetId,
         context: &Context,
     ) -> Result<(), ()> {
-
         // getting the main viewport's layout boundaries
         let layout_boundaries = LayoutBoundaries {
             horizontal: Boundary::new(
@@ -377,11 +360,8 @@ impl<Message> WidgetStore<Message> {
         self.clear_all_placement_info();
 
         // calculating the child dimensions
-        let dimensions = self.widget_try_update_minimum_dimensions(
-            &root_widget_id,
-            &layout_boundaries,
-            context,
-        );
+        let dimensions =
+            self.widget_try_update_minimum_dimensions(&root_widget_id, &layout_boundaries, context);
 
         // getting the region of the entire viewport
         let region = Rectangle::new(
@@ -391,7 +371,7 @@ impl<Message> WidgetStore<Message> {
             context.viewport_dimensions_px.height as i32,
         );
 
-        // starting the recursive widget_place calls
+        // starting the recursive widget_place calls by placing the root widget
         self.widget_place(root_widget_id, region, context)
     }
 
@@ -403,12 +383,9 @@ impl<Message> WidgetStore<Message> {
         context: &Context,
     ) -> Result<(), ()> {
         // getting the entry
-        let entry = match self.get_mut(widget_id) {
-            Some(we) => we,
-            None => {
-                warn!("failed to find widget with id: {widget_id}!");
-                return Err(());
-            }
+        let Some(entry) = self.get_mut(widget_id) else {
+            warn!("failed to find widget with id: {widget_id}!");
+            return Err(());
         };
 
         //
@@ -424,9 +401,17 @@ impl<Message> WidgetStore<Message> {
         //  Placing children
         //
 
-        // getting children, early exit if widget does not accept children
-        let (axis, child_ids) = match entry.children.as_ref() {
-            Some(children) => (children.axis, children.ids.clone()),
+        // getting all data relevant to child placement, early exit if widget does not accept
+        // children
+        let (axis, child_ids, scroll_translation) = match entry.children.as_ref() {
+            Some(children) => (
+                children.axis,
+                children.ids.clone(),
+                match children.overflow_state {
+                    OverflowState::Overflowing { translation, .. } => translation,
+                    _ => glam::IVec2::ZERO,
+                },
+            ),
             None => {
                 return Ok(());
             }
@@ -437,17 +422,25 @@ impl<Message> WidgetStore<Message> {
             Boundary::new(BoundaryType::Static, region.width()),
             Boundary::new(BoundaryType::Static, region.height()),
         );
+
+        // caclulating/caching the minimum dimensions of all the child widgets given a parent's
+        // layout boundaries
         for child_id in child_ids.iter() {
             self.widget_try_update_minimum_dimensions(child_id, &layout_boundaries, context);
         }
 
-        // calculating the number of pixels that each SpanConstraint::ParentWeight(1f32) will use
+        // calculating the number of pixels that each SpanConstraint::ParentWeight(1f32) will use.
+        // This is done via the remaining space after the child widgets minimum dimensions have
+        // been calculated.
         let pixels_per_parent_weight =
             Self::calculate_pixels_per_parent_weight(self, &region, axis, &child_ids);
 
-        // The cursor that tracks the placement of the children widgets
+        // The cursor that tracks the placement of the children widgets. Must be a floating point
+        // vector to allow for sub-pixel precision to prevent bad-looking spacing and uncessary
+        // spacing overflow.
         let mut cursor = glam::Vec2::new(region.x_min as f32, region.y_max as f32);
 
+        // Placing all of the children
         for child_id in child_ids {
             // getting the child entry
             let child_entry = match self.get(&child_id) {
@@ -459,15 +452,13 @@ impl<Message> WidgetStore<Message> {
             };
 
             // getting the child dimensions
-            let mut child_dimensions = match child_entry.placement_info.minimum_dimensions_px {
-                Some(cd) => cd,
-                None => {
-                    warn!("child with id: {child_id} has no dimensions!");
-                    continue;
-                }
+            let Some(mut child_dimensions) = child_entry.placement_info.minimum_dimensions_px
+            else {
+                warn!("child with id: {child_id} has no dimensions!");
+                continue;
             };
 
-            // the pixels perpendicular to the axis used
+            // the pixels perpendicular to the axis that the children are layed out along
             let perpendicular_pixels_per_parent_weight =
                 Self::calculate_pixels_per_parent_weight(self, &region, axis.other(), &[child_id]);
 
@@ -600,8 +591,12 @@ impl<Message> WidgetStore<Message> {
                 }
             }
 
+            // applying the scroll from overflow, note this is zero if there is no scroll or
+            // overflow
+            let translated_child_region = child_region.translate(scroll_translation);
+
             // placing the child
-            _ = self.widget_place(&child_id, child_region, context);
+            _ = self.widget_place(&child_id, translated_child_region, context);
         }
 
         // setting the overflowing flag if the cursor is past the end of the parent region
@@ -874,12 +869,9 @@ impl<Message> WidgetStore<Message> {
         let dims = Dimensions::new(width_px, height_px);
 
         // getting the WidgetEntry
-        let entry = match self.get_mut(widget_id) {
-            Some(we) => we,
-            None => {
-                warn!("failed to find widget with id: {widget_id}!");
-                return Dimensions::new(0i32, 0i32);
-            }
+        let Some(entry) = self.get_mut(widget_id) else {
+            warn!("failed to find widget with id: {widget_id}!");
+            return Dimensions::new(0i32, 0i32);
         };
 
         // updating self

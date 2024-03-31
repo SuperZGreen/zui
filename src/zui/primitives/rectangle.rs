@@ -165,6 +165,16 @@ impl Rectangle<i32> {
     pub fn has_non_zero_area(&self) -> bool {
         self.width() > 0i32 && self.height() > 0i32
     }
+
+    /// Translates the region by a glam::IVec2
+    pub fn translate(self, translation: glam::IVec2) -> Self {
+        Self {
+            x_min: self.x_min + translation.x,
+            x_max: self.x_max + translation.x,
+            y_min: self.y_min + translation.y,
+            y_max: self.y_max + translation.y,
+        }
+    }
 }
 
 impl Rectangle<f32> {

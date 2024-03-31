@@ -1,12 +1,9 @@
 use std::collections::VecDeque;
 
-use crate::{ContextMutTypeface, Rectangle, WidgetStore};
+use crate::{ContextMutTypeface, WidgetStore};
 
 use super::{
-    render_layer::RenderLayer,
-    widget::{Boundary, BoundaryType, Event, LayoutBoundaries},
-    widget_store::WidgetId,
-    Context, Renderable, Scene,
+    render_layer::RenderLayer, widget::Event, widget_store::WidgetId, Context, Renderable, Scene,
 };
 
 pub struct SceneHandle<Message>
@@ -147,7 +144,6 @@ where
             context,
             &mut render_layers,
             0usize,
-            glam::IVec2::ZERO,
         );
 
         // for (render_layer_index, render_layer) in render_layers.iter().enumerate() {
