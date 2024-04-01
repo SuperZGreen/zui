@@ -1,4 +1,6 @@
+#[allow(dead_code)]
 mod image_vertex;
+#[allow(dead_code)]
 mod texture_atlas;
 
 pub use image_vertex::ImageVertex;
@@ -7,10 +9,12 @@ use wgpu::util::DeviceExt;
 
 use crate::util;
 
+#[allow(dead_code)]
 pub struct ImageRenderer {
     render_pipeline: wgpu::RenderPipeline,
 }
 
+#[allow(dead_code)]
 impl ImageRenderer {
     pub fn new(
         device: &wgpu::Device,

@@ -51,11 +51,11 @@ pub struct Zui {
 
     simple_renderer: SimpleRenderer,
     text_renderer: TextRenderer,
-    image_renderer: ImageRenderer,
-    image_texture_atlas: TextureAtlas,
+    _image_renderer: ImageRenderer,
+    _image_texture_atlas: TextureAtlas,
 
-    test_sprite_id: SpriteId,
-    test_image_buffer: ImageRendererBuffer,
+    _test_sprite_id: SpriteId,
+    _test_image_buffer: ImageRendererBuffer,
 
     viewport_dimensions_px: Dimensions<u32>,
     aspect_ratio: f32,
@@ -102,30 +102,20 @@ impl Zui {
                 surface_configuration,
                 typeface.texture_atlas.bind_group_layout(),
             ),
-            image_renderer: ImageRenderer::new(
+            _image_renderer: ImageRenderer::new(
                 device,
                 surface_configuration,
                 image_texture_atlas.bind_group_layout(),
             ),
-            image_texture_atlas,
-            test_sprite_id,
-            test_image_buffer,
+            _image_texture_atlas: image_texture_atlas,
+            _test_sprite_id: test_sprite_id,
+            _test_image_buffer: test_image_buffer,
             typeface,
             viewport_dimensions_px,
             aspect_ratio: viewport_dimensions_px.width as f32
                 / viewport_dimensions_px.height as f32,
             cursor_position: None,
         })
-    }
-
-    /// Converts a clip rectangle from f32 to u32
-    fn rectangle_i32_to_u32(rect: &Rectangle<i32>) -> Rectangle<u32> {
-        Rectangle::new(
-            rect.x_min as u32,
-            rect.x_max as u32,
-            rect.y_min as u32,
-            rect.y_max as u32,
-        )
     }
 
     /// Returns a rectangle that gives the intersection of the y-up rectangle with the viewport

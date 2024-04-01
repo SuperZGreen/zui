@@ -12,9 +12,10 @@ pub struct RenderState<'a> {
 
     pub surface_texture_view: Option<TextureView>,
     pub command_encoder: Option<CommandEncoder>,
-    surface_texture: Option<SurfaceTexture>,
+    _surface_texture: Option<SurfaceTexture>,
 }
 
+#[allow(dead_code)]
 impl<'a> RenderState<'a> {
     pub async fn new(window: &winit::window::Window) -> Self {
         let window_size = window.inner_size();
@@ -110,7 +111,7 @@ impl<'a> RenderState<'a> {
             skip_rendering: false,
             surface_texture_view: None,
             command_encoder: None,
-            surface_texture: None,
+            _surface_texture: None,
         };
 
         this.update_skip_rendering();
@@ -135,7 +136,7 @@ impl<'a> RenderState<'a> {
 
     /// Gives the RenderPass that does the initial clear of the screen
     pub fn render_clear(&mut self) -> Option<RenderPass> {
-        self.surface_texture = match self.surface.get_current_texture() {
+        self._surface_texture = match self.surface.get_current_texture() {
             Ok(t) => Some(t),
             Err(_) => {
                 error!("failed to get surface texture!");
@@ -144,7 +145,7 @@ impl<'a> RenderState<'a> {
         };
 
         self.surface_texture_view = Some(
-            self.surface_texture
+            self._surface_texture
                 .as_mut()
                 .unwrap()
                 .texture
@@ -209,7 +210,7 @@ impl<'a> RenderState<'a> {
 
     /// Presents the surfacecommand_encoder, must be done after submitting the command encoder
     pub fn present(&mut self) -> Result<(), wgpu::SurfaceError> {
-        let surface_texture = match self.surface_texture.take() {
+        let surface_texture = match self._surface_texture.take() {
             Some(st) => st,
             None => {
                 warn!("failed to get surface texture");
