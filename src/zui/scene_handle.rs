@@ -126,8 +126,13 @@ where
     }
 
     /// Scrolls the widgets under the cursor
-    pub fn scroll_under_cursor(&mut self, context: &Context, translation: glam::IVec2) {
-        self.widget_store.scroll_under_cursor(context, translation);
+    pub fn scroll_under_cursor(&mut self, context: &Context, scroll_translation: glam::IVec2) {
+        self.widget_store.scroll_under_cursor_recursively(
+            context,
+            &self.root_widget_id,
+            scroll_translation,
+            true,
+        );
     }
 }
 

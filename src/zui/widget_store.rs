@@ -896,46 +896,59 @@ impl<Message> WidgetStore<Message> {
 
     // Scrolls the overflowing widgets that are under the cursor. Note: this is a naiive approach
     // that queries every widget entry
-    pub fn scroll_under_cursor(&mut self, context: &Context, scroll_translation: glam::IVec2) {
+    pub fn scroll_under_cursor_recursively(
+        &mut self,
+        context: &Context,
+        widget_id: &WidgetId,
+        scroll_translation: glam::IVec2,
+        cursor_valid: bool,
+    ) {
         let Some(cursor_position) = context.cursor_position else {
             return;
         };
 
-        for widget_entry_opt in self.widgets.iter_mut() {
-            let Some(widget_entry) = widget_entry_opt else {
-                continue;
-            };
+        let Some(widget_entry) = self.get_mut(widget_id) else {
+            warn!("failed to get current widget for scroll under cursor!");
+            return;
+        };
 
-            let Some(clip_rectangle) = widget_entry.placement_info.clip_rectangle_px else {
-                continue;
-            };
+        if let Some(clip_rectangle) = widget_entry.placement_info.clip_rectangle_px {
+            let cursor_valid_for_widget =
+                clip_rectangle.contains_position(&cursor_position) && cursor_valid;
 
-            let Some(entry_children) = &mut widget_entry.children else {
-                continue;
-            };
+            if let Some(entry_children) = &mut widget_entry.children {
+                if let OverflowState::Overflowing {
+                    translation: current_translation,
+                    children_dimensions,
+                } = &mut entry_children.overflow_state
+                {
+                    if cursor_valid_for_widget {
+                        // apply translation
+                        let new_translation = *current_translation + scroll_translation;
 
-            let OverflowState::Overflowing {
-                translation: current_translation,
-                children_dimensions,
-            } = &mut entry_children.overflow_state
-            else {
-                continue;
-            };
+                        current_translation.x = new_translation.x.clamp(
+                            0i32,
+                            i32::max(0i32, children_dimensions.width - clip_rectangle.width()),
+                        );
+                        current_translation.y = new_translation.y.clamp(
+                            0i32,
+                            i32::max(0i32, children_dimensions.height - clip_rectangle.height()),
+                        );
+                    }
+                }
 
-            if !clip_rectangle.contains_position(&cursor_position) {
-                continue;
+                let child_ids = entry_children.ids.clone();
+
+                // applying scroll to children
+                for child_id in child_ids {
+                    self.scroll_under_cursor_recursively(
+                        context,
+                        &child_id,
+                        scroll_translation,
+                        cursor_valid_for_widget,
+                    );
+                }
             }
-
-            let new_translation = *current_translation + scroll_translation;
-
-            current_translation.x = new_translation.x.clamp(
-                0i32,
-                i32::max(0i32, children_dimensions.width - clip_rectangle.width()),
-            );
-            current_translation.y = new_translation.y.clamp(
-                0i32,
-                i32::max(0i32, children_dimensions.height - clip_rectangle.height()),
-            );
         }
     }
 }
