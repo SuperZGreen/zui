@@ -894,28 +894,60 @@ impl<Message> WidgetStore<Message> {
         Ok(())
     }
 
-    // Scrolls the overflowing widgets that are under the cursor. Note: this is a naiive approach
-    // that queries every widget entry
+    /// Scrolls the overflowing widgets that are under the cursor. Will not scroll a parent widget
+    /// if a child widget scrolls.
     pub fn scroll_under_cursor_recursively(
         &mut self,
         context: &Context,
         widget_id: &WidgetId,
         scroll_translation: glam::IVec2,
         cursor_valid: bool,
-    ) {
+    ) -> Option<glam::IVec2> {
         let Some(cursor_position) = context.cursor_position else {
-            return;
+            return None;
         };
 
         let Some(widget_entry) = self.get_mut(widget_id) else {
             warn!("failed to get current widget for scroll under cursor!");
-            return;
+            return None;
         };
 
-        if let Some(clip_rectangle) = widget_entry.placement_info.clip_rectangle_px {
-            let cursor_valid_for_widget =
-                clip_rectangle.contains_position(&cursor_position) && cursor_valid;
+        let Some(clip_rectangle) = widget_entry.placement_info.clip_rectangle_px else {
+            return None;
+        };
 
+        let cursor_valid_for_widget =
+            clip_rectangle.contains_position(&cursor_position) && cursor_valid;
+
+        let mut child_scroll_returned_values = Vec::new();
+        if let Some(entry_children) = &mut widget_entry.children {
+            // applying scroll to children
+            child_scroll_returned_values.reserve(entry_children.ids.len());
+            let child_ids = entry_children.ids.clone();
+            for child_id in child_ids {
+                child_scroll_returned_values.push(self.scroll_under_cursor_recursively(
+                    context,
+                    &child_id,
+                    scroll_translation,
+                    cursor_valid_for_widget,
+                ));
+            }
+        }
+
+        // if there is as child scroll value returned from the children scrolls, it means that we
+        // cannot scroll the current (parent) widget.
+        for child_scroll_value in child_scroll_returned_values {
+            if let Some(v) = child_scroll_value {
+                return Some(v);
+            }
+        }
+
+        let Some(widget_entry) = self.get_mut(widget_id) else {
+            warn!("failed to get current widget for scroll under cursor!");
+            return None;
+        };
+
+        if cursor_valid_for_widget {
             if let Some(entry_children) = &mut widget_entry.children {
                 if let OverflowState::Overflowing {
                     translation: current_translation,
@@ -924,32 +956,28 @@ impl<Message> WidgetStore<Message> {
                 {
                     if cursor_valid_for_widget {
                         // apply translation
-                        let new_translation = *current_translation + scroll_translation;
-
-                        current_translation.x = new_translation.x.clamp(
+                        let mut new_translation = *current_translation + scroll_translation;
+                        new_translation.x = new_translation.x.clamp(
                             0i32,
                             i32::max(0i32, children_dimensions.width - clip_rectangle.width()),
                         );
-                        current_translation.y = new_translation.y.clamp(
+                        new_translation.y = new_translation.y.clamp(
                             0i32,
                             i32::max(0i32, children_dimensions.height - clip_rectangle.height()),
                         );
+
+                        let scroll_difference = new_translation - *current_translation;
+
+                        if scroll_difference != glam::IVec2::ZERO {
+                            *current_translation = new_translation;
+                            return Some(scroll_difference);
+                        }
                     }
-                }
-
-                let child_ids = entry_children.ids.clone();
-
-                // applying scroll to children
-                for child_id in child_ids {
-                    self.scroll_under_cursor_recursively(
-                        context,
-                        &child_id,
-                        scroll_translation,
-                        cursor_valid_for_widget,
-                    );
                 }
             }
         }
+
+        None
     }
 }
 
