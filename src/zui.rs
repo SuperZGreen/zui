@@ -16,6 +16,8 @@ pub mod util;
 mod widget;
 mod widget_store;
 
+use std::ops::Range;
+
 pub use colour::named as named_colours;
 pub use colour::Colour;
 pub use position_constraint::{PaddingWeights, PositionConstraint};
@@ -160,15 +162,15 @@ impl Zui {
     }
 
     /// Tries to draw with a render pass, if it exists
-    fn try_render_pass_draw(&self, render_pass_opt: Option<wgpu::RenderPass>) {
-        match render_pass_opt {
-            Some(mut rp) => {
-                self.simple_renderer.render(&mut rp);
-                self.text_renderer
-                    .render(&mut rp, &self.typeface.texture_atlas);
-            }
-            None => {}
-        };
+    fn render_pass_draw<'a>(
+        &'a self,
+        mut render_pass: wgpu::RenderPass<'a>,
+        simple_vertices_range: Range<u32>,
+        text_vertices_range: Range<u32>,
+    ) {
+        self.simple_renderer.render(&mut render_pass, simple_vertices_range);
+        self.text_renderer
+            .render(&mut render_pass, &self.typeface.texture_atlas, text_vertices_range);
     }
 
     /// Renders a scene handle
@@ -190,11 +192,17 @@ impl Zui {
         }
 
         let render_layers = scene_handle.to_render_layers(&self.context());
+        let unified_layers = render_layers.unify();
+
+        self.simple_renderer
+            .upload(device, &unified_layers.simple_vertices());
+        self.text_renderer
+            .upload(device, &unified_layers.text_vertices());
 
         // rendering each of the render layers
-        for render_layer in render_layers {
+        for unified_layer_info in unified_layers.iter() {
             // determining whether the layer should be rendered or not
-            let render_layer_behaviour = match render_layer.clip_rectangle {
+            let render_layer_behaviour = match unified_layer_info.clip_rectangle_opt() {
                 Some(clip_rect) => {
                     // converting the i32 rectangles to valid (TODO: check this for screen upper
                     // bounds) u32 clipping rectangles
@@ -232,30 +240,30 @@ impl Zui {
 
             match render_layer_behaviour {
                 RenderLayerBehaviour::WithFramebufferClipRectangle(fcr) => {
-                    self.simple_renderer
-                        .upload(device, &render_layer.simple_vertices);
-                    self.text_renderer
-                        .upload(device, &render_layer.text_vertices);
-
-                    let render_pass_opt = Self::try_render_pass_with_clip_rectangle(
+                    let render_pass = Self::render_pass_with_clip_rectangle(
                         command_encoder,
                         output_texture_view,
                         Some(fcr),
                     );
-                    self.try_render_pass_draw(render_pass_opt);
+
+                    self.render_pass_draw(
+                        render_pass,
+                        unified_layer_info.simple_vertices_range(),
+                        unified_layer_info.text_vertices_range(),
+                    );
                 }
                 RenderLayerBehaviour::WithoutClipRectangle => {
-                    self.simple_renderer
-                        .upload(device, &render_layer.simple_vertices);
-                    self.text_renderer
-                        .upload(device, &render_layer.text_vertices);
-
-                    let render_pass_opt = Self::try_render_pass_with_clip_rectangle(
+                    let render_pass = Self::render_pass_with_clip_rectangle(
                         command_encoder,
                         output_texture_view,
                         None,
                     );
-                    self.try_render_pass_draw(render_pass_opt);
+
+                    self.render_pass_draw(
+                        render_pass,
+                        unified_layer_info.simple_vertices_range(),
+                        unified_layer_info.text_vertices_range(),
+                    );
                 }
                 RenderLayerBehaviour::DoNotRender => {
                     // Do nothing!
@@ -263,17 +271,13 @@ impl Zui {
             };
         }
 
-        let render_pass_opt =
-            Self::try_render_pass_with_clip_rectangle(command_encoder, output_texture_view, None);
-        if let Some(mut render_pass) = render_pass_opt {
-            self.image_renderer.render(
-                &mut render_pass,
-                &self.image_texture_atlas,
-                &self.test_image_buffer,
-            );
-        } else {
-            error!("failed to get render pass");
-        }
+        // let mut render_pass =
+        //     Self::render_pass_with_clip_rectangle(command_encoder, output_texture_view, None);
+        // self.image_renderer.render(
+        //     &mut render_pass,
+        //     &self.image_texture_atlas,
+        //     &self.test_image_buffer,
+        // );
 
         // Note: command encoder should be submitted by the end user!
 
@@ -282,11 +286,11 @@ impl Zui {
     }
 
     /// Gives a RenderPass, with a clip rectangle set if provided
-    fn try_render_pass_with_clip_rectangle<'a>(
+    fn render_pass_with_clip_rectangle<'a>(
         command_encoder: &'a mut wgpu::CommandEncoder,
         viewport_texture_view: &'a wgpu::TextureView,
         clip_rectangle: Option<Rectangle<u32>>,
-    ) -> Option<wgpu::RenderPass<'a>> {
+    ) -> wgpu::RenderPass<'a> {
         let mut render_pass = command_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("zui_render_pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -312,7 +316,7 @@ impl Zui {
         }
 
         // Do rendering
-        Some(render_pass)
+        render_pass
     }
 
     /// Resizes the zui context
@@ -403,7 +407,6 @@ impl Zui {
                 scene_handle.map(|sh| sh.handle_event(event, &self.context()));
             }
             WindowEvent::MouseWheel { delta, .. } => {
-
                 // getting the translation required from the mouse event
                 // NOTE: this converts straight from lines to pixels in some cases..
                 let (x, y) = match delta {

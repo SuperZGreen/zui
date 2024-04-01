@@ -219,6 +219,37 @@ impl Scene for ContainerScene {
             },
         );
 
+        let lorem_ipsum =
+            "Praesent ac iaculis mauris. Pellentesque varius consequat odio in tempus. Pellentesque\
+            euismod, massa eleifend vulputate volutpat, purus neque e uismod erat, ac pretium nunc \
+            ipsum quis libero. Phasellus posuere augue laoreet ipsum vulputate, quis commodo sem di\
+            gnissim. Phasellus et sapien sit amet libero pellentesque tempus vitae eu eros. Aenean \
+            fermentum leo sit amet neque venenatis, at congue ex interdum. Pellentesque purus risus\
+            , porta vitae lorem quis, varius pharetra nunc. Pellentesque et bibendum justo. ";
+
+        let mut big_string = String::with_capacity(lorem_ipsum.len() * 5);
+        for _ in 0..5 {
+            big_string.push_str(lorem_ipsum);
+        }
+
+        let lorem_ipsum_text_container = widget_store.add(
+            TextContainer::new().with_text(
+                Text::new()
+                    .push_segment(TextSegment::new(&big_string, Colour::WHITE))
+                    .with_configuration(TextConfiguration {
+                        line_wrapping: zui::LineWrapping::Symbol,
+                        ..Default::default()
+                    }),
+            ),
+            EntryOverrideDescriptor {
+                width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1f32))),
+                position_constraint: Some(PositionConstraint::ParentDetermined(
+                    PaddingWeights::NONE,
+                )),
+                ..Default::default()
+            },
+        );
+
         _ = widget_store.widget_add_child(&root, title);
         _ = widget_store.widget_add_child(&root, info_text);
 
@@ -232,6 +263,7 @@ impl Scene for ContainerScene {
         );
         _ = widget_store.widget_add_child(&overflowing_container, overflowing_container_button);
         _ = widget_store.widget_add_child(&root, overflowing_container);
+        _ = widget_store.widget_add_child(&root, lorem_ipsum_text_container);
 
         root
     }

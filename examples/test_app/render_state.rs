@@ -2,7 +2,7 @@ use wgpu::{CommandEncoder, RenderPass, StoreOp, SurfaceTargetUnsafe, SurfaceText
 
 pub struct RenderState<'a> {
     _adapter: wgpu::Adapter,
-    surface: wgpu::Surface<'a>,
+    pub surface: wgpu::Surface<'a>,
     _surface_format: wgpu::TextureFormat,
     surface_configuration: wgpu::SurfaceConfiguration,
     pub device: wgpu::Device,
@@ -25,7 +25,7 @@ impl<'a> RenderState<'a> {
         // let instance = wgpu::Instance::default();
 
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-            backends: wgpu::Backends::PRIMARY,
+            backends: wgpu::Backends::DX12,
             ..Default::default()
         });
 
@@ -204,7 +204,7 @@ impl<'a> RenderState<'a> {
 
         // self.surface_texture.take();
 
-        self.queue.submit(std::iter::once(command_encoder.finish()));
+        self.queue.submit(Some(command_encoder.finish()));
     }
 
     /// Presents the surfacecommand_encoder, must be done after submitting the command encoder
@@ -219,55 +219,6 @@ impl<'a> RenderState<'a> {
 
         Ok(surface_texture.present())
     }
-
-    // pub fn render(&mut self, zui: &Zui) -> Result<(), wgpu::SurfaceError> {
-    //     if self.skip_rendering {
-    //         return Ok(());
-    //     }queue
-
-    //     let surface_texture = self.surface.get_current_texture()?;
-    //     let surface_texture_view = surface_texture
-    //         .texture
-    //         .surfacereate_view(&wgpu::TextureViewDescriptor::default());
-
-    //     let mut command_encoder =
-    //         self.device
-    //             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-    //                 label: Some("render pass command encoder"),
-    //             });
-
-    //     {
-    //         let mut render_pass = command_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-    //             label: Some("world_render_pass"),
-    //             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-    //                 view: &surface_texture_view,
-    //                 resolve_target: None,
-    //                 ops: wgpu::Operations {
-    //                     load: wgpu::LoadOp::Clear({
-    //                         // TODO
-    //                         let r = 0.1f64;
-    //                         let g = 0.2f64;
-    //                         let b = 0.3f64;
-    //                         let a = 1f64;
-
-    //                         wgpu::Color { r, g, b, a }
-    //                     }),
-    //                     store: true,
-    //                 },
-    //             })],
-    //             depth_stencil_attachment: None,
-    //         });
-
-    //         // TODO: do rendering
-    //         zui.render(&mut render_pass);
-    //     }
-
-    //     self.queue.submit(std::iter::once(command_encoder.finish()));
-
-    //     surface_texture.present();
-
-    //     Ok(())
-    // }
 
     fn update_skip_rendering(&mut self) {
         self.skip_rendering = !(self.window_size.width > 0 || self.window_size.height > 0);

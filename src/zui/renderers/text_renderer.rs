@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use wgpu::util::DeviceExt;
 
 use crate::{util, zui::texture_atlas::TextureAtlas, Dimensions, Rectangle};
@@ -142,7 +144,7 @@ impl TextRenderer {
         });
 
         let vertices_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("zui_vertices_buffer"),
+            label: Some("zui_text_vertices_buffer"),
             size: 0,
             usage: wgpu::BufferUsages::VERTEX,
             mapped_at_creation: false,
@@ -161,7 +163,7 @@ impl TextRenderer {
         // uploading vertices buffer
         let vertices_bytes = unsafe { util::slice_as_u8_slice(&vertices) };
         let vertices_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("zui_vertices_buffer"),
+            label: Some("zui_text_vertices_buffer"),
             contents: vertices_bytes,
             usage: wgpu::BufferUsages::VERTEX,
         });
@@ -175,6 +177,7 @@ impl TextRenderer {
         &'a self,
         render_pass: &mut wgpu::RenderPass<'a>,
         texture_atlas: &'a TextureAtlas,
+        text_vertices_range: Range<u32>
     ) {
         let texture_atlas_bind_group = match texture_atlas.bind_group().as_ref() {
             Some(tabg) => tabg,
@@ -185,6 +188,6 @@ impl TextRenderer {
         render_pass.set_pipeline(&self.render_pipeline);
         render_pass.set_bind_group(0, texture_atlas_bind_group, &[]);
         render_pass.set_vertex_buffer(0, self.vertices_buffer.slice(..));
-        render_pass.draw(0..self.vertices_used as u32, 0..1);
+        render_pass.draw(text_vertices_range, 0..1);
     }
 }

@@ -10,7 +10,7 @@ use crate::{
 
 use super::{
     primitives::Dimensions,
-    render_layer::RenderLayer,
+    render_layer::{RenderLayer, RenderLayers},
     widget::{Boundary, BoundaryType, LayoutBoundaries, OverflowState, PlacementInfo},
 };
 
@@ -204,7 +204,7 @@ impl<Message> WidgetStore<Message> {
         &self,
         root_widget_id: &WidgetId,
         context: &Context,
-        render_layers: &mut Vec<RenderLayer>,
+        render_layers: &mut RenderLayers,
         current_layer_index: usize,
     ) -> Result<(), ()> {
         let entry = match self.get(root_widget_id) {
@@ -223,43 +223,32 @@ impl<Message> WidgetStore<Message> {
             }
         };
 
-        // if the current widget is overflowing, creates a new layer and sets the children to render
-        // to the new layer.
-        let children_layer_index =
-            match entry.children.as_ref().map(|c| &c.overflow_state) {
-                Some(OverflowState::None) => current_layer_index,
-                Some(OverflowState::Overflowing { translation, .. }) => {
-                    let translation = *translation;
-                    if entry
-                        .placement_info
-                        .clip_rectangle_px
-                        .is_some_and(|crpx| crpx.has_non_zero_area())
-                    {
-                        // creating a new render layer
-                        let index = render_layers.len();
-                        render_layers.push(RenderLayer::new(Some(region)));
-
-                        index
-                    } else {
-                        current_layer_index
-                    }
-                }
-                None => current_layer_index,
-            };
-
         // renders current widget on the same layer as its parents, allowing children to be on an
         // entirely new layer. TODO: think of a good reason for this, as opposed to putting the
         // widget on the same layer as its children.
-        let parent_render_layer = &mut render_layers[current_layer_index];
-        let parent_simple_vertices = &mut parent_render_layer.simple_vertices;
-        let parent_text_vertices = &mut parent_render_layer.text_vertices;
+        let current_render_layer = render_layers.get_mut(current_layer_index);
+        let (simple_vertices, text_vertices) = current_render_layer.vertices_mut();
+        entry
+            .widget
+            .to_vertices(region, context, simple_vertices, text_vertices);
 
-        entry.widget.to_vertices(
-            region,
-            context,
-            parent_simple_vertices,
-            parent_text_vertices,
-        );
+        // if the current widget is overflowing, creates a new layer and sets the children to render
+        // to the new layer.
+        let children_layer_index = match entry.children.as_ref().map(|c| &c.overflow_state) {
+            Some(OverflowState::None) => current_layer_index,
+            Some(OverflowState::Overflowing { .. }) => {
+                if entry
+                    .placement_info
+                    .clip_rectangle_px
+                    .is_some_and(|crpx| crpx.has_non_zero_area())
+                {
+                    render_layers.new_layer(Some(region))
+                } else {
+                    current_layer_index
+                }
+            }
+            None => current_layer_index,
+        };
 
         // generating child vertices
         let child_ids = match entry.children.as_ref() {
@@ -270,12 +259,7 @@ impl<Message> WidgetStore<Message> {
         };
 
         for child_id in child_ids {
-            _ = self.widget_to_vertices(
-                child_id,
-                context,
-                render_layers,
-                children_layer_index,
-            );
+            _ = self.widget_to_vertices(child_id, context, render_layers, children_layer_index);
         }
 
         Ok(())

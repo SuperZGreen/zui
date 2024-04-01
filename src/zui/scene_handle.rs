@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use crate::{ContextMutTypeface, WidgetStore};
 
 use super::{
-    render_layer::RenderLayer, widget::Event, widget_store::WidgetId, Context, Renderable, Scene,
+    render_layer::{RenderLayer, RenderLayers}, widget::Event, widget_store::WidgetId, Context, Renderable, Scene,
 };
 
 pub struct SceneHandle<Message>
@@ -135,26 +135,16 @@ impl<Message> Renderable for SceneHandle<Message>
 where
     Message: Clone,
 {
-    fn to_render_layers(&self, context: &Context) -> Vec<RenderLayer> {
-        let mut render_layers = Vec::new();
-        render_layers.push(RenderLayer::new(None));
+    fn to_render_layers(&self, context: &Context) -> RenderLayers {
+        let mut render_layers = RenderLayers::new();
+        let base_layer_index = render_layers.new_layer(None);
 
         _ = self.widget_store.widget_to_vertices(
             &self.root_widget_id,
             context,
             &mut render_layers,
-            0usize,
+            base_layer_index,
         );
-
-        // for (render_layer_index, render_layer) in render_layers.iter().enumerate() {
-        //     info!(
-        //         "render_layer[{render_layer_index}] sv.len: {}, tv.len: {}, clip_rect: {:?}",
-        //         render_layer.simple_vertices.len(),
-        //         render_layer.text_vertices.len(),
-        //         render_layer.clip_rectangle,
-        //     );
-        // }
-        // info!("");
 
         render_layers
     }

@@ -1,5 +1,7 @@
 mod simple_vertex;
 
+use std::ops::Range;
+
 pub use simple_vertex::SimpleVertex;
 use wgpu::util::DeviceExt;
 
@@ -99,10 +101,11 @@ impl SimpleRenderer {
     pub fn render<'a>(
         &'a self,
         render_pass: &mut wgpu::RenderPass<'a>,
+        simple_vertices_range: Range<u32>
     ) {
         // drawing
         render_pass.set_pipeline(&self.render_pipeline);
         render_pass.set_vertex_buffer(0, self.vertices_buffer.slice(..));
-        render_pass.draw(0..self.vertices_used as u32, 0..1);
+        render_pass.draw(simple_vertices_range, 0..1);
     }
 }
