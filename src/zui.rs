@@ -374,10 +374,14 @@ impl Zui {
                 position: cursor_physical_position,
                 ..
             } => {
+                // update zui's internal cache of the cursor location
                 self.handle_winit_cursor_moved(*cursor_physical_position);
-                scene_handle.map(|sh| {
-                    sh.handle_event(Event::MouseEvent(MouseEvent::CursorMoved), &self.context())
-                });
+
+                // traverse the widget entry tree to determine if cursor is unoccluded, and pass
+                // event to all widgets in root tree.
+                if let Some(scene_handle) = scene_handle {
+                    scene_handle.move_cursor(&self.context());
+                }
             }
             WindowEvent::CursorLeft { .. } => {
                 self.handle_winit_cursor_left();

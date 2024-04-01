@@ -61,7 +61,12 @@ where
         context: &Context,
     ) -> Option<Message> {
         match event {
-            Event::MouseEvent(MouseEvent::CursorMoved) => {
+            Event::MouseEvent(MouseEvent::CursorMoved { cursor_unoccluded }) => {
+                if !cursor_unoccluded {
+                    self.cursor_is_over = false;
+                    return None;
+                }
+
                 if let Some(cursor_position) = context.cursor_position {
                     if region.contains_position(&cursor_position) {
                         self.cursor_is_over = true;

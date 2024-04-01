@@ -4,8 +4,8 @@ pub use entry::{Entry, EntryChildren, EntryDefaultDescriptor, EntryOverrideDescr
 use rustc_hash::FxHashSet;
 
 use crate::{
-    typeface::SymbolKey, zui::span_constraint::IntoPixelSpan, Axis, Context, PaddingWeights,
-    PositionConstraint, Rectangle, SpanConstraint, Widget,
+    typeface::SymbolKey, zui::span_constraint::IntoPixelSpan, Axis, Context, Event, MouseEvent,
+    PaddingWeights, PositionConstraint, Rectangle, SpanConstraint, Widget,
 };
 
 use super::{
@@ -978,6 +978,48 @@ impl<Message> WidgetStore<Message> {
         }
 
         None
+    }
+
+    /// Traverses the widget entry tree to determine if the cursor is unoccluded, and passes the
+    /// correct event to the widgets in the root tree.
+    pub fn move_cursor_recursively(
+        &mut self,
+        context: &Context,
+        widget_id: &WidgetId,
+        cursor_unoccluded: bool,
+    ) {
+        let Some(cursor_position) = context.cursor_position else {
+            return;
+        };
+
+        let Some(widget_entry) = self.get_mut(widget_id) else {
+            warn!("failed to get current widget for scroll under cursor!");
+            return;
+        };
+
+        let Some(clip_rectangle) = widget_entry.placement_info.clip_rectangle_px else {
+            return;
+        };
+
+        let cursor_unoccluded_for_widget =
+            clip_rectangle.contains_position(&cursor_position) && cursor_unoccluded;
+
+        // sending off event for widget to handle
+        widget_entry.widget.handle_event(
+            &Event::MouseEvent(MouseEvent::CursorMoved {
+                cursor_unoccluded: cursor_unoccluded_for_widget,
+            }),
+            &clip_rectangle,
+            context,
+        );
+
+        // triggering recursion for child widgets
+        if let Some(entry_children) = &mut widget_entry.children {
+            let child_ids = entry_children.ids.clone();
+            for child_id in child_ids {
+                self.move_cursor_recursively(context, &child_id, cursor_unoccluded_for_widget);
+            }
+        }
     }
 }
 

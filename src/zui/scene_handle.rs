@@ -134,6 +134,13 @@ where
             true,
         );
     }
+
+    /// Traverses the widget entry tree to determine if the cursor is unoccluded, and passes the
+    /// correct event to the widgets in the root tree.
+    pub fn move_cursor(&mut self, context: &Context) {
+        self.widget_store
+            .move_cursor_recursively(context, &self.root_widget_id, true);
+    }
 }
 
 impl<Message> Renderable for SceneHandle<Message>

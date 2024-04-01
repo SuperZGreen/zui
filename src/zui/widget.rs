@@ -40,7 +40,10 @@ pub enum MouseEvent {
 
     /// Event for when the mouse cursor is moved, the position of the cursor is provided in the
     /// provided context
-    CursorMoved,
+    CursorMoved {
+        /// Determines if the cursor is being blocked from the widget by clipping
+        cursor_unoccluded: bool,
+    },
 
     /// Event for when the wheel is scolled, contains the pixel/line translation that should be
     /// performed
