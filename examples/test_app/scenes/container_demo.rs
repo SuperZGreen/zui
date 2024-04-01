@@ -1,5 +1,4 @@
 use zui::{
-    named_colours,
     premade_widgets::{Button, Container, TextContainer, TextContainerDescriptor},
     text::TextDescriptor,
     typeface::FontStyle,

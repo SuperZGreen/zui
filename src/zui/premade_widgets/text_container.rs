@@ -1,14 +1,13 @@
-use std::collections::VecDeque;
-
 use crate::{
-    text::TextDescriptor, zui::{
+    text::TextDescriptor,
+    zui::{
         primitives::Dimensions,
-        render_layer::RenderLayer,
         renderers::{SimpleVertex, TextVertex},
         widget::{Bounds, LayoutBoundaries},
         widget_store::EntryDefaultDescriptor,
         Colour, Context, Rectangle, Text, Widget,
-    }, Event, PaddingWeights, PositionConstraint, SpanConstraint, TextSegment
+    },
+    Event, PaddingWeights, PositionConstraint, SpanConstraint, TextSegment,
 };
 
 /// A widget that contains and displays a block of text.
@@ -174,7 +173,6 @@ impl From<&str> for TextContainer {
         }
     }
 }
-
 
 /// A descriptor for a TextContainer
 pub struct TextContainerDescriptor {

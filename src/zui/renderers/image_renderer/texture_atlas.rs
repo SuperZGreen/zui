@@ -414,7 +414,6 @@ fn texture_from_rgba_image(
     queue: &wgpu::Queue,
     image: &image::RgbaImage,
 ) -> Result<wgpu::Texture, String> {
-
     // getting the image dimensions
     let image_dimensions = image.dimensions();
 
@@ -436,7 +435,7 @@ fn texture_from_rgba_image(
         label: Some("texture_curses"),
         view_formats: &[],
     });
-    
+
     // writing the texture to GPU memory via created handle
     queue.write_texture(
         wgpu::ImageCopyTexture {
@@ -456,4 +455,3 @@ fn texture_from_rgba_image(
 
     Ok(texture)
 }
-

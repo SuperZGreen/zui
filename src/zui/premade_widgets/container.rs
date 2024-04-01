@@ -1,9 +1,6 @@
-use std::collections::VecDeque;
-
 use crate::{
     zui::{
         primitives::{Dimensions, Rectangle},
-        render_layer::RenderLayer,
         renderers::{SimpleVertex, TextVertex},
         widget::LayoutBoundaries,
         widget_store::{EntryChildren, EntryDefaultDescriptor},
@@ -89,7 +86,7 @@ where
         region: Rectangle<i32>,
         context: &Context,
         simple_vertices: &mut Vec<SimpleVertex>,
-        text_vertices: &mut Vec<TextVertex>,
+        _text_vertices: &mut Vec<TextVertex>,
     ) {
         // adding own rectangle/simple vertices
         if let Some(base_colour) = self.background {

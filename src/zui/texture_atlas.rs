@@ -261,7 +261,8 @@ impl TextureAtlas {
         // creating a new texture if required, othewise just updating the old texture
         let texture = match (&self.image, self.texture.take()) {
             (Some(previous_image), Some(previous_texture))
-                if previous_image.width == new_image.width && previous_image.height == new_image.height =>
+                if previous_image.width == new_image.width
+                    && previous_image.height == new_image.height =>
             {
                 previous_texture
             }

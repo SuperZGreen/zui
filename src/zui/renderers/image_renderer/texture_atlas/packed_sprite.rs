@@ -1,4 +1,4 @@
-use crate::zui::primitives::{Rectangle, Dimensions};
+use crate::zui::primitives::{Dimensions, Rectangle};
 
 /// Contains post-packing sprite info, including the name and sprite coordinates in the atlas
 /// texture
@@ -34,7 +34,7 @@ impl PackedSprite {
     pub fn region(&self) -> Rectangle<f32> {
         self.region
     }
-    
+
     pub fn name(&self) -> &str {
         &self.name
     }

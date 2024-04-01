@@ -10,7 +10,7 @@ use crate::{
 
 use super::{
     primitives::Dimensions,
-    render_layer::{RenderLayer, RenderLayers},
+    render_layer::RenderLayers,
     widget::{Boundary, BoundaryType, LayoutBoundaries, OverflowState, PlacementInfo},
 };
 

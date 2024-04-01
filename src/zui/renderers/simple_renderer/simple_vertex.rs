@@ -1,4 +1,4 @@
-use crate::zui::{Colour, Rectangle, primitives::Dimensions};
+use crate::zui::{primitives::Dimensions, Colour, Rectangle};
 
 #[allow(dead_code)]
 #[repr(C, align(16))]
@@ -43,7 +43,11 @@ impl SimpleVertex {
     }
 
     /// Translates the vertex by pixels
-    pub fn translate_by_pixels(&mut self, pixel_translation: glam::IVec2, viewport_dimensions_px: Dimensions<u32>) {
+    pub fn translate_by_pixels(
+        &mut self,
+        pixel_translation: glam::IVec2,
+        viewport_dimensions_px: Dimensions<u32>,
+    ) {
         let screen_space_pixel_height = 2f32 / viewport_dimensions_px.height as f32;
         let screen_space_pixel_width = 2f32 / viewport_dimensions_px.height as f32;
 

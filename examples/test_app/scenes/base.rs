@@ -1,7 +1,6 @@
 use winit::dpi::PhysicalPosition;
 use zui::{
-    premade_widgets::{Button, Container, TextContainer, TextContainerDescriptor},
-    text::TextDescriptor,
+    premade_widgets::{Button, Container, TextContainer},
     Axis, Colour, EntryChildren, EntryOverrideDescriptor, PaddingWeights, ParentHeight,
     ParentWidth, PositionConstraint, Scene, SpanConstraint, Text, TextConfiguration, TextSegment,
     WidgetId, WidgetStore,

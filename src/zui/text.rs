@@ -1,7 +1,7 @@
 mod glyph_origin;
 mod text_configuration;
-mod text_line;
 mod text_descriptor;
+mod text_line;
 
 use std::fmt::Display;
 

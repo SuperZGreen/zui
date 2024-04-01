@@ -2,7 +2,7 @@ mod image_vertex;
 mod texture_atlas;
 
 pub use image_vertex::ImageVertex;
-pub use texture_atlas::{packed_sprite::PackedSprite, SpriteId, TextureAtlas, TextureAtlasBuilder};
+pub use texture_atlas::{SpriteId, TextureAtlas, TextureAtlasBuilder};
 use wgpu::util::DeviceExt;
 
 use crate::util;

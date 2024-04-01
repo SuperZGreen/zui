@@ -3,7 +3,10 @@ use std::time::Duration;
 use scenes::BaseSceneMessage;
 use wgpu::StoreOp;
 use winit::{
-    event::{DeviceEvent, Event, RawKeyEvent, WindowEvent}, event_loop::{EventLoop, EventLoopWindowTarget}, keyboard::{KeyCode, PhysicalKey}, window::{Fullscreen, WindowBuilder}
+    event::{DeviceEvent, Event, RawKeyEvent, WindowEvent},
+    event_loop::{EventLoop, EventLoopWindowTarget},
+    keyboard::{KeyCode, PhysicalKey},
+    window::{Fullscreen, WindowBuilder},
 };
 
 #[macro_use]
@@ -109,13 +112,12 @@ fn main() {
                             // clearing the screen, this is where the world render pass would go
                             // _ = render_state.render_clear();
 
-                            let surface_texture =
-                                match render_state.surface.get_current_texture() {
-                                    Ok(t) => t,
-                                    Err(_) => {
-                                        panic!("failed to get surface texture!");
-                                    }
-                                };
+                            let surface_texture = match render_state.surface.get_current_texture() {
+                                Ok(t) => t,
+                                Err(_) => {
+                                    panic!("failed to get surface texture!");
+                                }
+                            };
 
                             let surface_texture_view = surface_texture
                                 .texture
@@ -263,10 +265,13 @@ fn main() {
                 zui.handle_winit_window_event(event, Some(&mut scene_handle));
             }
             Event::DeviceEvent {
-                event: DeviceEvent::Key(RawKeyEvent { physical_key: PhysicalKey::Code(key_code), state: winit::event::ElementState::Pressed }),
+                event:
+                    DeviceEvent::Key(RawKeyEvent {
+                        physical_key: PhysicalKey::Code(key_code),
+                        state: winit::event::ElementState::Pressed,
+                    }),
                 ..
             } => {
-
                 match key_code {
                     KeyCode::Digit1 => {
                         scene_handle.handle_message(UiMessage::BaseSceneMessage(
@@ -278,7 +283,7 @@ fn main() {
                             BaseSceneMessage::ChangeScene(SceneIdentifier::ContainerDemo),
                         ));
                     }
-                    _=> {}
+                    _ => {}
                 }
                 println!("rke: {key_code:?}");
             }

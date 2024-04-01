@@ -14,10 +14,7 @@ pub struct SimpleRenderer {
 }
 
 impl SimpleRenderer {
-    pub fn new(
-        device: &wgpu::Device,
-        surface_configuration: &wgpu::SurfaceConfiguration,
-    ) -> Self {
+    pub fn new(device: &wgpu::Device, surface_configuration: &wgpu::SurfaceConfiguration) -> Self {
         let shader_module = util::shader_module_from_file_path(
             device,
             "resources/zui/simple_renderer.wgsl",
@@ -67,8 +64,8 @@ impl SimpleRenderer {
             },
             multiview: None,
         });
-        
-        let vertices_buffer = device.create_buffer(&wgpu::BufferDescriptor{
+
+        let vertices_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("zui_simple_renderer_vertices_buffer"),
             size: 0,
             usage: wgpu::BufferUsages::VERTEX,
@@ -81,9 +78,10 @@ impl SimpleRenderer {
             vertices_used: 0u32,
         }
     }
-    
+
     /// Uploads the verticies to the GPU For rendering
-    // TODO: Change this to dynamically resize buffer only if too large, therefore not reinitialising the buffer every upload
+    // TODO: Change this to dynamically resize buffer only if too large, therefore not
+    // reinitialising the buffer every upload
     pub fn upload(&mut self, device: &wgpu::Device, vertices: &[SimpleVertex]) {
         // uploading vertices buffer
         let vertices_bytes = unsafe { util::slice_as_u8_slice(&vertices) };
@@ -92,7 +90,7 @@ impl SimpleRenderer {
             contents: vertices_bytes,
             usage: wgpu::BufferUsages::VERTEX,
         });
-        
+
         self.vertices_used = vertices.len() as u32;
         self.vertices_buffer = vertices_buffer;
     }
@@ -101,7 +99,7 @@ impl SimpleRenderer {
     pub fn render<'a>(
         &'a self,
         render_pass: &mut wgpu::RenderPass<'a>,
-        simple_vertices_range: Range<u32>
+        simple_vertices_range: Range<u32>,
     ) {
         // drawing
         render_pass.set_pipeline(&self.render_pipeline);

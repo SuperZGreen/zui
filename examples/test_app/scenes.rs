@@ -13,4 +13,3 @@ pub enum SceneIdentifier {
     ButtonDemo,
     FillBarDemo,
 }
-

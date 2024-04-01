@@ -1,10 +1,10 @@
 use rustc_hash::FxHashSet;
 
 use super::{
-    primitives::Dimensions, render_layer::RenderLayer, renderers::SimpleVertex,
-    renderers::TextVertex, typeface::SymbolKey, widget_store::EntryDefaultDescriptor, Rectangle,
+    primitives::Dimensions, renderers::SimpleVertex, renderers::TextVertex, typeface::SymbolKey,
+    widget_store::EntryDefaultDescriptor, Rectangle,
 };
-use std::{any::Any, collections::VecDeque};
+use std::any::Any;
 
 use crate::zui::Context;
 

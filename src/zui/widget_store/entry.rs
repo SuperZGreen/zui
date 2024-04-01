@@ -1,4 +1,7 @@
-use crate::{zui::widget::{OverflowState, PlacementInfo}, Axis, PositionConstraint, SpanConstraint, Widget, WidgetId};
+use crate::{
+    zui::widget::{OverflowState, PlacementInfo},
+    Axis, PositionConstraint, SpanConstraint, Widget, WidgetId,
+};
 
 /// A widget's entry in the WidgetStore
 pub struct Entry<Message> {
@@ -29,7 +32,7 @@ pub struct EntryChildren {
     pub axis: Axis,
 
     /// Children of the widget, contains both Floating and ParentDetermined widgets. Render order is
-    /// determined by position in this list, with the earlier entries being rendered first. 
+    /// determined by position in this list, with the earlier entries being rendered first.
     pub ids: Vec<WidgetId>,
 
     /// Set by zui if the children are overflowing the parent container and contains information
@@ -100,7 +103,6 @@ pub struct EntryDefaultDescriptor {
 }
 
 impl EntryDefaultDescriptor {
-
     /// Applies the overrides to the entry default desc
     pub fn apply_overrides(&mut self, overrides: EntryOverrideDescriptor) {
         // TODO: this seems wrong
@@ -120,6 +122,4 @@ impl EntryDefaultDescriptor {
             self.position_constraint = position_constraint;
         }
     }
-
 }
-

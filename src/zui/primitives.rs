@@ -1,5 +1,5 @@
-mod rectangle;
 mod dimensions;
+mod rectangle;
 
-pub use rectangle::Rectangle;
 pub use dimensions::Dimensions;
+pub use rectangle::Rectangle;

@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use crate::{ContextMutTypeface, WidgetStore};
 
 use super::{
-    render_layer::{RenderLayer, RenderLayers}, widget::Event, widget_store::WidgetId, Context, Renderable, Scene,
+    render_layer::RenderLayers, widget::Event, widget_store::WidgetId, Context, Renderable, Scene,
 };
 
 pub struct SceneHandle<Message>

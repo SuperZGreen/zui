@@ -64,7 +64,11 @@ impl TextVertex {
     }
 
     /// Translates the vertex by pixels
-    pub fn translate_by_pixels(&mut self, pixel_translation: glam::IVec2, viewport_dimensions_px: Dimensions<u32>) {
+    pub fn translate_by_pixels(
+        &mut self,
+        pixel_translation: glam::IVec2,
+        viewport_dimensions_px: Dimensions<u32>,
+    ) {
         let screen_space_pixel_height = 2f32 / viewport_dimensions_px.height as f32;
         let screen_space_pixel_width = 2f32 / viewport_dimensions_px.height as f32;
 
@@ -177,7 +181,7 @@ impl TextRenderer {
         &'a self,
         render_pass: &mut wgpu::RenderPass<'a>,
         texture_atlas: &'a TextureAtlas,
-        text_vertices_range: Range<u32>
+        text_vertices_range: Range<u32>,
     ) {
         let texture_atlas_bind_group = match texture_atlas.bind_group().as_ref() {
             Some(tabg) => tabg,

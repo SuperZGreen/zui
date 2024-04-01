@@ -20,7 +20,7 @@ impl Default for TextDescriptor {
 
 impl From<TextDescriptor> for Text {
     fn from(text_descriptor: TextDescriptor) -> Self {
-        Self  {
+        Self {
             segments: text_descriptor.segments,
             symbols: Vec::new(),
             configuration: text_descriptor.configuration,

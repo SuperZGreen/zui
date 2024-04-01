@@ -168,9 +168,13 @@ impl Zui {
         simple_vertices_range: Range<u32>,
         text_vertices_range: Range<u32>,
     ) {
-        self.simple_renderer.render(&mut render_pass, simple_vertices_range);
-        self.text_renderer
-            .render(&mut render_pass, &self.typeface.texture_atlas, text_vertices_range);
+        self.simple_renderer
+            .render(&mut render_pass, simple_vertices_range);
+        self.text_renderer.render(
+            &mut render_pass,
+            &self.typeface.texture_atlas,
+            text_vertices_range,
+        );
     }
 
     /// Renders a scene handle
