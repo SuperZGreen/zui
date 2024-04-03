@@ -23,6 +23,7 @@ pub use colour::Colour;
 pub use position_constraint::{PaddingWeights, PositionConstraint};
 pub use primitives::{Dimensions, Rectangle};
 pub use renderable::Renderable;
+pub use renderers::SpriteId;
 pub use scene::Scene;
 pub use scene_handle::SceneHandle;
 pub use span_constraint::{ParentHeight, ParentWidth, SpanConstraint, ViewHeight, ViewWidth};
@@ -40,9 +41,7 @@ use winit::{
     event::{ElementState, WindowEvent},
 };
 
-use self::renderers::image_renderer::{
-    SpriteId, TextureAtlas as ImageTextureAtlas, TextureAtlasBuilder,
-};
+use self::renderers::image_renderer::{TextureAtlas as ImageTextureAtlas, TextureAtlasBuilder};
 // use self::texture_atlas::TextureAtlas as GlyphTextureAtlas;
 
 pub struct Zui {

@@ -1,6 +1,6 @@
 use winit::dpi::PhysicalPosition;
 use zui::{
-    premade_widgets::{Button, Container, TextContainer},
+    premade_widgets::{Button, Container, ContainerBackground, TextContainer},
     Axis, Colour, EntryChildren, EntryOverrideDescriptor, PaddingWeights, ParentHeight,
     ParentWidth, PositionConstraint, Scene, SpanConstraint, Text, TextConfiguration, TextSegment,
     WidgetId, WidgetStore,
@@ -204,7 +204,8 @@ impl Scene for BaseScene {
         );
 
         let sidebar = widget_store.add(
-            Container::new().with_background(Some(zui::named_colours::Black)),
+            Container::new()
+                .with_background(Some(ContainerBackground::Colour(zui::named_colours::Black))),
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(0.2f32))),
                 height_constraint: Some(SpanConstraint::ParentHeight(ParentHeight::new(1f32))),
@@ -336,7 +337,9 @@ impl Scene for BaseScene {
         );
 
         let display_area_background = widget_store.add(
-            Container::new().with_background(Some(zui::named_colours::Corbeau)),
+            Container::new().with_background(Some(ContainerBackground::Colour(
+                zui::named_colours::Corbeau,
+            ))),
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::ParentWeight(1f32)),
                 height_constraint: Some(SpanConstraint::ParentHeight(ParentHeight::new(1f32))),
@@ -348,7 +351,9 @@ impl Scene for BaseScene {
         );
 
         let display_area = widget_store.add(
-            Container::new().with_background(Some(zui::named_colours::CapitalBlue)),
+            Container::new().with_background(Some(ContainerBackground::Colour(
+                zui::named_colours::CapitalBlue,
+            ))),
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::ParentWeight(5f32)),
                 height_constraint: Some(SpanConstraint::ParentHeight(ParentHeight::new(1f32))),
@@ -386,7 +391,9 @@ impl Scene for BaseScene {
         );
 
         let cursor = widget_store.add(
-            Container::new().with_background(Some(zui::named_colours::LemonGrass)),
+            Container::new().with_background(Some(ContainerBackground::Colour(
+                zui::named_colours::LemonGrass,
+            ))),
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::Pixels(32f32)),
                 height_constraint: Some(SpanConstraint::Pixels(32f32)),

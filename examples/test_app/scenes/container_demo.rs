@@ -1,9 +1,12 @@
 use zui::{
-    premade_widgets::{Button, Container, TextContainer, TextContainerDescriptor},
+    premade_widgets::{
+        Button, Container, ContainerBackground, TextContainer, TextContainerDescriptor,
+    },
     text::TextDescriptor,
     typeface::FontStyle,
     Axis, Colour, EntryChildren, EntryOverrideDescriptor, PaddingWeights, ParentHeight,
-    ParentWidth, PositionConstraint, Scene, SpanConstraint, Text, TextConfiguration, TextSegment,
+    ParentWidth, PositionConstraint, Scene, SpanConstraint, SpriteId, Text, TextConfiguration,
+    TextSegment,
 };
 
 use crate::UiMessage;
@@ -91,7 +94,8 @@ impl Scene for ContainerScene {
         );
 
         let overflowing_container = widget_store.add(
-            Container::new().with_background(Some(Colour::DARK_ORANGE)),
+            Container::new()
+                .with_background(Some(ContainerBackground::Colour(Colour::DARK_ORANGE))),
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(0.5f32))),
                 height_constraint: Some(SpanConstraint::Aspect(1f32)),
@@ -199,6 +203,18 @@ impl Scene for ContainerScene {
             },
         );
 
+        let overflowing_container_image = widget_store.add(
+            Container::new().with_background(Some(ContainerBackground::Image(SpriteId(1)))),
+            EntryOverrideDescriptor {
+                width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(0.5f32))),
+                height_constraint: Some(SpanConstraint::Aspect(1f32)),
+                position_constraint: Some(PositionConstraint::ParentDetermined(
+                    PaddingWeights::NONE,
+                )),
+                ..Default::default()
+            },
+        );
+
         let overflowing_container_button = widget_store.add(
             Button::new(
                 UiMessage::ToggleFullscreen,
@@ -212,7 +228,7 @@ impl Scene for ContainerScene {
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1f32))),
                 position_constraint: Some(PositionConstraint::ParentDetermined(
-                    PaddingWeights::NONE,
+                    PaddingWeights::vh(0f32, 1f32),
                 )),
                 ..Default::default()
             },
@@ -260,6 +276,7 @@ impl Scene for ContainerScene {
             &overflowing_container,
             overflowing_container_filler_text_final,
         );
+        _ = widget_store.widget_add_child(&overflowing_container, overflowing_container_image);
         _ = widget_store.widget_add_child(&overflowing_container, overflowing_container_button);
         _ = widget_store.widget_add_child(&root, overflowing_container);
         _ = widget_store.widget_add_child(&root, lorem_ipsum_text_container);

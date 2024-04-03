@@ -1,7 +1,10 @@
 use crate::{
     zui::{
         primitives::{Dimensions, Rectangle},
-        renderers::{image_renderer::{ImageVertex, SpriteId}, SimpleVertex, TextVertex},
+        renderers::{
+            image_renderer::{ImageVertex, SpriteId},
+            SimpleVertex, TextVertex,
+        },
         widget::LayoutBoundaries,
         widget_store::{EntryChildren, EntryDefaultDescriptor},
         Axis, Colour, Context, Event, SpanConstraint, Widget,
@@ -9,14 +12,19 @@ use crate::{
     PaddingWeights,
 };
 
+pub enum ContainerBackground {
+    Colour(Colour),
+    Image(SpriteId),
+}
+
 /// A widget that contains other widgets
 pub struct Container {
     /// The name/tag of the Container, usually for debugging purposes
     pub name: Option<String>,
 
     /// The background of the Container, None is comletely transparent, a Colour will cause the
-    /// container to render vertices of that Colour in the region of its Layout's clip Rectangle
-    pub background: Option<Colour>,
+    /// container to render vertices of that Colour in the region of its Layout's clip Rectangle.
+    pub background: Option<ContainerBackground>,
     // /// A test toggle that inverts the background colour when true
     // test_toggle: bool,
 }
@@ -36,7 +44,7 @@ impl Container {
         self
     }
 
-    pub fn with_background(mut self, background: Option<Colour>) -> Self {
+    pub fn with_background(mut self, background: Option<ContainerBackground>) -> Self {
         self.background = background;
         self
     }
@@ -89,34 +97,25 @@ where
         _text_vertices: &mut Vec<TextVertex>,
         image_vertices: &mut Vec<ImageVertex>,
     ) {
-        // adding own rectangle/simple vertices
-        if let Some(base_colour) = self.background {
-            // let modified_colour = if self.test_toggle {
-            //     Colour {
-            //         r: 1f32 - base_colour.r,
-            //         g: 1f32 - base_colour.g,
-            //         b: 1f32 - base_colour.b,
-            //         a: 1f32,
-            //     }
-            // } else {
-            //     base_colour
-            // };
-
-            simple_vertices.extend_from_slice(&SimpleVertex::from_rectangle(
-                region,
-                // modified_colour,
-                base_colour,
-                context.viewport_dimensions_px,
-            ));
+        match self.background {
+            Some(ContainerBackground::Colour(colour)) => {
+                simple_vertices.extend_from_slice(&SimpleVertex::from_rectangle(
+                    region,
+                    colour,
+                    context.viewport_dimensions_px,
+                ));
+            }
+            Some(ContainerBackground::Image(sprite_id)) => {
+                image_vertices.extend_from_slice(&ImageVertex::from_rectangle_and_packed_sprite(
+                    region,
+                    context.viewport_dimensions_px,
+                    context.image_texture_atlas.get(sprite_id),
+                ));
+            }
+            None => {
+                // do nothing
+            },
         }
-
-        image_vertices.extend_from_slice(
-            &ImageVertex::from_rectangle_and_packed_sprite(
-                region,
-                context.viewport_dimensions_px,
-                context.image_texture_atlas.get(SpriteId(0)),
-            )
-        );
     }
 
     fn calculate_minimum_dimensions(

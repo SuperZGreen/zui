@@ -1,5 +1,5 @@
 use zui::{
-    premade_widgets::{Container, TextContainer, TextContainerDescriptor},
+    premade_widgets::{Container, ContainerBackground, TextContainer, TextContainerDescriptor},
     text::TextDescriptor,
     typeface::FontStyle,
     Axis, Colour, EntryChildren, EntryOverrideDescriptor, PaddingWeights, ParentHeight,
@@ -189,7 +189,7 @@ impl Scene for TextScene {
         );
 
         let vertical_alignment_container = widget_store.add(
-            Container::new().with_background(Some(Colour::BLACK)),
+            Container::new().with_background(Some(ContainerBackground::Colour(Colour::BLACK))),
             EntryOverrideDescriptor {
                 children: Some(EntryChildren::new(Axis::Horizontal)),
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1f32))),
