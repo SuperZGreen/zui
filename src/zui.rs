@@ -172,6 +172,7 @@ impl Zui {
         &mut self,
         scene_handle: &SceneHandle<Message>,
         device: &wgpu::Device,
+        queue: &wgpu::Queue,
         output_texture_view: &wgpu::TextureView,
         command_encoder: &mut wgpu::CommandEncoder,
     ) where
@@ -189,9 +190,9 @@ impl Zui {
         let unified_layers = render_layers.unify();
 
         self.simple_renderer
-            .upload(device, &unified_layers.simple_vertices());
+            .upload(device, queue, &unified_layers.simple_vertices());
         self.text_renderer
-            .upload(device, &unified_layers.text_vertices());
+            .upload(device, queue, &unified_layers.text_vertices());
 
         // rendering each of the render layers
         for unified_layer_info in unified_layers.iter() {

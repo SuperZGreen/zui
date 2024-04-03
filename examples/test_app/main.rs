@@ -157,6 +157,7 @@ fn main() {
                             zui.render_scene_handle(
                                 &scene_handle,
                                 &render_state.device,
+                                &render_state.queue,
                                 &surface_texture_view,
                                 // &mut render_state.command_encoder.as_mut().unwrap(),
                                 &mut command_encoder,

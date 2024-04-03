@@ -115,8 +115,6 @@ impl ImageRendererBuffer {
             usage: wgpu::BufferUsages::VERTEX,
         });
 
-        debug!("vertices: {vertices:#?}");
-
         Self {
             vertices_buffer,
             vertices_used: vertices.len() as u32,

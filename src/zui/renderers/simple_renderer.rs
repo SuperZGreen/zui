@@ -3,14 +3,14 @@ mod simple_vertex;
 use std::ops::Range;
 
 pub use simple_vertex::SimpleVertex;
-use wgpu::util::DeviceExt;
 
 use crate::util;
 
+use super::resizable_buffer::ResizableBuffer;
+
 pub struct SimpleRenderer {
     render_pipeline: wgpu::RenderPipeline,
-    vertices_buffer: wgpu::Buffer,
-    vertices_used: u32,
+    vertices_buffer: ResizableBuffer<SimpleVertex>,
 }
 
 impl SimpleRenderer {
@@ -65,45 +65,37 @@ impl SimpleRenderer {
             multiview: None,
         });
 
-        let vertices_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("zui_simple_renderer_vertices_buffer"),
-            size: 0,
-            usage: wgpu::BufferUsages::VERTEX,
-            mapped_at_creation: false,
-        });
-
         Self {
             render_pipeline,
-            vertices_buffer,
-            vertices_used: 0u32,
+            vertices_buffer: ResizableBuffer::new(
+                device,
+                "zui_simple_vertex_buffer",
+                wgpu::BufferUsages::VERTEX,
+            ),
         }
     }
 
     /// Uploads the verticies to the GPU For rendering
     // TODO: Change this to dynamically resize buffer only if too large, therefore not
     // reinitialising the buffer every upload
-    pub fn upload(&mut self, device: &wgpu::Device, vertices: &[SimpleVertex]) {
-        // uploading vertices buffer
-        let vertices_bytes = unsafe { util::slice_as_u8_slice(&vertices) };
-        let vertices_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("zui_simple_renderer_vertices_buffer"),
-            contents: vertices_bytes,
-            usage: wgpu::BufferUsages::VERTEX,
-        });
-
-        self.vertices_used = vertices.len() as u32;
-        self.vertices_buffer = vertices_buffer;
+    pub fn upload(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        vertices: &[SimpleVertex],
+    ) {
+        self.vertices_buffer.reupload(device, queue, vertices);
     }
 
-    /// Renders the previously uploaded vertices on the GPU
+    /// Renders the previously uploaded vertices on the GPU within a range provided by a render
+    /// layer.
     pub fn render<'a>(
         &'a self,
         render_pass: &mut wgpu::RenderPass<'a>,
         simple_vertices_range: Range<u32>,
     ) {
-        // drawing
         render_pass.set_pipeline(&self.render_pipeline);
-        render_pass.set_vertex_buffer(0, self.vertices_buffer.slice(..));
+        render_pass.set_vertex_buffer(0, self.vertices_buffer.buffer().slice(..));
         render_pass.draw(simple_vertices_range, 0..1);
     }
 }
