@@ -1,4 +1,4 @@
-use crate::{typeface::SymbolInfo, zui::Rectangle, Typeface};
+use crate::{typeface::SymbolInfo, zui::Rectangle};
 
 use super::{PixelFontMetrics, Presymbol, Symbol};
 

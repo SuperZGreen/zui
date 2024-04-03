@@ -26,7 +26,7 @@ impl<'a> RenderState<'a> {
         // let instance = wgpu::Instance::default();
 
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-            backends: wgpu::Backends::DX12,
+            backends: wgpu::Backends::VULKAN,
             ..Default::default()
         });
 

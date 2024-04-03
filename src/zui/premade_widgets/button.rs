@@ -104,7 +104,7 @@ where
     ) {
         // adding own text vertices
         if let Some(text) = &self.text {
-            text_vertices.append(&mut text.to_vertices(region, context.viewport_dimensions_px));
+            text.extend_vertices(text_vertices, region, context.viewport_dimensions_px);
         }
 
         let colour = if self.cursor_is_over {

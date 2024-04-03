@@ -91,7 +91,7 @@ where
     ) {
         // adding own text vertices
         if let Some(text) = &self.text {
-            text_vertices.append(&mut text.to_vertices(region, context.viewport_dimensions_px));
+            text.extend_vertices(text_vertices, region, context.viewport_dimensions_px);
         }
 
         // adding own rectangle/simple vertices

@@ -279,6 +279,27 @@ impl Text {
         vertices
     }
 
+    /// places the text vertices in the provided vertices vec in-place, to avoid unecessary memcpys
+    pub fn extend_vertices(
+        &self,
+        // the text vertices to be extended
+        text_vertices: &mut Vec<TextVertex>,
+        // The clipping region of the parent widget, can not render fragments outside of this rect.
+        // Given in viewport pixels
+        parent_clip_region: Rectangle<i32>,
+        // The viewport dimensions in pixels, used to calculate the clip bounds for the text
+        // fragment shader
+        viewport_dimensions_px: Dimensions<u32>,
+    ) {
+        // the number of vertices produced by a symbol
+        let vertices_per_symbol = 6usize;
+
+        text_vertices.reserve(self.symbols.len() & vertices_per_symbol);
+        for symbol in self.symbols.iter() {
+            symbol.extend_vertices(text_vertices, parent_clip_region, viewport_dimensions_px);
+        }
+    }
+
     fn generate_presymbols(&self, typeface: &Typeface, size_px: u32) -> Vec<Presymbol> {
         let mut ps = Vec::new();
         for segment in self.segments.iter() {
@@ -389,6 +410,70 @@ impl Symbol {
             a, c, b, //
             b, c, d, //
         ]
+    }
+
+    /// produces text vertices for the Symbol in-place in a provided text_vertices vec
+    pub fn extend_vertices(
+        &self,
+        text_vertices: &mut Vec<TextVertex>,
+        parent_clip_region: Rectangle<i32>,
+        viewport_dimensions_px: Dimensions<u32>,
+    ) {
+        let symbol_rectangle = Rectangle::new(
+            self.region.x_min as i32,
+            self.region.x_max as i32,
+            self.region.y_min as i32,
+            self.region.y_max as i32,
+        );
+
+        let uv_top_left = glam::Vec2::new(self.uv_region.x_min, self.uv_region.y_min);
+        let uv_top_right = glam::Vec2::new(self.uv_region.x_max, self.uv_region.y_min);
+        let uv_bottom_left = glam::Vec2::new(self.uv_region.x_min, self.uv_region.y_max);
+        let uv_bottom_right = glam::Vec2::new(self.uv_region.x_max, self.uv_region.y_max);
+
+        let region_vertices = symbol_rectangle.vertices(viewport_dimensions_px);
+
+        // for (index, vert) in region_vertices.iter().enumerate() {
+        //     println!("{}: {}", index, vert);
+        // }
+
+        let a = TextVertex::new(
+            region_vertices[0],
+            uv_top_left,
+            self.colour.into(),
+            &parent_clip_region,
+            viewport_dimensions_px,
+        );
+        let b = TextVertex::new(
+            region_vertices[1],
+            uv_top_right,
+            self.colour.into(),
+            &parent_clip_region,
+            viewport_dimensions_px,
+        );
+        let c = TextVertex::new(
+            region_vertices[2],
+            uv_bottom_left,
+            self.colour.into(),
+            &parent_clip_region,
+            viewport_dimensions_px,
+        );
+        let d = TextVertex::new(
+            region_vertices[3],
+            uv_bottom_right,
+            self.colour.into(),
+            &parent_clip_region,
+            viewport_dimensions_px,
+        );
+
+        text_vertices.extend_from_slice(&[a, c, b, b, c, d]);
+        // text_vertices.push(a);
+        // text_vertices.push(c);
+        // text_vertices.push(b);
+
+        // text_vertices.push(b);
+        // text_vertices.push(c);
+        // text_vertices.push(d);
     }
 }
 
