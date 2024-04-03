@@ -1,7 +1,7 @@
 use crate::{
     zui::{
         primitives::{Dimensions, Rectangle},
-        renderers::{SimpleVertex, TextVertex},
+        renderers::{image_renderer::{ImageVertex, SpriteId}, SimpleVertex, TextVertex},
         widget::LayoutBoundaries,
         widget_store::{EntryChildren, EntryDefaultDescriptor},
         Axis, Colour, Context, Event, SpanConstraint, Widget,
@@ -87,6 +87,7 @@ where
         context: &Context,
         simple_vertices: &mut Vec<SimpleVertex>,
         _text_vertices: &mut Vec<TextVertex>,
+        image_vertices: &mut Vec<ImageVertex>,
     ) {
         // adding own rectangle/simple vertices
         if let Some(base_colour) = self.background {
@@ -108,6 +109,14 @@ where
                 context.viewport_dimensions_px,
             ));
         }
+
+        image_vertices.extend_from_slice(
+            &ImageVertex::from_rectangle_and_packed_sprite(
+                region,
+                context.viewport_dimensions_px,
+                context.image_texture_atlas.get(SpriteId(0)),
+            )
+        );
     }
 
     fn calculate_minimum_dimensions(

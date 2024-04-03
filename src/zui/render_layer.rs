@@ -2,7 +2,7 @@ use std::ops::Range;
 
 use super::{
     primitives::Rectangle,
-    renderers::{SimpleVertex, TextVertex},
+    renderers::{image_renderer::ImageVertex, SimpleVertex, TextVertex},
 };
 
 /// Render layers start out containing their own vectors of vertices, they are then 'joined' to a
@@ -41,6 +41,8 @@ impl RenderLayers {
     pub fn unify(self) -> UnifiedRenderLayers {
         let mut simple_vertices = Vec::with_capacity(self.simple_vertices_used());
         let mut text_vertices = Vec::with_capacity(self.text_vertices_used());
+        let mut image_vertices = Vec::with_capacity(self.image_vertices_used());
+
         let mut unified_layers = Vec::with_capacity(self.render_layers.len());
 
         for mut render_layer in self.render_layers {
@@ -54,16 +56,22 @@ impl RenderLayers {
                     start: text_vertices.len() as u32,
                     end: (text_vertices.len() + render_layer.text_vertices.len()) as u32,
                 },
+                image_vertices_range: Range {
+                    start: image_vertices.len() as u32,
+                    end: (image_vertices.len() + render_layer.image_vertices.len()) as u32,
+                },
             });
 
             simple_vertices.append(&mut render_layer.simple_vertices);
             text_vertices.append(&mut render_layer.text_vertices);
+            image_vertices.append(&mut render_layer.image_vertices);
         }
 
         UnifiedRenderLayers {
             layer_infos: unified_layers,
             simple_vertices,
             text_vertices,
+            image_vertices,
         }
     }
 
@@ -84,12 +92,24 @@ impl RenderLayers {
         }
         vertices_used
     }
+
+    /// Gives the total number of image vertices used by all layers
+    fn image_vertices_used(&self) -> usize {
+        let mut vertices_used = 0usize;
+        for render_layer in self.render_layers.iter() {
+            vertices_used += render_layer.image_vertices.len()
+        }
+        vertices_used
+    }
 }
 
+/// Contains the concatenated vertices of each of the render layers, which are then uploaded to the
+/// GPU once and rendered using ranges kept in the layer_infos.
 pub struct UnifiedRenderLayers {
     layer_infos: Vec<UnifiedLayerInfo>,
     simple_vertices: Vec<SimpleVertex>,
     text_vertices: Vec<TextVertex>,
+    image_vertices: Vec<ImageVertex>,
 }
 
 impl UnifiedRenderLayers {
@@ -104,6 +124,10 @@ impl UnifiedRenderLayers {
 
     pub fn text_vertices(&self) -> &[TextVertex] {
         &self.text_vertices
+    }
+
+    pub fn image_vertices(&self) -> &[ImageVertex] {
+        &self.image_vertices
     }
 }
 
@@ -120,6 +144,10 @@ pub struct UnifiedLayerInfo {
     /// The range of text vertices to be used, u32 is used instead of usize for compatibility with
     /// wgpu
     text_vertices_range: Range<u32>,
+
+    /// The range of image vertices to be used, u32 is used instead of usize for compatibility with
+    /// wgpu
+    image_vertices_range: Range<u32>,
 }
 
 impl UnifiedLayerInfo {
@@ -133,6 +161,10 @@ impl UnifiedLayerInfo {
 
     pub fn text_vertices_range(&self) -> Range<u32> {
         self.text_vertices_range.clone()
+    }
+
+    pub fn image_vertices_range(&self) -> Range<u32> {
+        self.image_vertices_range.clone()
     }
 }
 
@@ -148,6 +180,9 @@ pub struct RenderLayer {
 
     /// The TextVertices that will be rendered on this layer
     text_vertices: Vec<TextVertex>,
+
+    /// The ImageVertices that will be rendered on this layer
+    image_vertices: Vec<ImageVertex>,
 }
 
 impl RenderLayer {
@@ -155,6 +190,7 @@ impl RenderLayer {
         Self {
             simple_vertices: Vec::new(),
             text_vertices: Vec::new(),
+            image_vertices: Vec::new(),
             clip_rectangle_opt,
         }
     }
@@ -168,7 +204,17 @@ impl RenderLayer {
     }
 
     /// Borrows all of the vertices types mutably at the same time
-    pub fn vertices_mut(&mut self) -> (&mut Vec<SimpleVertex>, &mut Vec<TextVertex>) {
-        (&mut self.simple_vertices, &mut self.text_vertices)
+    pub fn vertices_mut(
+        &mut self,
+    ) -> (
+        &mut Vec<SimpleVertex>,
+        &mut Vec<TextVertex>,
+        &mut Vec<ImageVertex>,
+    ) {
+        (
+            &mut self.simple_vertices,
+            &mut self.text_vertices,
+            &mut self.image_vertices,
+        )
     }
 }

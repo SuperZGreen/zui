@@ -12,7 +12,7 @@ use crate::zui::primitives::{Dimensions, Rectangle};
 
 /// Id used to retrieve sprite information from the TextureAtlas
 #[derive(Copy, Clone, PartialEq)]
-pub struct SpriteId(usize);
+pub struct SpriteId(pub usize);
 
 impl Default for SpriteId {
     /// The Id of the fallback sprite. Should present as a question mark

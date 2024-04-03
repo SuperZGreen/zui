@@ -75,6 +75,7 @@ where
         // take the mutability out of the typeface
         let context = &Context {
             typeface: context.typeface,
+            image_texture_atlas: context.image_texture_atlas,
             aspect_ratio: context.aspect_ratio,
             cursor_position: context.cursor_position,
             viewport_dimensions_px: context.viewport_dimensions_px,

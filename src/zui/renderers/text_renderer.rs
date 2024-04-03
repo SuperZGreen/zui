@@ -1,6 +1,6 @@
 use std::ops::Range;
 use crate::{util, zui::texture_atlas::TextureAtlas, Dimensions, Rectangle};
-use super::resizable_buffer::ResizableBuffer;
+use super::resizeable_buffer::ResizeableBuffer;
 
 // use super::{
 //     primitives::{Dimensions, Rectangle},
@@ -85,7 +85,7 @@ impl TextVertex {
 
 pub struct TextRenderer {
     render_pipeline: wgpu::RenderPipeline,
-    vertices_buffer: ResizableBuffer<TextVertex>,
+    vertices_buffer: ResizeableBuffer<TextVertex>,
 }
 
 impl TextRenderer {
@@ -146,7 +146,7 @@ impl TextRenderer {
 
         Self {
             render_pipeline,
-            vertices_buffer: ResizableBuffer::new(
+            vertices_buffer: ResizeableBuffer::new(
                 device,
                 "zui_text_vertices_buffer",
                 wgpu::BufferUsages::VERTEX,
@@ -154,8 +154,7 @@ impl TextRenderer {
         }
     }
 
-    /// Uploads the verticies to the GPU For rendering
-    // TODO: Change this to dynamically resize buffer only if too large, therefore not reinitialising the buffer every upload
+    /// Uploads the verticies to the GPU For rendering via the internal ResizeableBuffer
     pub fn upload(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, vertices: &[TextVertex]) {
         self.vertices_buffer.reupload(device, queue, vertices);
     }

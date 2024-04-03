@@ -3,7 +3,7 @@ mod simple_renderer;
 mod text_renderer;
 
 /// not really a renderer, but is used by the renderers.
-mod resizable_buffer;
+mod resizeable_buffer;
 
 pub use image_renderer::ImageRenderer;
 pub use simple_renderer::{SimpleRenderer, SimpleVertex};

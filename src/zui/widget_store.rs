@@ -227,10 +227,14 @@ impl<Message> WidgetStore<Message> {
         // entirely new layer. TODO: think of a good reason for this, as opposed to putting the
         // widget on the same layer as its children.
         let current_render_layer = render_layers.get_mut(current_layer_index);
-        let (simple_vertices, text_vertices) = current_render_layer.vertices_mut();
-        entry
-            .widget
-            .to_vertices(region, context, simple_vertices, text_vertices);
+        let (simple_vertices, text_vertices, image_vertices) = current_render_layer.vertices_mut();
+        entry.widget.to_vertices(
+            region,
+            context,
+            simple_vertices,
+            text_vertices,
+            image_vertices,
+        );
 
         // if the current widget is overflowing, creates a new layer and sets the children to render
         // to the new layer.

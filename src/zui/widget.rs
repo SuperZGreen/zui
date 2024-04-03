@@ -1,8 +1,11 @@
 use rustc_hash::FxHashSet;
 
 use super::{
-    primitives::Dimensions, renderers::SimpleVertex, renderers::TextVertex, typeface::SymbolKey,
-    widget_store::EntryDefaultDescriptor, Rectangle,
+    primitives::Dimensions,
+    renderers::{image_renderer::ImageVertex, SimpleVertex, TextVertex},
+    typeface::SymbolKey,
+    widget_store::EntryDefaultDescriptor,
+    Rectangle,
 };
 use std::any::Any;
 
@@ -114,6 +117,7 @@ pub trait Widget<Message> {
         context: &Context,
         simple_vertices: &mut Vec<SimpleVertex>,
         text_vertices: &mut Vec<TextVertex>,
+        image_vertices: &mut Vec<ImageVertex>,
     ) {
         // Do nothing by default
     }

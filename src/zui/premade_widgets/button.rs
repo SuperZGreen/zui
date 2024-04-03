@@ -1,7 +1,7 @@
 use crate::{
     zui::{
         primitives::{Dimensions, Rectangle},
-        renderers::{SimpleVertex, TextVertex},
+        renderers::{image_renderer::ImageVertex, SimpleVertex, TextVertex},
         widget::{Bounds, Event, LayoutBoundaries, MouseEvent, Widget},
         widget_store::EntryDefaultDescriptor,
         Colour, Context,
@@ -101,6 +101,7 @@ where
         context: &Context,
         simple_vertices: &mut Vec<SimpleVertex>,
         text_vertices: &mut Vec<TextVertex>,
+        _image_vertices: &mut Vec<ImageVertex>,
     ) {
         // adding own text vertices
         if let Some(text) = &self.text {

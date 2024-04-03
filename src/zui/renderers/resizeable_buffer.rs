@@ -2,8 +2,8 @@ use crate::util;
 use std::marker::PhantomData;
 use wgpu::util::DeviceExt;
 
-/// A resizable wgpu GPU-side buffer, that is only reallocated when required.
-pub struct ResizableBuffer<D> {
+/// A resizeable wgpu GPU-side buffer, that is only reallocated when required.
+pub struct ResizeableBuffer<D> {
     /// The handle for the gpu-side buffer.
     buffer: wgpu::Buffer,
 
@@ -24,7 +24,7 @@ pub struct ResizableBuffer<D> {
 }
 
 #[allow(dead_code)]
-impl<D> ResizableBuffer<D> {
+impl<D> ResizeableBuffer<D> {
     /// Creates an empty buffer for later use
     /// Note: that wgpu::BufferUsages::COPY_DST is automatically added to usages, as it is required
     /// when reuploading.

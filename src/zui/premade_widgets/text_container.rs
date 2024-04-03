@@ -2,7 +2,7 @@ use crate::{
     text::TextDescriptor,
     zui::{
         primitives::Dimensions,
-        renderers::{SimpleVertex, TextVertex},
+        renderers::{image_renderer::ImageVertex, SimpleVertex, TextVertex},
         widget::{Bounds, LayoutBoundaries},
         widget_store::EntryDefaultDescriptor,
         Colour, Context, Rectangle, Text, Widget,
@@ -88,6 +88,7 @@ where
         context: &Context,
         simple_vertices: &mut Vec<SimpleVertex>,
         text_vertices: &mut Vec<TextVertex>,
+        _image_vertices: &mut Vec<ImageVertex>,
     ) {
         // adding own text vertices
         if let Some(text) = &self.text {

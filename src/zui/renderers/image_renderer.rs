@@ -1,20 +1,20 @@
-#[allow(dead_code)]
 mod image_vertex;
-#[allow(dead_code)]
 mod texture_atlas;
+
+use std::ops::Range;
 
 pub use image_vertex::ImageVertex;
 pub use texture_atlas::{SpriteId, TextureAtlas, TextureAtlasBuilder};
-use wgpu::util::DeviceExt;
 
 use crate::util;
 
-#[allow(dead_code)]
+use super::resizeable_buffer::ResizeableBuffer;
+
 pub struct ImageRenderer {
     render_pipeline: wgpu::RenderPipeline,
+    vertices_buffer: ResizeableBuffer<ImageVertex>,
 }
 
-#[allow(dead_code)]
 impl ImageRenderer {
     pub fn new(
         device: &wgpu::Device,
@@ -71,7 +71,19 @@ impl ImageRenderer {
             multiview: None,
         });
 
-        Self { render_pipeline }
+        Self {
+            render_pipeline,
+            vertices_buffer: ResizeableBuffer::new(
+                device,
+                "zui_image_vertices_buffer",
+                wgpu::BufferUsages::VERTEX,
+            ),
+        }
+    }
+
+    /// Uploads the verticies to the GPU For rendering via the internal ResizeableBuffer
+    pub fn upload(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, vertices: &[ImageVertex]) {
+        self.vertices_buffer.reupload(device, queue, vertices);
     }
 
     /// Takes an ImageRendererBuffer and draws contents to the screen.
@@ -79,45 +91,11 @@ impl ImageRenderer {
         &'a self,
         render_pass: &mut wgpu::RenderPass<'a>,
         texture_atlas: &'a TextureAtlas,
-        buffer: &'a ImageRendererBuffer,
+        vertices_range: Range<u32>,
     ) {
         render_pass.set_pipeline(&self.render_pipeline);
-
         render_pass.set_bind_group(0, texture_atlas.bind_group(), &[]);
-
-        render_pass.set_vertex_buffer(0, buffer.vertices_buffer.slice(..));
-
-        render_pass.draw(0..buffer.vertices_used, 0..1);
-
-        // info!("vertices used: {}!", buffer.vertices_used);
-    }
-}
-
-/// Contains all of the vertex information to be rendered by the ImageRenderer
-pub struct ImageRendererBuffer {
-    vertices_buffer: wgpu::Buffer,
-    vertices_used: u32,
-    // TODO: use indices.
-    // indices_buffer: wgpu::Buffer,
-    // indices_used: u32,
-}
-
-impl ImageRendererBuffer {
-    /// Uploads the ImageRendererBuffer to the GPU
-    pub fn upload(device: &wgpu::Device, vertices: &[ImageVertex]) -> Self {
-        // raw data to send to wgpu
-        let vertices_bytes = unsafe { util::slice_as_u8_slice(vertices) };
-
-        // creating buffers
-        let vertices_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("image_render_buffer"),
-            contents: vertices_bytes,
-            usage: wgpu::BufferUsages::VERTEX,
-        });
-
-        Self {
-            vertices_buffer,
-            vertices_used: vertices.len() as u32,
-        }
+        render_pass.set_vertex_buffer(0, self.vertices_buffer.buffer().slice(..));
+        render_pass.draw(vertices_range, 0..1);
     }
 }

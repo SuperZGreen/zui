@@ -40,22 +40,20 @@ use winit::{
     event::{ElementState, WindowEvent},
 };
 
-use self::renderers::image_renderer::ImageRendererBuffer;
-use self::renderers::image_renderer::ImageVertex;
-use self::renderers::image_renderer::{SpriteId, TextureAtlas, TextureAtlasBuilder};
-// use self::texture_atlas::TextureAtlas;
-// use self::texture_atlas::TextureAtlasBuilder;
+use self::renderers::image_renderer::{
+    SpriteId, TextureAtlas as ImageTextureAtlas, TextureAtlasBuilder,
+};
+// use self::texture_atlas::TextureAtlas as GlyphTextureAtlas;
 
 pub struct Zui {
     typeface: Typeface,
 
     simple_renderer: SimpleRenderer,
     text_renderer: TextRenderer,
-    _image_renderer: ImageRenderer,
-    _image_texture_atlas: TextureAtlas,
+    image_renderer: ImageRenderer,
+    image_texture_atlas: ImageTextureAtlas,
 
     _test_sprite_id: SpriteId,
-    _test_image_buffer: ImageRendererBuffer,
 
     viewport_dimensions_px: Dimensions<u32>,
     aspect_ratio: f32,
@@ -86,14 +84,6 @@ impl Zui {
         let image_texture_atlas = image_texture_atlas_builder
             .build(2024, device, queue)
             .expect("failed to build image texture atlas!");
-        let test_image_buffer = ImageRendererBuffer::upload(
-            device,
-            &ImageVertex::from_rectangle_and_packed_sprite(
-                Rectangle::new(100, 100 + 256, 100, 100 + 256),
-                viewport_dimensions_px,
-                image_texture_atlas.get(test_sprite_id),
-            ),
-        );
 
         Ok(Self {
             simple_renderer: SimpleRenderer::new(device, surface_configuration),
@@ -102,14 +92,13 @@ impl Zui {
                 surface_configuration,
                 typeface.texture_atlas.bind_group_layout(),
             ),
-            _image_renderer: ImageRenderer::new(
+            image_renderer: ImageRenderer::new(
                 device,
                 surface_configuration,
                 image_texture_atlas.bind_group_layout(),
             ),
-            _image_texture_atlas: image_texture_atlas,
+            image_texture_atlas,
             _test_sprite_id: test_sprite_id,
-            _test_image_buffer: test_image_buffer,
             typeface,
             viewport_dimensions_px,
             aspect_ratio: viewport_dimensions_px.width as f32
@@ -157,9 +146,15 @@ impl Zui {
         mut render_pass: wgpu::RenderPass<'a>,
         simple_vertices_range: Range<u32>,
         text_vertices_range: Range<u32>,
+        image_vertices_range: Range<u32>,
     ) {
         self.simple_renderer
             .render(&mut render_pass, simple_vertices_range);
+        self.image_renderer.render(
+            &mut render_pass,
+            &self.image_texture_atlas,
+            image_vertices_range,
+        );
         self.text_renderer.render(
             &mut render_pass,
             &self.typeface.texture_atlas,
@@ -193,6 +188,8 @@ impl Zui {
             .upload(device, queue, &unified_layers.simple_vertices());
         self.text_renderer
             .upload(device, queue, &unified_layers.text_vertices());
+        self.image_renderer
+            .upload(device, queue, &unified_layers.image_vertices());
 
         // rendering each of the render layers
         for unified_layer_info in unified_layers.iter() {
@@ -245,6 +242,7 @@ impl Zui {
                         render_pass,
                         unified_layer_info.simple_vertices_range(),
                         unified_layer_info.text_vertices_range(),
+                        unified_layer_info.image_vertices_range(),
                     );
                 }
                 RenderLayerBehaviour::WithoutClipRectangle => {
@@ -258,6 +256,7 @@ impl Zui {
                         render_pass,
                         unified_layer_info.simple_vertices_range(),
                         unified_layer_info.text_vertices_range(),
+                        unified_layer_info.image_vertices_range(),
                     );
                 }
                 RenderLayerBehaviour::DoNotRender => {
@@ -341,6 +340,7 @@ impl Zui {
     pub fn context<'a>(&self) -> Context {
         Context {
             typeface: &self.typeface,
+            image_texture_atlas: &self.image_texture_atlas,
             aspect_ratio: self.aspect_ratio,
             cursor_position: self.cursor_position,
             viewport_dimensions_px: self.viewport_dimensions_px,
@@ -351,6 +351,7 @@ impl Zui {
     pub fn context_mut_typeface<'a>(&mut self) -> ContextMutTypeface {
         ContextMutTypeface {
             typeface: &mut self.typeface,
+            image_texture_atlas: &self.image_texture_atlas,
             aspect_ratio: self.aspect_ratio,
             cursor_position: self.cursor_position,
             viewport_dimensions_px: self.viewport_dimensions_px,
@@ -432,6 +433,7 @@ impl Zui {
 /// correctly.
 pub struct Context<'a> {
     pub typeface: &'a Typeface,
+    pub image_texture_atlas: &'a ImageTextureAtlas,
     pub aspect_ratio: f32,
     pub cursor_position: Option<PhysicalPosition<f64>>,
     pub viewport_dimensions_px: Dimensions<u32>,
@@ -440,6 +442,7 @@ pub struct Context<'a> {
 /// Same as the previously declared context, but with a mutable TypeFace
 pub struct ContextMutTypeface<'a> {
     pub typeface: &'a mut Typeface,
+    pub image_texture_atlas: &'a ImageTextureAtlas,
     pub aspect_ratio: f32,
     pub cursor_position: Option<PhysicalPosition<f64>>,
     pub viewport_dimensions_px: Dimensions<u32>,

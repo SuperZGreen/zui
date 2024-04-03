@@ -6,11 +6,11 @@ pub use simple_vertex::SimpleVertex;
 
 use crate::util;
 
-use super::resizable_buffer::ResizableBuffer;
+use super::resizeable_buffer::ResizeableBuffer;
 
 pub struct SimpleRenderer {
     render_pipeline: wgpu::RenderPipeline,
-    vertices_buffer: ResizableBuffer<SimpleVertex>,
+    vertices_buffer: ResizeableBuffer<SimpleVertex>,
 }
 
 impl SimpleRenderer {
@@ -67,7 +67,7 @@ impl SimpleRenderer {
 
         Self {
             render_pipeline,
-            vertices_buffer: ResizableBuffer::new(
+            vertices_buffer: ResizeableBuffer::new(
                 device,
                 "zui_simple_vertex_buffer",
                 wgpu::BufferUsages::VERTEX,
