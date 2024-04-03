@@ -209,7 +209,7 @@ impl Scene for ContainerScene {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(0.5f32))),
                 height_constraint: Some(SpanConstraint::Aspect(1f32)),
                 position_constraint: Some(PositionConstraint::ParentDetermined(
-                    PaddingWeights::NONE,
+                    PaddingWeights::vh(0f32, 1f32),
                 )),
                 ..Default::default()
             },
@@ -228,7 +228,7 @@ impl Scene for ContainerScene {
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(1f32))),
                 position_constraint: Some(PositionConstraint::ParentDetermined(
-                    PaddingWeights::vh(0f32, 1f32),
+                    PaddingWeights::NONE,
                 )),
                 ..Default::default()
             },
