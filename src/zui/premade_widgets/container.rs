@@ -13,6 +13,7 @@ use crate::{
 };
 
 pub enum ContainerBackground {
+    None,
     Colour(Colour),
     Image(SpriteId),
 }
@@ -24,7 +25,7 @@ pub struct Container {
 
     /// The background of the Container, None is comletely transparent, a Colour will cause the
     /// container to render vertices of that Colour in the region of its Layout's clip Rectangle.
-    pub background: Option<ContainerBackground>,
+    pub background: ContainerBackground,
     // /// A test toggle that inverts the background colour when true
     // test_toggle: bool,
 }
@@ -33,7 +34,7 @@ impl Container {
     pub fn new() -> Self {
         Self {
             name: None,
-            background: None,
+            background: ContainerBackground::None,
             // test_toggle: false,
         }
     }
@@ -44,7 +45,7 @@ impl Container {
         self
     }
 
-    pub fn with_background(mut self, background: Option<ContainerBackground>) -> Self {
+    pub fn with_background(mut self, background: ContainerBackground) -> Self {
         self.background = background;
         self
     }
@@ -98,23 +99,23 @@ where
         image_vertices: &mut Vec<ImageVertex>,
     ) {
         match self.background {
-            Some(ContainerBackground::Colour(colour)) => {
+            ContainerBackground::Colour(colour) => {
                 simple_vertices.extend_from_slice(&SimpleVertex::from_rectangle(
                     region,
                     colour,
                     context.viewport_dimensions_px,
                 ));
             }
-            Some(ContainerBackground::Image(sprite_id)) => {
+            ContainerBackground::Image(sprite_id) => {
                 image_vertices.extend_from_slice(&ImageVertex::from_rectangle_and_packed_sprite(
                     region,
                     context.viewport_dimensions_px,
                     context.image_texture_atlas.get(sprite_id),
                 ));
             }
-            None => {
+            ContainerBackground::None => {
                 // do nothing
-            },
+            }
         }
     }
 

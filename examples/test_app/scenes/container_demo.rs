@@ -95,7 +95,7 @@ impl Scene for ContainerScene {
 
         let overflowing_container = widget_store.add(
             Container::new()
-                .with_background(Some(ContainerBackground::Colour(Colour::DARK_ORANGE))),
+                .with_background(ContainerBackground::Colour(Colour::DARK_ORANGE)),
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(0.5f32))),
                 height_constraint: Some(SpanConstraint::Aspect(1f32)),
@@ -204,7 +204,7 @@ impl Scene for ContainerScene {
         );
 
         let overflowing_container_image = widget_store.add(
-            Container::new().with_background(Some(ContainerBackground::Image(SpriteId(1)))),
+            Container::new().with_background(ContainerBackground::Image(SpriteId(1))),
             EntryOverrideDescriptor {
                 width_constraint: Some(SpanConstraint::ParentWidth(ParentWidth::new(0.5f32))),
                 height_constraint: Some(SpanConstraint::Aspect(1f32)),
