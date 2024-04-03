@@ -131,6 +131,7 @@ pub trait Widget<Message> {
     fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
+#[derive(PartialEq, Clone)]
 pub enum BoundaryType {
     /// Indicates that the parent would not like this boundary overflown, if possible
     Static,
@@ -138,6 +139,7 @@ pub enum BoundaryType {
     Dynamic,
 }
 
+#[derive(PartialEq, Clone)]
 pub struct Boundary {
     pub boundary_type: BoundaryType,
     pub span_px: i32,
@@ -154,6 +156,7 @@ impl Boundary {
 
 /// Describes the boundaries of a layout that is given to a child widget to calculate its minimum
 /// dimensions
+#[derive(PartialEq, Clone)]
 pub struct LayoutBoundaries {
     pub horizontal: Boundary,
     pub vertical: Boundary,

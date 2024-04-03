@@ -1,4 +1,4 @@
-use crate::zui::Rectangle;
+use crate::{typeface::SymbolInfo, zui::Rectangle, Typeface};
 
 use super::{PixelFontMetrics, Presymbol, Symbol};
 
@@ -74,25 +74,25 @@ impl GlyphOrigin {
 
     /// Moves the GlyphOrigin by the Presymbol, as though placing the symbol
     pub fn increment_by_presymbol(&mut self, presymbol: &Presymbol) {
-        self.viewport_px_position.x += presymbol.symbol_info.symbol_metrics.advance_width;
+        self.viewport_px_position.x += presymbol.symbol_metrics.advance_width;
     }
 
     /// Gives the symbol for a presymbol at the GlyphOrigin's location
-    pub fn symbol_from_presymbol(&self, presymbol: &Presymbol) -> Symbol {
+    pub fn symbol_from_presymbol(&self, presymbol: &Presymbol, symbol_info: &SymbolInfo) -> Symbol {
+        let symbol_metrics = &symbol_info.symbol_metrics;
+
         Symbol {
             character: presymbol.character,
             colour: presymbol.colour,
             region: Rectangle::new(
-                (self.viewport_px_position.x + presymbol.symbol_info.symbol_metrics.x_shift) as f32,
-                (self.viewport_px_position.x
-                    + presymbol.symbol_info.symbol_metrics.x_shift
-                    + presymbol.symbol_info.symbol_metrics.width) as f32,
-                (self.viewport_px_position.y + presymbol.symbol_info.symbol_metrics.y_shift) as f32,
-                (self.viewport_px_position.y
-                    + presymbol.symbol_info.symbol_metrics.y_shift
-                    + presymbol.symbol_info.symbol_metrics.height) as f32,
+                (self.viewport_px_position.x + symbol_metrics.x_shift) as f32,
+                (self.viewport_px_position.x + symbol_metrics.x_shift + symbol_metrics.width)
+                    as f32,
+                (self.viewport_px_position.y + symbol_metrics.y_shift) as f32,
+                (self.viewport_px_position.y + symbol_metrics.y_shift + symbol_metrics.height)
+                    as f32,
             ),
-            uv_region: presymbol.symbol_info.uv_region,
+            uv_region: symbol_info.uv_region,
         }
     }
 

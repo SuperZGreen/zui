@@ -17,6 +17,12 @@ pub struct TextContainer {
 
     /// The background colour of the text container.
     background_colour: Option<Colour>,
+
+    /// Allows text layouts to be reused if text and layout have not changed
+    old_layout_boundaries: Option<LayoutBoundaries>,
+
+    /// Allows text layouts to be reused if text and layout have not changed
+    old_dimensions: Option<Dimensions<i32>>,
 }
 
 #[allow(dead_code)]
@@ -25,6 +31,8 @@ impl TextContainer {
         Self {
             text: None,
             background_colour: None,
+            old_layout_boundaries: None,
+            old_dimensions: None,
         }
     }
 
@@ -40,6 +48,9 @@ impl TextContainer {
 
     pub fn set_text(&mut self, text: Text) {
         self.text = Some(text);
+
+        // setting this to none so that the layout will be recalculated if the text changes.
+        self.old_dimensions = None;
     }
 }
 
@@ -48,6 +59,8 @@ impl Default for TextContainer {
         Self {
             text: None,
             background_colour: None,
+            old_layout_boundaries: None,
+            old_dimensions: None,
         }
     }
 }
@@ -97,8 +110,15 @@ where
         context: &Context,
     ) -> Dimensions<i32> {
         if let Some(text) = self.text.as_mut() {
-            let boundary_width = layout_boundaries.horizontal.span_px;
+            if let (Some(old_layout_boundaries), Some(old_dimensions)) =
+                (self.old_layout_boundaries.clone(), self.old_dimensions)
+            {
+                if *layout_boundaries == old_layout_boundaries {
+                    return old_dimensions;
+                }
+            }
 
+            let boundary_width = layout_boundaries.horizontal.span_px;
             text.update_layout(
                 context.typeface,
                 Bounds {
@@ -110,6 +130,9 @@ where
             let dimensions = text.dimensions_px().unwrap();
 
             // self.layout.dimensions_px = Some(dimensions);
+
+            self.old_layout_boundaries = Some(layout_boundaries.clone());
+            self.old_dimensions = Some(dimensions);
 
             dimensions
         } else {
@@ -197,6 +220,8 @@ impl From<TextContainerDescriptor> for TextContainer {
         Self {
             text: descriptor.text,
             background_colour: descriptor.background_colour,
+            old_layout_boundaries: None,
+            old_dimensions: None,
         }
     }
 }

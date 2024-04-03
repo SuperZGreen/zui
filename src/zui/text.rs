@@ -11,10 +11,12 @@ use text_line::TextLines;
 
 pub use text_descriptor::TextDescriptor;
 
+use crate::typeface::SymbolMetrics;
+
 use super::{
     primitives::{Dimensions, Rectangle},
     renderers::TextVertex,
-    typeface::{FontStyle, SymbolInfo, SymbolKey},
+    typeface::{FontStyle, SymbolKey},
     widget::Bounds,
     Axis, Colour, Typeface,
 };
@@ -60,8 +62,8 @@ impl Default for TextSegment {
     }
 }
 
-#[derive(Clone)]
 /// Data that is calculated before symbols are placed onto the screen
+#[derive(Clone)]
 struct TextLayout {
     pub presymbols: Vec<Presymbol>,
     pub lines: TextLines,
@@ -156,6 +158,11 @@ impl Text {
         // calculating the screen space metrics of all symbols
         let presymbols = Self::generate_presymbols(&self, typeface, self.configuration.size_px);
 
+        // for presymbol in presymbols.iter() {
+        //     print!("{}", presymbol.symbol_key.character);
+        // }
+        // println!("");
+
         // TODOW
         let max_width_px = bounds.span;
 
@@ -165,6 +172,7 @@ impl Text {
             max_width_px,
             &font_metrics_px,
             &self.configuration.line_wrapping,
+            typeface,
         );
 
         // getting the dimensions of the lines
@@ -218,7 +226,12 @@ impl Text {
 
             origin.viewport_px_position.x += horizontal_offset;
             for presymbol in &layout.presymbols[line.range.start..line.range.end] {
-                self.symbols.push(origin.symbol_from_presymbol(presymbol));
+                let symbol_info = typeface
+                    .get_symbol(&presymbol.symbol_key)
+                    .expect("failed to get symbol info from presymbol's symbolkey");
+
+                self.symbols
+                    .push(origin.symbol_from_presymbol(presymbol, symbol_info));
                 origin.increment_by_presymbol(presymbol);
             }
             origin.new_line(region, &font_metrics_px);
@@ -274,8 +287,8 @@ impl Text {
             for character in segment.string.chars() {
                 let symbol_key = SymbolKey::new(character, style, size_px);
 
-                let symbol_info = match typeface.get_symbol(&symbol_key) {
-                    Some(res) => res,
+                let symbol_metrics = match typeface.get_symbol(&symbol_key) {
+                    Some(symbol_info) => &symbol_info.symbol_metrics,
                     None => {
                         error!("could not find glyph for character: '{}'!", character);
                         continue;
@@ -285,7 +298,8 @@ impl Text {
                 ps.push(Presymbol {
                     character,
                     colour: segment.colour,
-                    symbol_info: symbol_info.clone(),
+                    symbol_key,
+                    symbol_metrics: symbol_metrics.clone(),
                 })
             }
         }
@@ -378,16 +392,22 @@ impl Symbol {
     }
 }
 
-#[derive(Clone)]
 /// Holds the information required for placing a [`Symbol`], ie most things without the final position,
 /// this makes it easier for text to be placed into lines, formatted etc.
+#[derive(Clone)]
 pub struct Presymbol {
     /// The character that a symbol represents
     pub character: char,
+
     /// The colour of a character
     pub colour: Colour,
+
     /// The symbol info of the presymbol, giving its metrics and uv region
-    pub symbol_info: SymbolInfo,
+    pub symbol_key: SymbolKey,
+
+    /// The symbol metrics of the symbol, used to calculate the dimensions of the text, and in
+    /// generating vertices. Cached from a lookup in the Typeface.
+    pub symbol_metrics: SymbolMetrics,
 }
 
 impl Presymbol {

@@ -226,7 +226,7 @@ impl Scene for ContainerScene {
             fermentum leo sit amet neque venenatis, at congue ex interdum. Pellentesque purus risus\
             , porta vitae lorem quis, varius pharetra nunc. Pellentesque et bibendum justo. ";
 
-        let mut big_string = String::with_capacity(lorem_ipsum.len() * 5);
+        let mut big_string = String::with_capacity(lorem_ipsum.len() * 50);
         for _ in 0..5 {
             big_string.push_str(lorem_ipsum);
         }

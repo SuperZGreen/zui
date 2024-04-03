@@ -416,10 +416,11 @@ impl Zui {
                 let translation_px = glam::IVec2::new(x, y) * -40i32;
 
                 // applying the translation to relevant widgets
-                scene_handle.map(|sh| sh.scroll_under_cursor(&self.context(), translation_px));
-
-                // let event = Event::MouseEvent(MouseEvent::Scroll(translation_px));
-                // scene_handle.map(|sh| sh.handle_event(event, &self.context()));
+                if let Some(scene_handle) = scene_handle {
+                    // changing the scroll tranlsations of widgets so they will be scrolled when
+                    // next placed
+                    scene_handle.scroll_under_cursor(&self.context(), translation_px);
+                }
             }
             _ => {}
         }

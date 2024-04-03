@@ -54,7 +54,7 @@ pub enum FontStyle {
     Italic,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 /// The metrics of a symbol in pixels
 pub struct SymbolMetrics {
     /// The width of the symbol
@@ -186,7 +186,7 @@ impl Typeface {
             // Preventing rasterisation if the symbol already exists, reusing symbol metrics and
             // info instead
             let (symbol_metrics, symbol_coverage) = match self.symbols.get(symbol_key) {
-                Some(si) => (si.symbol_metrics, si.coverage_image.clone()),
+                Some(si) => (si.symbol_metrics.clone(), si.coverage_image.clone()),
                 None => {
                     // rasterising the symbol and getting metrics
                     font.rasterise(symbol_key.character, symbol_key.size_px)

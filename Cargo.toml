@@ -5,7 +5,7 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [profile.release]
-debug = false
+debug = true
 
 # enabling optimisation for all dependencies for development build
 [profile.dev.package."*"]

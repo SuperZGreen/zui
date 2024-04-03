@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use crate::zui::primitives::Dimensions;
+use crate::{typeface::SymbolMetrics, zui::primitives::Dimensions, Typeface};
 
 use super::{text_configuration::LineWrapping, PixelFontMetrics, Presymbol};
 
@@ -23,9 +23,7 @@ impl TextWidthAccumulator {
     }
 
     /// Pushes a presymbol to the TextWidthAccumulator, adds the new width
-    pub fn push(&mut self, presymbol: &Presymbol) {
-        let symbol_metrics = &presymbol.symbol_info.symbol_metrics;
-
+    pub fn push(&mut self, symbol_metrics: &SymbolMetrics) {
         // The amount of horizontal pixels that the new symbol will take up past the previous
         // symbol's maximum
         let additional_width_px =
@@ -85,11 +83,19 @@ impl TextLineBuilder {
     }
 
     /// Tries to fit the word into the line
-    pub fn try_push_slice(&mut self, word: &[Presymbol]) -> Result<(), TextLineBuilderError> {
+    pub fn try_push_slice(
+        &mut self,
+        word: &[Presymbol],
+        typeface: &Typeface,
+    ) -> Result<(), TextLineBuilderError> {
         // Calculating the width of the word
         let mut word_width_accumulator = TextWidthAccumulator::new();
         for presymbol in word {
-            word_width_accumulator.push(presymbol);
+            let symbol_metrics = &typeface
+                .get_symbol(&presymbol.symbol_key)
+                .expect("failed to get symbol from symbolkey")
+                .symbol_metrics;
+            word_width_accumulator.push(symbol_metrics);
         }
         let word_width_px = word_width_accumulator.width_px();
         let additional_width = self.previous_symbol_advance_width_px + word_width_px;
@@ -105,7 +111,8 @@ impl TextLineBuilder {
             self.width_px += additional_width;
             self.previous_symbol_advance_width_px = match word.last() {
                 Some(p) => {
-                    let last_symbol_metrics = &p.symbol_info.symbol_metrics;
+                    let last_symbol_metrics = &p.symbol_metrics;
+
                     last_symbol_metrics.advance_width
                         - (last_symbol_metrics.x_shift + last_symbol_metrics.width)
                 }
@@ -118,7 +125,7 @@ impl TextLineBuilder {
     /// Tries to fit a symbol into the text line, given an x_max value. Will return Err if the
     /// symbol does not fit
     pub fn try_push_symbol(&mut self, presymbol: &Presymbol) -> Result<(), TextLineBuilderError> {
-        let symbol_metrics = presymbol.symbol_info.symbol_metrics;
+        let symbol_metrics = &presymbol.symbol_metrics;
 
         // The amount of horizontal pixels that the new symbol will take up past the previous
         // symbol's maximum
@@ -141,7 +148,8 @@ impl TextLineBuilder {
     /// Pushes a symbol into the line without checking that it fits within the clipping rectangle,
     /// can cause clipping of text!
     pub fn force_push_symbol(&mut self, presymbol: &Presymbol) {
-        let symbol_metrics = presymbol.symbol_info.symbol_metrics;
+        let symbol_metrics = &presymbol.symbol_metrics;
+
         let additional_width_px =
             self.previous_symbol_advance_width_px + symbol_metrics.x_shift + symbol_metrics.width;
 
@@ -182,6 +190,7 @@ impl TextLines {
         region_width_px: f32,
         font_metrics_px: &PixelFontMetrics,
         line_wrapping: &LineWrapping,
+        typeface: &Typeface,
     ) -> Self {
         let mut lines = Vec::new();
 
@@ -195,7 +204,7 @@ impl TextLines {
                     let mut index = 0usize;
 
                     for word in Presymbol::words(presymbols).into_iter() {
-                        match builder.try_push_slice(word) {
+                        match builder.try_push_slice(word, typeface) {
                             Ok(_) => {
                                 index += word.len();
                                 continue;
@@ -224,7 +233,7 @@ impl TextLines {
                             Err(TextLineBuilderError::CreateNewLine) => {
                                 lines.push(builder.build(font_metrics_px));
                                 builder = TextLineBuilder::new(index, region_width_px);
-                                _ = builder.try_push_slice(word);
+                                _ = builder.try_push_slice(word, typeface);
                                 index += word.len();
                             }
                         }
