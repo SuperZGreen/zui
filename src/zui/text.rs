@@ -294,7 +294,7 @@ impl Text {
         // the number of vertices produced by a symbol
         let vertices_per_symbol = 6usize;
 
-        text_vertices.reserve(self.symbols.len() & vertices_per_symbol);
+        text_vertices.reserve(self.symbols.len() * vertices_per_symbol);
         for symbol in self.symbols.iter() {
             symbol.extend_vertices(text_vertices, parent_clip_region, viewport_dimensions_px);
         }
