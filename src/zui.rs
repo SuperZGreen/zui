@@ -18,7 +18,9 @@ mod widget_store;
 
 use std::ops::Range;
 
+#[cfg(feature = "named_colours")]
 pub use colour::named as named_colours;
+
 pub use colour::Colour;
 pub use position_constraint::{PaddingWeights, PositionConstraint};
 pub use primitives::{Dimensions, Rectangle};

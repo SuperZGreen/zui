@@ -1,3 +1,4 @@
+#![cfg(feature = "named_colours")]
 #![allow(non_upper_case_globals)]
 #![allow(dead_code)]
 #![allow(clippy::excessive_precision)]

@@ -1,3 +1,4 @@
+#[cfg(feature = "named_colours")]
 pub mod named;
 
 #[derive(Debug, Copy, Clone)]
