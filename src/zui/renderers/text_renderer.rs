@@ -1,6 +1,6 @@
-use std::ops::Range;
-use crate::{util, zui::texture_atlas::TextureAtlas, Dimensions, Rectangle};
 use super::resizeable_buffer::ResizeableBuffer;
+use crate::{zui::texture_atlas::TextureAtlas, Dimensions, Rectangle};
+use std::ops::Range;
 
 // use super::{
 //     primitives::{Dimensions, Rectangle},
@@ -94,12 +94,17 @@ impl TextRenderer {
         surface_configuration: &wgpu::SurfaceConfiguration,
         texture_atlas_bind_group_layout: &wgpu::BindGroupLayout,
     ) -> Self {
-        let shader_module = util::shader_module_from_file_path(
-            device,
-            "resources/zui/text_renderer.wgsl",
-            "zui_shader_module",
-        )
-        .expect("failed to load zui shader!");
+        // included in source rather than loading dynamically, as dynamic loading complicates the
+        // crate
+        let shader_source = std::include_str!(std::concat!(
+            std::env!("CARGO_MANIFEST_DIR"),
+            "/resources/zui/text_renderer.wgsl"
+        ));
+
+        let shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("zui_simple_renderer_shader_module"),
+            source: wgpu::ShaderSource::Wgsl(shader_source.into()),
+        });
 
         let vertex_buffer_layout = TextVertex::vertex_buffer_layout();
 

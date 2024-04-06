@@ -4,8 +4,6 @@ use std::ops::Range;
 
 pub use simple_vertex::SimpleVertex;
 
-use crate::util;
-
 use super::resizeable_buffer::ResizeableBuffer;
 
 pub struct SimpleRenderer {
@@ -15,12 +13,17 @@ pub struct SimpleRenderer {
 
 impl SimpleRenderer {
     pub fn new(device: &wgpu::Device, surface_configuration: &wgpu::SurfaceConfiguration) -> Self {
-        let shader_module = util::shader_module_from_file_path(
-            device,
-            "resources/zui/simple_renderer.wgsl",
-            "zui_simple_renderer_shader_module",
-        )
-        .expect("failed to load zui shader!");
+        // included in source rather than loading dynamically, as dynamic loading complicates the
+        // crate
+        let shader_source = std::include_str!(std::concat!(
+            std::env!("CARGO_MANIFEST_DIR"),
+            "/resources/zui/simple_renderer.wgsl"
+        ));
+
+        let shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("zui_simple_renderer_shader_module"),
+            source: wgpu::ShaderSource::Wgsl(shader_source.into()),
+        });
 
         let vertex_buffer_layout = SimpleVertex::vertex_buffer_layout();
 

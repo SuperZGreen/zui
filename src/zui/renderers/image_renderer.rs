@@ -6,8 +6,6 @@ use std::ops::Range;
 pub use image_vertex::ImageVertex;
 pub use texture_atlas::{SpriteId, TextureAtlas, TextureAtlasBuilder};
 
-use crate::util;
-
 use super::resizeable_buffer::ResizeableBuffer;
 
 pub struct ImageRenderer {
@@ -21,12 +19,17 @@ impl ImageRenderer {
         surface_configuration: &wgpu::SurfaceConfiguration,
         texture_atlas_bind_group_layout: &wgpu::BindGroupLayout,
     ) -> Self {
-        let shader_module = util::shader_module_from_file_path(
-            device,
-            "resources/zui/image_renderer.wgsl",
-            "zui_image_renderer_shader_module",
-        )
-        .expect("failed to load zui image renderer shader!");
+        // included in source rather than loading dynamically, as dynamic loading complicates the
+        // crate
+        let shader_source = std::include_str!(std::concat!(
+            std::env!("CARGO_MANIFEST_DIR"),
+            "/resources/zui/image_renderer.wgsl"
+        ));
+
+        let shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("zui_simple_renderer_shader_module"),
+            source: wgpu::ShaderSource::Wgsl(shader_source.into()),
+        });
 
         let vertex_buffer_layout = ImageVertex::vertex_buffer_layout();
 
