@@ -329,6 +329,12 @@ impl Text {
     }
 }
 
+impl From<&str> for Text {
+    fn from(value: &str) -> Self {
+        Text::new().push_segment(TextSegment::from(value))
+    }
+}
+
 impl Display for Text {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for segment in self.segments.iter() {
