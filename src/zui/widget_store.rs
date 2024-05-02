@@ -27,6 +27,12 @@ impl std::fmt::Display for WidgetId {
     }
 }
 
+impl PartialEq for WidgetId {
+    fn eq(&self, other: &Self) -> bool {
+        self.index == other.index
+    }
+}
+
 /// Holds the widget state for a scene
 pub struct WidgetStore<Message> {
     widgets: Vec<Option<Entry<Message>>>,
@@ -193,10 +199,28 @@ impl<Message> WidgetStore<Message> {
     /// Unsets a child Widget for the widget
     pub fn widget_remove_child(
         &mut self,
-        _parent_widget_id: &WidgetId,
-        _child_widget_id: WidgetId,
+        parent_widget_id: &WidgetId,
+        child_widget_id: WidgetId,
     ) -> Result<(), ()> {
-        todo!()
+        let Some(widget_entry) = self.get_mut(parent_widget_id) else {
+            error!("failed to find widget with id: {parent_widget_id}!");
+            return Err(());
+        };
+
+        let Some(widget_children) = &mut widget_entry.children else {
+            warn!("widget with id {parent_widget_id} has no children to remove!");
+            return Err(());
+        };
+
+        let previous_len = widget_children.ids.len();
+        widget_children.ids.retain(|id| *id != child_widget_id);
+
+        if previous_len == widget_children.ids.len() {
+            warn!("failed to remove any children!");
+            Err(())
+        } else {
+            Ok(())
+        }
     }
 
     /// Builds the vertices by tree, by the root widget id
