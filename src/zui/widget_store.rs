@@ -186,8 +186,12 @@ impl<Message> WidgetStore<Message> {
 
         match entry.children.as_mut() {
             Some(children) => {
-                children.ids.push(child_widget_id);
-                Ok(())
+                if children.ids.contains(&child_widget_id) {
+                    return Err(());
+                } else {
+                    children.ids.push(child_widget_id);
+                    Ok(())
+                }
             }
             None => {
                 warn!("Failed to push child for widget: {parent_widget_id}, widget accepts no children!");
@@ -224,10 +228,7 @@ impl<Message> WidgetStore<Message> {
     }
 
     /// Unsets all child Widgets for the widget
-    pub fn widget_remove_all_children(
-        &mut self,
-        parent_widget_id: &WidgetId,
-    ) -> Result<(), ()> {
+    pub fn widget_remove_all_children(&mut self, parent_widget_id: &WidgetId) -> Result<(), ()> {
         let Some(widget_entry) = self.get_mut(parent_widget_id) else {
             error!("failed to find widget with id: {parent_widget_id}!");
             return Err(());
@@ -240,7 +241,7 @@ impl<Message> WidgetStore<Message> {
 
         widget_children.ids.clear();
 
-        return Ok(())
+        return Ok(());
     }
 
     /// Builds the vertices by tree, by the root widget id
