@@ -223,6 +223,26 @@ impl<Message> WidgetStore<Message> {
         }
     }
 
+    /// Unsets all child Widgets for the widget
+    pub fn widget_remove_all_children(
+        &mut self,
+        parent_widget_id: &WidgetId,
+    ) -> Result<(), ()> {
+        let Some(widget_entry) = self.get_mut(parent_widget_id) else {
+            error!("failed to find widget with id: {parent_widget_id}!");
+            return Err(());
+        };
+
+        let Some(widget_children) = &mut widget_entry.children else {
+            warn!("widget with id {parent_widget_id} has no children to remove!");
+            return Err(());
+        };
+
+        widget_children.ids.clear();
+
+        return Ok(())
+    }
+
     /// Builds the vertices by tree, by the root widget id
     pub fn widget_to_vertices(
         &self,
